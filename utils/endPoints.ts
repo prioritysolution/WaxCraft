@@ -137,6 +137,8 @@ export const endPoints = {
   addSamplePrint: `${createApi}Org/ProcessInventory/PostSamplePrint`,
   getSamplePrint: (orgId: number | string, page: number, keyword: string) =>
     `${createApi}Org/ProcessInventory/GetSamplePrint?org_id=${orgId}&page=${page}&keyword=${keyword}`,
+  getSamplePrintDetails: (orgId: number | string, printId: number | string) =>
+    `${createApi}Org/ProcessInventory/GetSamplePrintDetails?org_id=${orgId}&print_id=${printId}`,
   deleteSamplePrint: `${createApi}Org/ProcessInventory/CancelSamplePrint`,
   getWorkStatus: (orgId: number | string, orderId: number) =>
     `${createApi}Org/ProcessInventory/GetWorkStatus?org_id=${orgId}&order_id=${orderId}`,

@@ -43,6 +43,7 @@ const SamplePrint: FC<SamplePrintProps> = ({
   setShowDeleteDialog,
   setTempDeleteId,
   handleDeleteSamplePrint,
+  printLoading,
   currentPage,
   setCurrentPage,
   lastPage,
@@ -91,6 +92,7 @@ const SamplePrint: FC<SamplePrintProps> = ({
             setTempDeleteId={setTempDeleteId}
             handleDeleteSamplePrint={handleDeleteSamplePrint}
             deleteSamplePrintLoading={deleteSamplePrintLoading}
+            printLoading={printLoading}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             lastPage={lastPage}

@@ -111,7 +111,7 @@ export const useItem = () => {
     categoryId: yup.string().required("Category is required"),
     modelId: yup.string().required("Model is required"),
     sizeId: yup.string().required("Size is required"),
-    colourId: yup.string().required("Colour is required"),
+    colourId: yup.string().default(""),
     itemName: yup.string().required("Item name is required"),
     itemShortName: yup.string().required("Item short name is required"),
     unitId: yup.string().required("Unit is required"),

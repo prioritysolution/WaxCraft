@@ -37,6 +37,7 @@ const SamplePrintContainer = () => {
     setShowDeleteDialog,
     setTempDeleteId,
     handleDeleteSamplePrint,
+    printLoading,
     currentPage,
     setCurrentPage,
     lastPage,
@@ -136,6 +137,7 @@ const SamplePrintContainer = () => {
       setShowDeleteDialog={setShowDeleteDialog}
       setTempDeleteId={setTempDeleteId}
       handleDeleteSamplePrint={handleDeleteSamplePrint}
+      printLoading={printLoading}
       currentPage={currentPage}
       setCurrentPage={setCurrentPage}
       lastPage={lastPage}

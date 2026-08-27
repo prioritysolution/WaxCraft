@@ -62,10 +62,13 @@ const PrintModal: FC<PrintModalProps> = ({
     documentTitle: "Sample Print",
   });
 
-  const partyName = printData?.partyId
-    ? orderPartyData.find((party) => party.Id.toString() === printData.partyId)
-        ?.Party_Name
-    : "";
+  const partyName =
+    printData?.partyName ||
+    (printData?.partyId
+      ? orderPartyData.find((party) => party.Id.toString() === printData.partyId)
+          ?.Party_Name
+      : "") ||
+    "";
 
   const wtTotal =
     (Number(printData?.wt) || 0) * (Number(printData?.wtRate) || 0);

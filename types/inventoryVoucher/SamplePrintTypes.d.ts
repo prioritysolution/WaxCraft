@@ -4,6 +4,7 @@ import { Dispatch, SetStateAction } from "react";
 export interface SamplePrintFormData {
   printDate: Date;
   partyId: string;
+  partyName?: string;
   address: string;
   mobileNo: string;
   gstin: string;
@@ -61,6 +62,7 @@ export interface SamplePrintTableData {
   Sample_No: string;
   Party_Name: string;
   Party_Id: string;
+  Design_Id?: string;
   Design_Name: string;
   Design_No: string;
   Total: string;
@@ -122,6 +124,7 @@ export interface SamplePrintProps {
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
   setTempDeleteId: Dispatch<SetStateAction<number | null>>;
   handleDeleteSamplePrint: () => void;
+  printLoading?: boolean;
   currentPage: number;
   setCurrentPage: Dispatch<SetStateAction<number>>;
   lastPage: number;
@@ -158,6 +161,7 @@ export interface SamplePrintTableProps {
   setTempDeleteId: Dispatch<SetStateAction<number | null>>;
   handleDeleteSamplePrint: () => void;
   deleteSamplePrintLoading: boolean;
+  printLoading?: boolean;
   currentPage: number;
   setCurrentPage: Dispatch<SetStateAction<number>>;
   lastPage: number;

@@ -54,7 +54,7 @@ const DesignModal: FC<DesignModalProps> = ({
       <Form {...form}>
         <form className="flex w-full flex-col" autoComplete="off">
           <FormModalHeader
-            title="Add New Design"
+            title="Add Design"
             description="Review design details and add it to the print."
             onClose={() => {
               setShowDesignDialog(false);
@@ -128,7 +128,10 @@ const DesignModal: FC<DesignModalProps> = ({
                       <TableColumn align="center">Total</TableColumn>
                     </TableHeader>
                     <TableBody emptyContent={"No data found."}>
-                      {designFormTableData.childrow?.map((data, index) => (
+                      {(Array.isArray(designFormTableData)
+                        ? []
+                        : designFormTableData?.childrow
+                      )?.map((data, index) => (
                         <TableRow key={index}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>

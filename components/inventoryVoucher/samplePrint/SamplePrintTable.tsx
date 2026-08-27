@@ -10,6 +10,7 @@ import {
   SamplePrintTableData,
   SamplePrintTableProps,
 } from "@/types/inventoryVoucher/SamplePrintTypes";
+import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Pagination,
   Spinner,
@@ -41,10 +42,11 @@ const formatPrintDate = (value?: string) => {
   return isValid(parsed) ? format(parsed, "dd-MM-yyyy") : value;
 };
 
-const itemTypeLabel = (value?: string) => {
-  if (value === "1") return "Own Item";
-  if (value === "0") return "Party Item";
-  return value || "";
+const itemTypeLabel = (value?: string | number) => {
+  const normalized = String(value ?? "").trim();
+  if (normalized === "1") return "Own Item";
+  if (normalized === "0") return "Party Item";
+  return normalized || "—";
 };
 
 const SamplePrintTable: FC<SamplePrintTableProps> = ({
@@ -56,6 +58,7 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
   setTempDeleteId,
   handleDeleteSamplePrint,
   deleteSamplePrintLoading,
+  printLoading = false,
   currentPage,
   setCurrentPage,
   lastPage,
@@ -129,7 +132,7 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
               <TableCell>{data.Design_Name || "—"}</TableCell>
               <TableCell>{data.Design_No || "—"}</TableCell>
               <TableCell>{itemTypeLabel(data.Item_Type)}</TableCell>
-              <TableCell>{data.Total || "—"}</TableCell>
+              <TableCell>{formatTwoDecimals(data.Total)}</TableCell>
               <TableCell>
                 <div className="flex items-center justify-center gap-2">
                   <Tooltip content="Print" delay={200}>
@@ -141,6 +144,8 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
                         radius="md"
                         aria-label="Print"
                         className="h-8 w-8 min-w-8 bg-primary/10 text-primary shadow-none data-[hover=true]:bg-primary/20"
+                        isLoading={printLoading}
+                        isDisabled={printLoading}
                         onPress={() => handleShowPrintFromHistory(data)}
                       >
                         <Printer className="h-3.5 w-3.5" strokeWidth={2} />

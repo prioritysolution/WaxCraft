@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import { useSelector } from "react-redux";
 
 interface ItemState {
@@ -34,6 +34,46 @@ interface ItemState {
 interface RootState {
   item: ItemState;
 }
+
+/** Item names follow: Category - Model - Size [- Colour] */
+const getSizeFromItemName = (itemName: string): string => {
+  const parts = (itemName || "").split(" - ");
+  return parts.length >= 3 ? parts[2].trim() : "";
+};
+
+const compareItemsBySizeAsc = (a: ItemTableData, b: ItemTableData): number => {
+  const sizeA = getSizeFromItemName(a.Item_Name);
+  const sizeB = getSizeFromItemName(b.Item_Name);
+
+  if (!sizeA && !sizeB) {
+    return (a.Item_Name || "").localeCompare(b.Item_Name || "", undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+  if (!sizeA) return 1;
+  if (!sizeB) return -1;
+
+  const numA = Number.parseFloat(sizeA);
+  const numB = Number.parseFloat(sizeB);
+  const isNumA =
+    !Number.isNaN(numA) && /^-?\d+(\.\d+)?$/.test(sizeA);
+  const isNumB =
+    !Number.isNaN(numB) && /^-?\d+(\.\d+)?$/.test(sizeB);
+
+  if (isNumA && isNumB && numA !== numB) return numA - numB;
+
+  const sizeCompare = sizeA.localeCompare(sizeB, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  if (sizeCompare !== 0) return sizeCompare;
+
+  return (a.Item_Name || "").localeCompare(b.Item_Name || "", undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+};
 
 const ItemTable: FC<ItemTableProps> = ({
   loading,
@@ -55,13 +95,18 @@ const ItemTable: FC<ItemTableProps> = ({
     (state: RootState) => state?.item?.itemData
   );
 
+  const sortedItemData = useMemo(
+    () => [...(itemData || [])].sort(compareItemsBySizeAsc),
+    [itemData]
+  );
+
   return (
     <>
       <Table
         removeWrapper
         aria-label="Example static collection table"
         bottomContent={
-          itemData?.length > 0 && (
+          sortedItemData.length > 0 && (
             <div className="flex w-full justify-end">
               <Pagination
                 isCompact
@@ -104,7 +149,7 @@ const ItemTable: FC<ItemTableProps> = ({
           loadingContent={<Spinner size="lg" color="primary" />}
           loadingState={loading ? "loading" : "idle"}
         >
-          {itemData?.map((data, index) => (
+          {sortedItemData.map((data, index) => (
             <TableRow key={data.Id}>
               <TableCell>{formatTableSerial(index)}</TableCell>
               <TableCell>
