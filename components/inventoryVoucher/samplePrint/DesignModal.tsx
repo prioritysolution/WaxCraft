@@ -11,10 +11,12 @@ import {
   FormModalHeader,
 } from "@/components/ui/form-modal";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { DesignModalProps } from "@/types/inventoryVoucher/SamplePrintTypes";
+import {
+  DesignModalProps,
+  SamplePrintFormData,
+} from "@/types/inventoryVoucher/SamplePrintTypes";
 import { DesignTableData } from "@/types/master/DesignTypes";
 import {
-  Button,
   Image,
   Table,
   TableBody,
@@ -23,7 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { FC } from "react";
+import { FC, useEffect } from "react";
+import { UseFormReturn, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 
 interface OrderBookingState {
@@ -33,6 +36,136 @@ interface OrderBookingState {
 interface RootState {
   orderBooking: OrderBookingState;
 }
+
+const calcRowTotal = (
+  quantity: unknown,
+  rate: unknown,
+  makingRate: unknown
+): number => {
+  const qty = Number(quantity) || 0;
+  const r = Number(rate) || 0;
+  const m = Number(makingRate) || 0;
+  const total = qty * r + qty * m;
+  return Number.isFinite(total) ? total : 0;
+};
+
+/** Isolates re-renders so totals update when rate / making rate change. */
+const RowTotalCell: FC<{
+  form: UseFormReturn<SamplePrintFormData>;
+  index: number;
+}> = ({ form, index }) => {
+  const quantity = useWatch({
+    control: form.control,
+    name: `item.${index}.itemQuantity`,
+  });
+  const rate = useWatch({
+    control: form.control,
+    name: `item.${index}.itemRate`,
+  });
+  const makingRate = useWatch({
+    control: form.control,
+    name: `item.${index}.makingRate`,
+  });
+
+  const total = calcRowTotal(quantity, rate, makingRate).toFixed(2);
+
+  useEffect(() => {
+    const current = form.getValues(`item.${index}.itemTotal`);
+    if (current !== total) {
+      form.setValue(`item.${index}.itemTotal`, total, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [total, form, index]);
+
+  return (
+    <span className="inline-flex min-w-[70px] items-center justify-center text-sm tabular-nums">
+      {total}
+    </span>
+  );
+};
+
+const ItemTotalsSync: FC<{
+  form: UseFormReturn<SamplePrintFormData>;
+  rowCount: number;
+}> = ({ form, rowCount }) => {
+  const items = useWatch({ control: form.control, name: "item" }) || [];
+  const wt = useWatch({ control: form.control, name: "wt" });
+  const wtRate = useWatch({ control: form.control, name: "wtRate" });
+  const polish = useWatch({ control: form.control, name: "polish" });
+
+  // Fingerprint nested calc fields so grand total updates when rate/making rate change.
+  const calcKey = items
+    .slice(0, rowCount)
+    .map(
+      (row) =>
+        `${row?.itemQuantity ?? ""}:${row?.itemRate ?? ""}:${row?.makingRate ?? ""}`
+    )
+    .join("|");
+
+  const itemGrandTotal = items.slice(0, rowCount).reduce((acc, row) => {
+    return (
+      acc + calcRowTotal(row?.itemQuantity, row?.itemRate, row?.makingRate)
+    );
+  }, 0);
+
+  useEffect(() => {
+    items.slice(0, rowCount).forEach((row, index) => {
+      const nextTotal = calcRowTotal(
+        row?.itemQuantity,
+        row?.itemRate,
+        row?.makingRate
+      ).toFixed(2);
+      if (row?.itemTotal !== nextTotal) {
+        form.setValue(`item.${index}.itemTotal`, nextTotal, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+      }
+    });
+
+    const nextTotalRate = (
+      itemGrandTotal +
+      (Number(wt) || 0) * (Number(wtRate) || 0) +
+      (Number(polish) || 0)
+    ).toFixed(2);
+
+    if (form.getValues("totalRate") !== nextTotalRate) {
+      form.setValue("totalRate", nextTotalRate, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [calcKey, itemGrandTotal, wt, wtRate, polish, form, items, rowCount]);
+
+  const totalRate = (
+    itemGrandTotal +
+    (Number(wt) || 0) * (Number(wtRate) || 0) +
+    (Number(polish) || 0)
+  ).toFixed(2);
+
+  return (
+    <div className="mt-1 grid gap-3 sm:grid-cols-2">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#F7F5F3]/90 px-4 py-3">
+        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Item Grand Total
+        </span>
+        <span className="text-sm font-semibold tabular-nums text-primary">
+          {itemGrandTotal.toFixed(2)}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-[#F7F5F3]/90 px-4 py-3">
+        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Total Rate
+        </span>
+        <span className="text-sm font-semibold tabular-nums text-primary">
+          {totalRate}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const DesignModal: FC<DesignModalProps> = ({
   showDesignDialog,
@@ -44,6 +177,27 @@ const DesignModal: FC<DesignModalProps> = ({
   const designFormTableData = useSelector(
     (state: RootState) => state?.orderBooking?.orderDesignDetailsData
   );
+
+  const items = useWatch({ control: form.control, name: "item" });
+  const itemType = useWatch({ control: form.control, name: "itemType" });
+  const isPartyItem = itemType === "0";
+
+  useEffect(() => {
+    if (!isPartyItem || !showDesignDialog) return;
+    (items ?? []).forEach((row, index) => {
+      if (row?.itemRate !== "0.00") {
+        form.setValue(`item.${index}.itemRate`, "0.00", {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+      }
+    });
+  }, [isPartyItem, items, form, showDesignDialog]);
+
+  const childRows = Array.isArray(designFormTableData)
+    ? []
+    : designFormTableData?.childrow;
+  const rowCount = childRows?.length ?? 0;
 
   return (
     <FormModal
@@ -128,17 +282,13 @@ const DesignModal: FC<DesignModalProps> = ({
                       <TableColumn align="center">Total</TableColumn>
                     </TableHeader>
                     <TableBody emptyContent={"No data found."}>
-                      {(Array.isArray(designFormTableData)
-                        ? []
-                        : designFormTableData?.childrow
-                      )?.map((data, index) => (
+                      {childRows?.map((data, index) => (
                         <TableRow key={index}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>
                             <InputField
                               control={form.control}
                               name={`item.${index}.itemName`}
-                              // label="Item Name"
                               disabled
                               className="min-w-[70px]"
                             />
@@ -147,7 +297,6 @@ const DesignModal: FC<DesignModalProps> = ({
                             <InputField
                               control={form.control}
                               name={`item.${index}.itemShName`}
-                              // label="Item ShName"
                               disabled
                               className="min-w-[70px]"
                             />
@@ -156,7 +305,6 @@ const DesignModal: FC<DesignModalProps> = ({
                             <InputField
                               control={form.control}
                               name={`item.${index}.itemQuantity`}
-                              // label="Item Quantity"
                               disabled
                               className="min-w-[70px]"
                             />
@@ -165,29 +313,23 @@ const DesignModal: FC<DesignModalProps> = ({
                             <InputField
                               control={form.control}
                               name={`item.${index}.itemRate`}
-                              // label="Item Rate"
                               type="number"
                               variant="bordered"
                               className="min-w-[70px]"
+                              disabled={isPartyItem}
                             />
                           </TableCell>
                           <TableCell>
                             <InputField
                               control={form.control}
                               name={`item.${index}.makingRate`}
-                              // label="Item Total"
+                              type="number"
                               variant="bordered"
                               className="min-w-[70px]"
                             />
                           </TableCell>
                           <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.itemTotal`}
-                              // label="Item Total"
-                              disabled
-                              className="min-w-[70px]"
-                            />
+                            <RowTotalCell form={form} index={index} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -195,27 +337,9 @@ const DesignModal: FC<DesignModalProps> = ({
                   </Table>
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
-                <div className="w-full xs:w-[400px] sm:w-full mx-auto flex items-center justify-between">
-                  <p className="sm:flex-grow sm:text-center font-semibold text-lg">
-                    Item Grand Total
-                  </p>
-                  <p className="sm:min-w-[100px]">
-                    {form.getValues("item")?.reduce((acc, item) => {
-                      const rate = item.itemTotal
-                        ? parseFloat(item.itemTotal)
-                        : 0; // Convert string to number, default to 0 if invalid
-                      return acc + rate;
-                    }, 0) || 0}
-                  </p>
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
-                <InputField
-                  control={form.control}
-                  name="totalRate"
-                  label="Total Rate"
-                  disabled
-                />
+                {rowCount > 0 ? (
+                  <ItemTotalsSync form={form} rowCount={rowCount} />
+                ) : null}
               </div>
           </FormModalBody>
           <FormModalFooter

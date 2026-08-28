@@ -136,14 +136,12 @@ const DesignForm: FC<DesignFormProps> = ({
                 control={form.control}
                 name="designName"
                 label="Design Name"
-                disabled={lockDesignFields}
               />
 
               <InputField
                 control={form.control}
                 name="designNo"
                 label="Design No."
-                disabled={lockDesignFields}
               />
 
               <InputField
@@ -151,7 +149,6 @@ const DesignForm: FC<DesignFormProps> = ({
                 name="wt"
                 label="WT"
                 type="number"
-                disabled={lockDesignFields}
               />
 
               <InputField
@@ -166,7 +163,6 @@ const DesignForm: FC<DesignFormProps> = ({
                 name="polish"
                 label="Polish"
                 type="number"
-                disabled={lockDesignFields}
               />
 
               <FormField

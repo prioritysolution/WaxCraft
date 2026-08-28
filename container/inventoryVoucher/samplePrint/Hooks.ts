@@ -70,16 +70,21 @@ const getDesignRows = (row: Record<string, any>): any[] => {
     if (candidate && typeof candidate === "object") return [candidate];
   }
 
-  const sampleArray = row.sampleprint_array || row.SamplePrint_Array || row.SamplePrintRow;
+  const sampleArray =
+    row.sampleprint_array ||
+    row.SamplePrint_Array ||
+    row.SamplePrintRow ||
+    row.sample_print ||
+    row.Sample_Print;
   if (Array.isArray(sampleArray) && sampleArray.length > 0) {
-    const designOnly = sampleArray.filter(
+    const flat = flattenSamplePrintRows(sampleArray as Record<string, any>[]);
+    const designOnly = flat.filter(
       (entry: Record<string, any>) =>
-        (entry.design_id || entry.Design_Id) &&
-        !entry.item_id &&
-        !entry.Item_Id
+        (entry.design_id || entry.Design_Id || entry.Design_Name) &&
+        !isSamplePrintItemRow(entry)
     );
     if (designOnly.length > 0) return designOnly;
-    return sampleArray;
+    return flat;
   }
 
   return [];
@@ -94,76 +99,269 @@ const normalizeItemType = (value: unknown): string => {
   return String(pickValue(value, ""));
 };
 
-const SAMPLE_PRINT_CACHE_KEY = "waxCraftSamplePrintCache";
+const isSamplePrintItemRow = (row: Record<string, any>): boolean => {
+  const itemId = row.item_id ?? row.Item_Id;
+  if (itemId !== undefined && itemId !== null && String(itemId).trim() !== "") {
+    return true;
+  }
+  // Some payloads omit item_id but still send item quantities / rates.
+  const hasItemQty =
+    row.item_qnty != null ||
+    row.Item_Qnty != null ||
+    row.Item_Qty != null ||
+    row.Qnty != null;
+  const hasItemRate =
+    row.item_rate != null ||
+    row.Item_Rate != null ||
+    row.making_rate != null ||
+    row.Making_Rate != null;
+  const looksLikeDesignHeader =
+    (row.wt != null ||
+      row.Wt != null ||
+      row.WT != null ||
+      row.polish_rate != null ||
+      row.qnty_rate != null) &&
+    !hasItemQty;
+  return Boolean(hasItemQty && hasItemRate && !looksLikeDesignHeader);
+};
 
-/** Redux requires serializable values — store printDate as ISO string. */
-const serializePrintData = (
-  data: SamplePrintFormData
-): SamplePrintFormData => {
-  const rawDate = data.printDate
-    ? data.printDate instanceof Date
-      ? data.printDate
-      : new Date(data.printDate as unknown as string)
-    : null;
-  const iso =
-    rawDate && !Number.isNaN(rawDate.getTime()) ? rawDate.toISOString() : "";
+const getNestedSamplePrintList = (row: Record<string, any>): any[] | null => {
+  const candidates = [
+    row.sample_print,
+    row.Sample_Print,
+    row.sampleprint_array,
+    row.SamplePrint_Array,
+    row.SamplePrintRow,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+  }
+  return null;
+};
+
+const getNestedItemList = (row: Record<string, any>): any[] | null => {
+  const candidates = [
+    row.ItemRow,
+    row.item_array,
+    row.Item_Array,
+    row.childrow,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+  }
+  return null;
+};
+
+const getNestedDesignList = (row: Record<string, any>): any[] | null => {
+  const candidates = [
+    row.DesignRow,
+    row.design_array,
+    row.Design_Array,
+    row.designArray,
+    row.SampleDesignRow,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+  }
+  return null;
+};
+
+const firstNonEmptyArray = (...candidates: unknown[]): any[] => {
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+  }
+  return [];
+};
+
+const collectItemsFromDesignRows = (designRows: any[]): any[] =>
+  (designRows || []).flatMap((design) => {
+    if (!design || typeof design !== "object") return [];
+    return firstNonEmptyArray(
+      design.ItemRow,
+      design.item_array,
+      design.Item_Array,
+      design.childrow
+    );
+  });
+
+/** Flatten wrappers like `{ sample_print: [design, item, item] }` into a single row list. */
+const flattenSamplePrintRows = (
+  rows: Record<string, any>[]
+): Record<string, any>[] => {
+  const out: Record<string, any>[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+
+    const sampleNested = getNestedSamplePrintList(row);
+    if (sampleNested) {
+      const headerClone: Record<string, any> = { ...row };
+      delete headerClone.sample_print;
+      delete headerClone.Sample_Print;
+      delete headerClone.sampleprint_array;
+      delete headerClone.SamplePrint_Array;
+      delete headerClone.SamplePrintRow;
+
+      const hasHeaderFields = Boolean(
+        headerClone.Party_Name ||
+          headerClone.party_name ||
+          headerClone.Print_Date ||
+          headerClone.print_date ||
+          headerClone.Print_No ||
+          headerClone.Sample_No ||
+          headerClone.Print_Id
+      );
+      const hasDesignFields = Boolean(
+        headerClone.design_id ||
+          headerClone.Design_Id ||
+          headerClone.Design_Name ||
+          headerClone.Wt ||
+          headerClone.WT ||
+          headerClone.wt
+      );
+
+      if (
+        (hasHeaderFields || hasDesignFields) &&
+        !isSamplePrintItemRow(headerClone)
+      ) {
+        out.push(headerClone);
+      }
+      out.push(...flattenSamplePrintRows(sampleNested as Record<string, any>[]));
+      continue;
+    }
+
+    // API shape: sample_print[] entry with DesignRow[{ ItemRow: [...] }]
+    const designNested = getNestedDesignList(row);
+    if (designNested) {
+      const headerClone: Record<string, any> = { ...row };
+      delete headerClone.DesignRow;
+      delete headerClone.design_array;
+      delete headerClone.Design_Array;
+      delete headerClone.designArray;
+      delete headerClone.SampleDesignRow;
+
+      const hasHeaderFields = Boolean(
+        headerClone.Party_Name ||
+          headerClone.party_name ||
+          headerClone.Print_Date ||
+          headerClone.print_date ||
+          headerClone.Print_No ||
+          headerClone.Sample_No ||
+          headerClone.Print_Id ||
+          headerClone.Total != null
+      );
+      if (hasHeaderFields && !isSamplePrintItemRow(headerClone)) {
+        out.push(headerClone);
+      }
+      out.push(...flattenSamplePrintRows(designNested as Record<string, any>[]));
+      continue;
+    }
+
+    const itemNested = getNestedItemList(row);
+    if (itemNested) {
+      out.push(row);
+      out.push(
+        ...(itemNested as Record<string, any>[]).filter(isSamplePrintItemRow)
+      );
+      continue;
+    }
+
+    out.push(row);
+  }
+  return out;
+};
+
+const mergeSamplePrintRows = (
+  rows: Record<string, any>[],
+  wrapper: Record<string, any> = {}
+): Record<string, any> => {
+  const printSlip =
+    wrapper.print_slip && typeof wrapper.print_slip === "object"
+      ? wrapper.print_slip
+      : {};
+
+  const flatRows = flattenSamplePrintRows(rows);
+
+  // Prefer real DesignRow objects (with ItemRow) from the API payload.
+  const nestedDesignRows = rows.flatMap((row) => {
+    const designs = getNestedDesignList(row);
+    return designs ? (designs as Record<string, any>[]) : [];
+  });
+  // Also pick up DesignRow after one level of sample_print unwrap.
+  const nestedDesignRowsFromSample = rows.flatMap((row) => {
+    const sample = getNestedSamplePrintList(row);
+    if (!sample) return [];
+    return (sample as Record<string, any>[]).flatMap((entry) => {
+      const designs = getNestedDesignList(entry);
+      return designs ? (designs as Record<string, any>[]) : [];
+    });
+  });
+
+  const designRowsFromFlat = flatRows.filter(
+    (row) =>
+      (row.design_id ||
+        row.Design_Id ||
+        row.Design_Name ||
+        row.Wt ||
+        row.WT ||
+        row.Wt_Rate) &&
+      !isSamplePrintItemRow(row) &&
+      !getNestedDesignList(row)
+  );
+
+  const designRows = firstNonEmptyArray(
+    nestedDesignRows,
+    nestedDesignRowsFromSample,
+    designRowsFromFlat
+  );
+
+  const nestedItems = flatRows.flatMap((row) => {
+    const items = getNestedItemList(row);
+    return items ? (items as Record<string, any>[]) : [];
+  });
+
+  const itemRows = firstNonEmptyArray(
+    collectItemsFromDesignRows(designRows),
+    flatRows.filter((row) => isSamplePrintItemRow(row)),
+    nestedItems
+  );
+
+  const header =
+    flatRows.find(
+      (row) =>
+        row.Party_Name ||
+        row.party_name ||
+        row.Print_Id ||
+        row.Print_No ||
+        row.Print_Date
+    ) ||
+    designRows[0] ||
+    flatRows[0] ||
+    {};
 
   return {
-    ...data,
-    printDate: iso as unknown as Date,
+    ...wrapper,
+    ...printSlip,
+    ...header,
+    DesignRow: (designRows.length > 0 ? designRows : [header]).map(
+      (design) => ({
+        ...design,
+        ItemRow: firstNonEmptyArray(
+          design.ItemRow,
+          design.item_array,
+          design.Item_Array,
+          design.childrow,
+          itemRows
+        ),
+      })
+    ),
+    sampleprint_array: flatRows,
+    sample_print: flatRows,
   };
-};
-
-const deserializePrintData = (
-  data: SamplePrintFormData
-): SamplePrintFormData => ({
-  ...data,
-  printDate: data.printDate
-    ? new Date(data.printDate as unknown as string)
-    : new Date(),
-});
-
-const readPrintCache = (): Record<string, SamplePrintFormData> => {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = sessionStorage.getItem(SAMPLE_PRINT_CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
-
-const writePrintCache = (cache: Record<string, SamplePrintFormData>) => {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(SAMPLE_PRINT_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // ignore quota / private mode errors
-  }
-};
-
-const cacheSamplePrintData = (
-  sampleNo: string,
-  data: SamplePrintFormData
-) => {
-  if (!sampleNo) return;
-  const cache = readPrintCache();
-  cache[sampleNo] = serializePrintData(data);
-  writePrintCache(cache);
-};
-
-const getCachedSamplePrintData = (
-  sampleNo: string
-): SamplePrintFormData | null => {
-  if (!sampleNo) return null;
-  const cached = readPrintCache()[sampleNo];
-  if (!cached) return null;
-  return deserializePrintData(cached);
 };
 
 /**
  * Same grand-total formula as PrintModal:
- * items total + (WT × Wt_Rate) + Polish
+ * items total + (WT * Wt_Rate) + Polish
  * API `Total` is items-only; WT/Polish are added on top.
  */
 const computeSamplePrintGrandTotal = (
@@ -188,17 +386,50 @@ const mapChildItems = (
 ): SamplePrintFormData["item"] =>
   (items || []).map((item: Record<string, any>) => ({
     designId,
-    itemId: String(pickValue(item.Item_Id, item.item_id, "")),
+    itemId: String(pickValue(item.Item_Id, item.item_id, item.ItemId, "")),
     itemGl: String(pickValue(item.Item_GL, item.Item_Gl, item.item_gl, "")),
-    itemName: String(pickValue(item.Item_Name, item.item_name, "")),
-    itemShName: String(pickValue(item.Item_Sh_Name, item.item_sh_name, "")),
-    itemQuantity: String(
-      pickValue(item.Item_Qnty, item.item_qnty, item.Qnty, item.qnty, "")
+    itemName: String(
+      pickValue(
+        item.Item_Name,
+        item.item_name,
+        item.ItemName,
+        item.Description,
+        item.description,
+        item.Item_Sh_Name,
+        item.item_sh_name,
+        ""
+      )
     ),
-    itemRate: String(pickValue(item.Item_Rate, item.item_rate, "")),
-    makingRate: String(pickValue(item.Making_Rate, item.making_rate, "")),
+    itemShName: String(
+      pickValue(item.Item_Sh_Name, item.item_sh_name, item.Item_ShName, "")
+    ),
+    itemQuantity: String(
+      pickValue(
+        item.Item_Qnty,
+        item.item_qnty,
+        item.Item_Qty,
+        item.item_qty,
+        item.Qnty,
+        item.qnty,
+        ""
+      )
+    ),
+    itemRate: String(
+      pickValue(item.Item_Rate, item.item_rate, item.ItemRate, "")
+    ),
+    makingRate: String(
+      pickValue(item.Making_Rate, item.making_rate, item.MakingRate, "")
+    ),
     itemTotal: String(
-      pickValue(item.Item_Tot, item.item_tot, item.Item_Total, item.item_total, "")
+      pickValue(
+        item.Item_Tot,
+        item.item_tot,
+        item.Item_Total,
+        item.item_total,
+        item.Item_Grand_Tot,
+        item.item_grand_tot,
+        ""
+      )
     ),
   }));
 
@@ -233,8 +464,7 @@ const mapHistoryRow = (
   const sampleNo = String(
     pickValue(row.Sample_No, row.Print_No, row.Order_No, row.sample_no, "")
   );
-  const cached = getCachedSamplePrintData(sampleNo);
-  const fallback = fallbackPrintData || cached || undefined;
+  const fallback = fallbackPrintData || undefined;
 
   return {
     Id: Number(pickValue(row.Id, row.id, Date.now())),
@@ -306,8 +536,8 @@ const mapHistoryRow = (
         fallback?.polish,
         ""
       );
-      // API Total is items-only; add WT × rate + Polish (same as PrintModal).
-      // fallback.totalRate is already a full grand total — use it only when API Total is absent.
+      // API Total is items-only; add WT * rate + Polish (same as PrintModal).
+      // fallback.totalRate is already a full grand total - use it only when API Total is absent.
       if (itemsTotal !== "" && itemsTotal != null) {
         return (
           computeSamplePrintGrandTotal(
@@ -378,90 +608,7 @@ const mapHistoryRow = (
         ""
       )
     ),
-    printData: fallback
-      ? serializePrintData({
-          ...fallback,
-          partyName:
-            fallback.partyName ||
-            String(pickValue(row.Party_Name, row.party_name, "")),
-          printDate: fallback.printDate
-            ? new Date(fallback.printDate)
-            : new Date(),
-        })
-      : undefined,
     DesignRow: designRows.length > 0 ? designRows : row.DesignRow,
-  };
-};
-
-const mapRowToPrintData = (row: SamplePrintTableData): SamplePrintFormData => {
-  if (row.printData) {
-    return {
-      ...deserializePrintData(row.printData),
-      partyName: row.printData.partyName || row.Party_Name || "",
-    };
-  }
-
-  const cached = getCachedSamplePrintData(row.Sample_No);
-  if (cached) {
-    return {
-      ...cached,
-      partyName: cached.partyName || row.Party_Name || "",
-    };
-  }
-
-  const designRow = (row.DesignRow?.[0] || {}) as Record<string, any>;
-  const printDateValue = row.Print_Date ? new Date(row.Print_Date) : new Date();
-  const designId = String(
-    pickValue(
-      row.Design_Id,
-      designRow.Design_Id,
-      designRow.design_id,
-      designRow.Id,
-      ""
-    )
-  );
-  const itemRows = Array.isArray(designRow.ItemRow)
-    ? designRow.ItemRow
-    : Array.isArray(designRow.item_array)
-      ? designRow.item_array
-      : Array.isArray(designRow.Item_Array)
-        ? designRow.Item_Array
-        : Array.isArray(designRow.childrow)
-          ? designRow.childrow
-          : [];
-
-  return {
-    printDate: Number.isNaN(printDateValue.getTime())
-      ? new Date()
-      : printDateValue,
-    partyId: row.Party_Id || "",
-    partyName: row.Party_Name || "",
-    address: row.Address || "",
-    mobileNo: row.Mobile || "",
-    gstin: row.Gstin || "",
-    designId,
-    designName: String(
-      pickValue(
-        row.Design_Name,
-        designRow.Design_Name,
-        designRow.design_name,
-        ""
-      )
-    ),
-    designNo: String(
-      pickValue(row.Design_No, designRow.Design_No, designRow.design_no, "")
-    ),
-    wt: String(pickValue(row.Wt, designRow.Wt, designRow.WT, designRow.wt, "")),
-    wtRate: String(
-      pickValue(row.Wt_Rate, designRow.Wt_Rate, designRow.wt_rate, "")
-    ),
-    polish: String(
-      pickValue(row.Polish, designRow.Polish, designRow.polish_rate, "")
-    ),
-    image: String(pickValue(row.Image, designRow.Image, designRow.image, "")),
-    itemType: row.Item_Type || "1",
-    item: mapChildItems(itemRows, designId),
-    totalRate: row.Total || "",
   };
 };
 
@@ -469,26 +616,45 @@ const resolveSamplePrintDetailsPayload = (
   details: unknown
 ): Record<string, any> | null => {
   if (!details) return null;
+
   if (Array.isArray(details)) {
     return details[0] && typeof details[0] === "object"
-      ? (details[0] as Record<string, any>)
+      ? mergeSamplePrintRows(details as Record<string, any>[])
       : null;
   }
   if (typeof details !== "object") return null;
 
   const record = details as Record<string, any>;
+  const nestedList = [
+    record.sample_print,
+    record.Sample_Print,
+    record.sampleprint_array,
+    record.SamplePrint_Array,
+    record.SamplePrintRow,
+    record.data,
+    record.details,
+  ].find((value) => Array.isArray(value) && value.length > 0);
 
-  // GetSamplePrintDetails shape: { print_slip, sample_print: [ {...} ] }
-  if (Array.isArray(record.sample_print) && record.sample_print[0]) {
-    return record.sample_print[0] as Record<string, any>;
+  if (nestedList) {
+    return mergeSamplePrintRows(nestedList as Record<string, any>[], record);
   }
-  if (Array.isArray(record.Sample_Print) && record.Sample_Print[0]) {
-    return record.Sample_Print[0] as Record<string, any>;
+
+  // Single object that itself wraps another sample_print list under print_slip.
+  if (record.print_slip && typeof record.print_slip === "object") {
+    const slipNested = [
+      record.print_slip.sample_print,
+      record.print_slip.Sample_Print,
+      record.print_slip.sampleprint_array,
+    ].find((value) => Array.isArray(value) && value.length > 0);
+    if (slipNested) {
+      return mergeSamplePrintRows(slipNested as Record<string, any>[], {
+        ...record,
+        ...record.print_slip,
+      });
+    }
   }
-  if (Array.isArray(record.data) && record.data[0]) {
-    return record.data[0] as Record<string, any>;
-  }
-  if (record.DesignRow || record.Print_Id || record.Print_No) {
+
+  if (record.DesignRow || record.Print_Id || record.Print_No || record.Id) {
     return record;
   }
 
@@ -513,22 +679,32 @@ const mapSamplePrintDetailsToPrintData = (
     )
   );
 
-  const itemSource = Array.isArray(designRow.ItemRow)
-    ? designRow.ItemRow
-    : Array.isArray(designRow.childrow)
-      ? designRow.childrow
-      : Array.isArray(designRow.item_array)
-        ? designRow.item_array
-        : Array.isArray(details.ItemRow)
-          ? details.ItemRow
-          : Array.isArray(details.childrow)
-            ? details.childrow
-            : Array.isArray(details.sampleprint_array)
-              ? details.sampleprint_array.filter(
-                  (entry: Record<string, any>) =>
-                    entry.item_id || entry.Item_Id
-                )
-              : [];
+  const itemSource = firstNonEmptyArray(
+    designRow.ItemRow,
+    designRow.item_array,
+    designRow.Item_Array,
+    designRow.childrow,
+    collectItemsFromDesignRows(designRows),
+    collectItemsFromDesignRows(
+      Array.isArray(details.DesignRow) ? details.DesignRow : []
+    ),
+    details.ItemRow,
+    details.item_array,
+    details.Item_Array,
+    details.childrow,
+    Array.isArray(details.sampleprint_array)
+      ? details.sampleprint_array.filter(isSamplePrintItemRow)
+      : null,
+    Array.isArray(details.sample_print)
+      ? details.sample_print.filter(isSamplePrintItemRow)
+      : null,
+    Array.isArray(details.Sample_Print)
+      ? details.Sample_Print.filter(isSamplePrintItemRow)
+      : null,
+    Array.isArray(fallbackRow?.DesignRow?.[0]?.ItemRow)
+      ? fallbackRow?.DesignRow?.[0]?.ItemRow
+      : null
+  );
 
   const items = mapChildItems(itemSource, designId).map((item) => {
     const quantity = Number(item.itemQuantity) || 0;
@@ -672,19 +848,20 @@ const mapSamplePrintDetailsToPrintData = (
       )
     ),
     item: items,
-    totalRate:
-      toTwoDecimalString(
-        pickValue(
-          details.Total,
-          details.Total_Amt,
-          details.Total_Order,
-          details.Total_Rate,
-          details.Qnty_Rate,
-          designRow.Qnty_Rate,
-          fallbackRow?.Total,
-          ""
-        )
-      ) || (computedTotal ? computedTotal.toFixed(2) : ""),
+    totalRate: computedTotal
+      ? computedTotal.toFixed(2)
+      : toTwoDecimalString(
+          pickValue(
+            details.Total,
+            details.Total_Amt,
+            details.Total_Order,
+            details.Total_Rate,
+            details.Qnty_Rate,
+            designRow.Qnty_Rate,
+            fallbackRow?.Total,
+            ""
+          )
+        ) || "",
   };
 };
 
@@ -787,20 +964,63 @@ export const useSamplePrint = () => {
     },
   });
 
-  const { partyId, designId, wt, wtRate, polish } = form.watch();
+  const { partyId, designId, itemType } = form.watch();
+  const isPartyItem = itemType === "0";
 
   const item = useWatch({
     control: form.control,
     name: "item",
   });
 
-  const calculateTotal = (index: number) => {
-    const rate = item[index]?.itemRate || 0;
-    const makingRate = item[index]?.makingRate || 0;
-    const quantity = item[index]?.itemQuantity || 0;
-    return (
-      Number(rate) * Number(quantity) + Number(makingRate) * Number(quantity)
-    );
+  /** Row total: (qty * rate) + (qty * making rate), always 2 decimal places. */
+  const calcRowTotal = (
+    quantity: unknown,
+    rate: unknown,
+    makingRate: unknown
+  ): string => {
+    const qty = Number(quantity) || 0;
+    const r = Number(rate) || 0;
+    const m = Number(makingRate) || 0;
+    const total = qty * r + qty * m;
+    return Number.isFinite(total) ? total.toFixed(2) : "0.00";
+  };
+
+  const syncItemTotalsAndTotalRate = () => {
+    const rows = form.getValues("item") || [];
+    rows.forEach((row, index) => {
+      const nextTotal = calcRowTotal(
+        row?.itemQuantity,
+        row?.itemRate,
+        row?.makingRate
+      );
+      if (row?.itemTotal !== nextTotal) {
+        form.setValue(`item.${index}.itemTotal`, nextTotal, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+      }
+    });
+
+    const itemsTotal = (form.getValues("item") || []).reduce((acc, row) => {
+      const rowTotal = Number(
+        calcRowTotal(row?.itemQuantity, row?.itemRate, row?.makingRate)
+      );
+      return acc + (Number.isFinite(rowTotal) ? rowTotal : 0);
+    }, 0);
+
+    const nextTotalRate = (
+      itemsTotal +
+      (Number(form.getValues("wt")) || 0) *
+        (Number(form.getValues("wtRate")) || 0) +
+      (Number(form.getValues("polish")) || 0)
+    ).toFixed(2);
+
+    if (form.getValues("totalRate") !== nextTotalRate) {
+      form.setValue("totalRate", nextTotalRate, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
   };
 
   const resetSampleForm = () => {
@@ -842,35 +1062,29 @@ export const useSamplePrint = () => {
 
     try {
       const res: ApiResponse = await getSamplePrintDetailsAPI(orgId, printId);
-      const details = resolveSamplePrintDetailsPayload(res.data?.details);
+      const responseData = res.data as Record<string, any> | undefined;
+      const details =
+        resolveSamplePrintDetailsPayload(responseData?.details) ||
+        resolveSamplePrintDetailsPayload(responseData?.data) ||
+        resolveSamplePrintDetailsPayload(responseData);
 
       if (res.status !== 200 || !details) {
         toast.error(
-          typeof res.data?.message === "string" && res.data.message.trim()
-            ? res.data.message
+          typeof responseData?.message === "string" &&
+            responseData.message.trim()
+            ? responseData.message
             : "Unable to load print data"
         );
         return;
       }
 
       const printPayload = mapSamplePrintDetailsToPrintData(details, row);
-
-      if (row.Sample_No || printPayload.designName) {
-        cacheSamplePrintData(
-          String(
-            pickValue(
-              row.Sample_No,
-              details.Print_No,
-              details.Sample_No,
-              details.sample_no,
-              printId
-            )
-          ),
-          printPayload
-        );
-      }
-
-      setPrintData(printPayload);
+      setPrintData({
+        ...printPayload,
+        partyName:
+          printPayload.partyName || row.Party_Name || printPayload.partyName,
+        partyId: printPayload.partyId || row.Party_Id || printPayload.partyId,
+      });
       setShowPrintDialog(true);
     } catch {
       toast.error("Unable to load print data");
@@ -907,19 +1121,34 @@ export const useSamplePrint = () => {
         form.setValue("wtRate", res.data.details[0].Wt_Rate || "");
         form.setValue("polish", res.data.details[0].Polish);
         form.setValue("image", res.data.details[0].Image);
+        const partyItem = form.getValues("itemType") === "0";
         form.setValue(
           "item",
-          (res.data.details[0].childrow || []).map((child: ChildRow) => ({
-            designId: res.data.details[0].Id,
-            itemId: child.Item_Id,
-            itemName: child.Item_Name,
-            itemGl: child.Item_GL,
-            itemShName: child.Item_Sh_Name,
-            itemQuantity: child.Qnty,
-            itemRate: child.Item_Rate != null ? String(child.Item_Rate) : "",
-            makingRate: "",
-            itemTotal: child.Item_Total != null ? String(child.Item_Total) : "",
-          }))
+          (res.data.details[0].childrow || []).map((child: ChildRow) => {
+            const quantity = Number(child.Qnty) || 0;
+            const rate = partyItem
+              ? "0.00"
+              : child.Item_Rate != null
+                ? String(child.Item_Rate)
+                : "";
+            const makingRate = "";
+            const itemTotal = (
+              quantity * (Number(rate) || 0) +
+              quantity * (Number(makingRate) || 0)
+            ).toFixed(2);
+
+            return {
+              designId: res.data.details[0].Id,
+              itemId: child.Item_Id,
+              itemName: child.Item_Name,
+              itemGl: child.Item_GL,
+              itemShName: child.Item_Sh_Name,
+              itemQuantity: child.Qnty,
+              itemRate: rate,
+              makingRate,
+              itemTotal,
+            };
+          })
         );
       } else {
         dispatch(getOrderDesignDetailsData([]));
@@ -936,6 +1165,8 @@ export const useSamplePrint = () => {
   ) => {
     setAddSamplePrintLoading(true);
 
+    const partyItem = values.itemType === "0";
+
     const itemDataList = (values.item || []).map((itemData) => ({
       design_id: itemData.designId || values.designId || null,
       qnty: null,
@@ -948,10 +1179,12 @@ export const useSamplePrint = () => {
       item_id: itemData.itemId,
       Item_Gl: itemData.itemGl,
       item_qnty: itemData.itemQuantity,
-      item_rate: itemData.itemRate,
-      item_tot: itemData.itemTotal,
-      item_grand_tot: itemData.itemTotal,
-      making_rate: itemData.makingRate,
+      item_rate: partyItem ? "0.00" : itemData.itemRate,
+      item_tot: toTwoDecimalString(itemData.itemTotal) || itemData.itemTotal,
+      item_grand_tot:
+        toTwoDecimalString(itemData.itemTotal) || itemData.itemTotal,
+      making_rate:
+        toTwoDecimalString(itemData.makingRate) || itemData.makingRate,
     }));
 
     const designDetails = values.designId
@@ -959,13 +1192,17 @@ export const useSamplePrint = () => {
           {
             design_id: values.designId,
             qnty: "1",
-            wt_rate: values.wtRate || null,
-            wt: values.wt || null,
-            tot_wt:
-              (Number(values.wt) || 0) * (Number(values.wtRate) || 0) || null,
-            polish_rate: values.polish || null,
-            tot_polish: values.polish || null,
-            qnty_rate: values.totalRate || null,
+            wt_rate: toTwoDecimalString(values.wtRate) || values.wtRate || null,
+            wt: toTwoDecimalString(values.wt) || values.wt || null,
+            tot_wt: toTwoDecimalString(
+              (Number(values.wt) || 0) * (Number(values.wtRate) || 0)
+            ) || null,
+            polish_rate:
+              toTwoDecimalString(values.polish) || values.polish || null,
+            tot_polish:
+              toTwoDecimalString(values.polish) || values.polish || null,
+            qnty_rate:
+              toTwoDecimalString(values.totalRate) || values.totalRate || null,
             item_id: null,
             Item_Gl: null,
             item_qnty: null,
@@ -1077,11 +1314,21 @@ export const useSamplePrint = () => {
             ? res.data.details
             : [];
 
-        let mapped: SamplePrintTableData[] = list.map((row: Record<string, any>) =>
-          mapHistoryRow(row, undefined)
+        let mapped: SamplePrintTableData[] = list.map(
+          (row: Record<string, any>) => {
+            const nested =
+              row.sample_print ||
+              row.Sample_Print ||
+              row.sampleprint_array ||
+              row.SamplePrint_Array;
+            const source = Array.isArray(nested) && nested.length > 0
+              ? mergeSamplePrintRows(nested, row)
+              : row;
+            return mapHistoryRow(source, undefined);
+          }
         );
 
-        // If API omits design/total/type on the newest row, fill from the just-saved form.
+        // If the list omits design/total/type on the newest row, fill from the just-saved form.
         if (fallbackPrintData && mapped.length > 0) {
           let newestIndex = 0;
           for (let i = 1; i < mapped.length; i += 1) {
@@ -1107,13 +1354,6 @@ export const useSamplePrint = () => {
               fallbackPrintData
             );
           }
-
-          if (mapped[newestIndex]?.Sample_No) {
-            cacheSamplePrintData(
-              mapped[newestIndex].Sample_No,
-              fallbackPrintData
-            );
-          }
         }
 
         dispatch(getSamplePrintData(mapped));
@@ -1123,7 +1363,6 @@ export const useSamplePrint = () => {
             1
         );
 
-        // Dynamically fill missing design details for history rows.
         const designIds: string[] = Array.from(
           new Set(
             mapped
@@ -1132,8 +1371,6 @@ export const useSamplePrint = () => {
                   row.Design_Id &&
                   (!row.Design_Name ||
                     !row.Design_No ||
-                    !row.printData?.item?.length ||
-                    // Need WT/Polish from design so list Total matches print Grand Total
                     !(Number(row.Wt) || Number(row.Polish)))
               )
               .map((row: SamplePrintTableData) => String(row.Design_Id))
@@ -1172,17 +1409,6 @@ export const useSamplePrint = () => {
                 : null;
               if (!detail) return row;
 
-              const designId = String(
-                pickValue(detail.Id, detail.Design_Id, row.Design_Id, "")
-              );
-              const items = mapChildItems(
-                detail.childrow || detail.ItemRow || [],
-                designId
-              );
-              const itemsTotal = items.reduce(
-                (sum, item) => sum + (Number(item.itemTotal) || 0),
-                0
-              );
               const wt = String(
                 pickValue(row.Wt, detail.WT, detail.Wt, "")
               );
@@ -1192,10 +1418,6 @@ export const useSamplePrint = () => {
               const polish = String(
                 pickValue(row.Polish, detail.Polish, "")
               );
-              // List/API Total is items-only. If WT was already on the row,
-              // mapHistoryRow may have turned Total into a grand total — strip
-              // WT/Polish so we never double-count. Prefer API items over design
-              // master item sums (those can differ from the saved sample print).
               const hadWtBefore =
                 !!(Number(row.Wt) || Number(row.Wt_Rate) || Number(row.Polish));
               const stored = Number(row.Total) || 0;
@@ -1204,9 +1426,7 @@ export const useSamplePrint = () => {
                 (Number(polish) || 0);
               const itemsBase = hadWtBefore
                 ? Math.max(0, stored - additive)
-                : stored > 0
-                  ? stored
-                  : itemsTotal;
+                : stored;
               const grandTotal = computeSamplePrintGrandTotal(
                 itemsBase,
                 wt,
@@ -1214,7 +1434,7 @@ export const useSamplePrint = () => {
                 polish
               );
 
-              const enriched: SamplePrintTableData = {
+              return {
                 ...row,
                 Design_Name:
                   row.Design_Name ||
@@ -1227,52 +1447,8 @@ export const useSamplePrint = () => {
                 Wt: toTwoDecimalString(wt) || wt,
                 Wt_Rate: toTwoDecimalString(wtRate) || wtRate,
                 Polish: toTwoDecimalString(polish) || polish,
-                Total: grandTotal,
-                DesignRow: [
-                  {
-                    Design_Id: Number(designId) || 0,
-                    Design_Name: String(
-                      pickValue(detail.Design_Name, row.Design_Name, "")
-                    ),
-                    Design_No: String(
-                      pickValue(detail.Design_No, row.Design_No, "")
-                    ),
-                    Wt: wt,
-                    Wt_Rate: wtRate,
-                    Polish: polish,
-                    Image: String(
-                      pickValue(detail.Image, detail.image, row.Image, "")
-                    ),
-                    ItemRow: items.map((item) => ({
-                      Item_Id: Number(item.itemId) || 0,
-                      Item_Name: item.itemName,
-                      Item_GL: item.itemGl,
-                      Item_Sh_Name: item.itemShName,
-                      Item_Qnty: item.itemQuantity,
-                      Item_Rate: item.itemRate,
-                      Making_Rate: item.makingRate,
-                      Item_Tot: item.itemTotal,
-                    })),
-                  },
-                ],
+                Total: grandTotal || row.Total,
               };
-
-              if (!enriched.printData && items.length > 0) {
-                enriched.printData = serializePrintData({
-                  ...mapRowToPrintData(enriched),
-                  item: items,
-                  totalRate: enriched.Total,
-                });
-              }
-
-              if (enriched.Sample_No && enriched.printData) {
-                cacheSamplePrintData(
-                  enriched.Sample_No,
-                  deserializePrintData(enriched.printData)
-                );
-              }
-
-              return enriched;
             });
 
             dispatch(getSamplePrintData(mapped));
@@ -1307,30 +1483,43 @@ export const useSamplePrint = () => {
     );
   }, [partyId]);
 
+  // Party item: force rate to 0.00 whenever item type or rows change.
   useEffect(() => {
-    if (item) {
-      item.forEach((_, index) => {
-        const total = calculateTotal(index);
-        const currentTotal = item[index]?.itemTotal;
-        if (currentTotal !== total.toFixed(2)) {
-          form.setValue(`item.${index}.itemTotal`, total.toFixed(2));
-        }
-      });
-    }
-  }, [item, form]);
+    if (!isPartyItem || !item?.length) return;
+    item.forEach((row, index) => {
+      if (row?.itemRate !== "0.00") {
+        form.setValue(`item.${index}.itemRate`, "0.00", {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+      }
+    });
+  }, [isPartyItem, item, form]);
 
+  // Recalculate row totals + total rate whenever rate / making rate / wt fields change.
   useEffect(() => {
-    if (item) {
-      let totalRate =
-        item.reduce((acc, item) => {
-          const rate = item.itemTotal ? parseFloat(item.itemTotal) : 0;
-          return acc + rate;
-        }, 0) +
-        (Number(wt) || 0) * (Number(wtRate) || 0) +
-        (Number(polish) || 0);
-      form.setValue("totalRate", totalRate.toString());
-    }
-  }, [item, polish, wt, wtRate, form]);
+    syncItemTotalsAndTotalRate();
+
+    const subscription = form.watch((_value, info) => {
+      const name = info?.name;
+      if (!name) return;
+
+      const touchesItemCalc =
+        name.startsWith("item.") &&
+        (name.endsWith(".itemRate") ||
+          name.endsWith(".makingRate") ||
+          name.endsWith(".itemQuantity") ||
+          name === "item");
+      const touchesHeaderCalc =
+        name === "wt" || name === "wtRate" || name === "polish";
+
+      if (touchesItemCalc || touchesHeaderCalc) {
+        syncItemTotalsAndTotalRate();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, item?.length]);
 
   useResetFormOnModalClose(showDesignDialog, () => {
     if (keepDesignSelectionRef.current) {
