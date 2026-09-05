@@ -66,19 +66,24 @@ const RadioField = <T extends FieldValues>({
                 isInvalid={!!fieldState?.error?.message}
                 value={field.value}
                 onValueChange={(value) => {
+                  if (isDisabled) return;
                   field.onChange(value);
                   onValueChange?.(value);
                 }}
                 color={color}
                 size={size}
                 orientation={orientation}
-                isReadOnly={isDisabled}
+                isDisabled={isDisabled}
                 classNames={{
                   wrapper: "bg-transparent gap-4",
                 }}
               >
                 {options.map((option) => (
-                  <Radio key={option.value} value={option.value}>
+                  <Radio
+                    key={option.value}
+                    value={option.value}
+                    isDisabled={isDisabled}
+                  >
                     {option.label}
                   </Radio>
                 ))}

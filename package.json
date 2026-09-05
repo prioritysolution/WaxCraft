@@ -64,6 +64,8 @@
   "overrides": {
     "form-data": "^4.0.6",
     "ajv": "^6.14.0",
+    "@humanfs/node": "0.16.8",
+    "postcss-selector-parser": "6.1.4",
     "@eslint/eslintrc": {
       "brace-expansion": "1.1.18"
     }

@@ -1,0 +1,233 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: inherit;
+}
+
+@layer base {
+  :root {
+    --background: 24 33% 96%;
+    --foreground: 17 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 17 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 17 25% 10%;
+    --primary: 17 79% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 24 33% 88%;
+    --secondary-foreground: 24 33% 9%;
+    --muted: 24 20% 94%;
+    --muted-foreground: 17 10% 42%;
+    --accent: 17 79% 96%;
+    --accent-foreground: 17 79% 28%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 24 18% 86%;
+    --input: 24 18% 86%;
+    --ring: 17 79% 54%;
+    --chart-1: 17 79% 54%;
+    --chart-2: 24 33% 48%;
+    --chart-3: 17 40% 28%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.75rem;
+    --sidebar-background: 17 22% 10%;
+    --sidebar-foreground: 24 20% 92%;
+    --sidebar-primary: 17 79% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 17 18% 16%;
+    --sidebar-accent-foreground: 24 20% 96%;
+    --sidebar-border: 17 14% 18%;
+    --sidebar-ring: 17 79% 54%;
+  }
+  .dark {
+    --background: 17 18% 8%;
+    --foreground: 24 20% 96%;
+    --card: 17 16% 11%;
+    --card-foreground: 24 20% 96%;
+    --popover: 17 16% 11%;
+    --popover-foreground: 24 20% 96%;
+    --primary: 17 79% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 17 14% 16%;
+    --secondary-foreground: 24 20% 96%;
+    --muted: 17 12% 16%;
+    --muted-foreground: 24 10% 65%;
+    --accent: 17 20% 18%;
+    --accent-foreground: 24 20% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 17 12% 18%;
+    --input: 17 12% 18%;
+    --ring: 17 79% 54%;
+    --chart-1: 17 79% 54%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 17 22% 8%;
+    --sidebar-foreground: 24 20% 92%;
+    --sidebar-primary: 17 79% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 17 18% 14%;
+    --sidebar-accent-foreground: 24 20% 96%;
+    --sidebar-border: 17 14% 16%;
+    --sidebar-ring: 17 79% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  body {
+    @apply min-h-screen overflow-x-hidden;
+  }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+* {
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+input[type="number"] {
+  position: relative;
+}
+
+input[type="number"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+input[type="number"]:hover::after,
+input[type="number"]:focus::after {
+  pointer-events: all;
+}
+
+.overflow-clip > .relative {
+  overflow: hidden;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+@layer utilities {
+  .table-scroll-x {
+    @apply overflow-x-auto max-w-full;
+  }
+
+  .page-surface {
+    @apply rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+  }
+
+  .wc-modal-footer > button {
+    @apply !h-9 !w-full min-w-0 sm:!w-auto sm:min-w-[8rem];
+  }
+
+  /*
+   * Absolute max-height (not %) so the nested form/body can shrink and
+   * overflow-y-auto on the body actually produces a scrollbar.
+   */
+  .wc-form-modal {
+    display: flex;
+    min-height: 0;
+    max-height: min(88dvh, calc(100dvh - 1.5rem));
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .wc-form-modal form {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    max-height: min(88dvh, calc(100dvh - 1.5rem));
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .wc-form-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer components {
+  table[aria-label] thead tr {
+    @apply bg-[#F7F5F3];
+  }
+
+  table[aria-label] thead th {
+    @apply h-11 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  table[aria-label] tbody tr {
+    @apply border-b border-black/[0.05] transition-colors hover:bg-[#F7F5F3]/80;
+  }
+
+  table[aria-label] tbody td {
+    @apply py-3.5 text-sm text-foreground;
+  }
+
+  [data-slot="input-wrapper"],
+  [data-slot="inner-wrapper"] {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.28);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.45);
+  }
+}
