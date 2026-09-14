@@ -12,20 +12,14 @@ import { DesignProps, DesignTableData } from "@/types/master/DesignTypes";
 import { Button } from "@heroui/react";
 import { Palette, Printer } from "lucide-react";
 import { FC, useState } from "react";
-import { useSelector } from "react-redux";
 import DesignForm from "./DesignForm";
 import DesignTable from "./DesignTable";
 import PreviewModal from "./PreviewModal";
 
-interface DesignState {
-  designData: DesignTableData[];
-}
-
-interface RootState {
-  design: DesignState;
-}
-
 const Design: FC<DesignProps> = ({
+  refreshDesignDetails,
+  handlePrintDesigns,
+  printLoading = false,
   addDesignLoading,
   updateDesignLoading,
   loading,
@@ -65,10 +59,18 @@ const Design: FC<DesignProps> = ({
   onPerPageChange,
 }) => {
   const [showPrintDialog, setShowPrintDialog] = useState(false);
-  const designData: DesignTableData[] = useSelector(
-    (state: RootState) => state?.design?.designData,
+  const [printDesignData, setPrintDesignData] = useState<DesignTableData[]>(
+    [],
   );
-  const safeDesignData = Array.isArray(designData) ? designData : [];
+
+  const handlePrintPress = async () => {
+    if (!handlePrintDesigns) return;
+    const rows = await handlePrintDesigns();
+    if (rows.length > 0) {
+      setPrintDesignData(rows);
+      setShowPrintDialog(true);
+    }
+  };
 
   return (
     <PageShell>
@@ -84,8 +86,13 @@ const Design: FC<DesignProps> = ({
               variant="bordered"
               className={cn(secondaryButtonClassName)}
               startContent={<Printer className="h-4 w-4" />}
-              onPress={() => setShowPrintDialog(true)}
-              isDisabled={loading || safeDesignData.length === 0}
+              onPress={() => {
+                void handlePrintPress();
+              }}
+              isLoading={printLoading}
+              isDisabled={
+                printLoading || loading || totalCount === 0 || !handlePrintDesigns
+              }
               aria-label="Print design list"
             >
               Print
@@ -121,6 +128,7 @@ const Design: FC<DesignProps> = ({
       />
       <DesignTable
         handleEditData={handleEditData}
+        refreshDesignDetails={refreshDesignDetails}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         lastPage={lastPage}
@@ -139,11 +147,9 @@ const Design: FC<DesignProps> = ({
       />
 
       <PreviewModal
-        designData={safeDesignData}
+        designData={printDesignData}
         showPrintDialog={showPrintDialog}
         setShowPrintDialog={setShowPrintDialog}
-        currentPage={currentPage}
-        perPage={perPage}
       />
     </PageShell>
   );

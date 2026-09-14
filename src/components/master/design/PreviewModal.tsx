@@ -23,16 +23,12 @@ interface PreviewModalProps {
   designData: DesignTableData[];
   showPrintDialog: boolean;
   setShowPrintDialog: Dispatch<SetStateAction<boolean>>;
-  currentPage: number;
-  perPage: number;
 }
 
 const PreviewModal: FC<PreviewModalProps> = ({
   designData,
   showPrintDialog,
   setShowPrintDialog,
-  currentPage,
-  perPage,
 }) => {
   const [orgName, setOrgName] = useState<string | null>(null);
   const [orgAddress, setOrgAddress] = useState<string | null>(null);
@@ -86,6 +82,7 @@ const PreviewModal: FC<PreviewModalProps> = ({
                     <th className={printThClass}>Design Name</th>
                     <th className={printThClass}>Design No</th>
                     <th className={`${printThClass} text-right`}>WT</th>
+                    <th className={`${printThClass} text-right`}>WT Rate</th>
                     <th className={`${printThClass} text-right`}>Polish</th>
                     <th className={`${printThClass} text-right`}>Total Rate</th>
                     <th className={`${printThClass} text-center`}>Design Image</th>
@@ -95,15 +92,15 @@ const PreviewModal: FC<PreviewModalProps> = ({
                   {pageRows.map((data, index) => (
                     <tr key={data.Id || startIndex + index}>
                       <td className={printTdClass}>
-                        {formatTableSerial(startIndex + index, {
-                          currentPage,
-                          perPage,
-                        })}
+                        {formatTableSerial(startIndex + index)}
                       </td>
                       <td className={printTdClass}>{data.Design_Name || "—"}</td>
                       <td className={printTdClass}>{data.Design_No || "—"}</td>
                       <td className={`${printTdClass} text-right`}>
                         {formatTwoDecimals(data.WT)}
+                      </td>
+                      <td className={`${printTdClass} text-right`}>
+                        {formatTwoDecimals(data.Wt_Rate)}
                       </td>
                       <td className={`${printTdClass} text-right`}>
                         {formatTwoDecimals(data.Polish)}
@@ -129,7 +126,7 @@ const PreviewModal: FC<PreviewModalProps> = ({
                   {!pageRows.length ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className={`${printTdClass} py-8 text-center text-muted-foreground`}
                       >
                         No designs found.

@@ -43,13 +43,6 @@ const formatPrintDate = (value?: string) => {
   return isValid(parsed) ? format(parsed, "dd-MM-yyyy") : value;
 };
 
-const itemTypeLabel = (value?: string | number) => {
-  const normalized = String(value ?? "").trim();
-  if (normalized === "1") return "Own Item";
-  if (normalized === "0") return "Party Item";
-  return normalized || "—";
-};
-
 const SamplePrintTable: FC<SamplePrintTableProps> = ({
   loading,
   handleShowPrintFromHistory,
@@ -104,8 +97,7 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
           <TableColumn align="center">Party Name</TableColumn>
           <TableColumn align="center">Design Name</TableColumn>
           <TableColumn align="center">Design No.</TableColumn>
-          <TableColumn align="center">Item Type</TableColumn>
-          <TableColumn align="center">Total</TableColumn>
+          <TableColumn align="center">Total Rate</TableColumn>
           <TableColumn align="center">Actions</TableColumn>
         </TableHeader>
         <TableBody
@@ -146,7 +138,6 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
                   return data.Design_No || "—";
                 })()}
               </TableCell>
-              <TableCell>{itemTypeLabel(data.Item_Type)}</TableCell>
               <TableCell>{formatTwoDecimals(data.Total)}</TableCell>
               <TableCell>
                 <div className="flex items-center justify-center gap-2">

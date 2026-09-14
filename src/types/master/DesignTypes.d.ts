@@ -16,6 +16,9 @@ export interface DesignFormData {
 }
 
 export interface DesignProps {
+  refreshDesignDetails?: (data: DesignTableData) => void | Promise<void>;
+  handlePrintDesigns?: () => Promise<DesignTableData[]>;
+  printLoading?: boolean;
   addDesignLoading: boolean;
   updateDesignLoading: boolean;
   loading: boolean;
@@ -80,6 +83,7 @@ export interface DesignFormProps {
 
 export interface DesignTableProps {
   handleEditData: (data: DesignTableData) => void;
+  refreshDesignDetails?: (data: DesignTableData) => void | Promise<void>;
   currentPage: number;
   setCurrentPage: Dispatch<SetStateAction<number>>;
   lastPage: number;

@@ -8,8 +8,13 @@ import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
 import { DesignFormData, DesignTableData } from "@/types/master/DesignTypes";
 import { ApiResponse } from "@/types/ApiTypes";
-import { getDesignData } from "./DesignReducer";
+import { getDesignData, patchDesignRow } from "./DesignReducer";
 import { addDesignAPI, deleteDesignAPI, getDesignAPI, updateDesignAPI } from "./DesignApis";
+import { getDesignDetailsAPI } from "@/container/inventoryVoucher/orderBooking/OrderBookingApis";
+import {
+  enrichDesignRowsWithItemRates,
+  enrichSingleDesignWithItemRates,
+} from "@/utils/designItemRates";
 import { ItemTableData } from "@/types/master/ItemTypes";
 import { decimalRegex } from "@/utils/validationRegex";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
@@ -20,6 +25,8 @@ import {
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
 
+const DESIGN_LIST_PER_PAGE = 50;
+
 interface ItemState {
   itemData: ItemTableData[];
 }
@@ -27,8 +34,6 @@ interface ItemState {
 interface RootState {
   item: ItemState;
 }
-
-const DESIGN_LIST_PER_PAGE = 50;
 
 const DESIGN_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const DESIGN_IMAGE_ALLOWED_EXTENSIONS = [
@@ -138,6 +143,7 @@ export const useDesign = () => {
   const [designFormTableData, setDesignFormTableData] = useState<any[]>([]);
 
   const [photoPreview, setPhotoPreview] = useState<string | undefined>();
+  const [printLoading, setPrintLoading] = useState(false);
 
   const itemData: ItemTableData[] = useSelector(
     (state: RootState) => state?.item?.itemData,
@@ -425,6 +431,46 @@ export const useDesign = () => {
     }
   };
 
+  const fetchAllDesignsForPrint = async (
+    orgId: number,
+    keyword: string,
+    pageSize: number,
+  ): Promise<DesignTableData[]> => {
+    const allRows: DesignTableData[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    do {
+      const res: ApiResponse = await getDesignAPI(
+        orgId,
+        page,
+        keyword,
+        pageSize,
+      );
+
+      if (res.status !== 200) break;
+
+      const details = res.data.details;
+      const rows = Array.isArray(details)
+        ? details
+        : Array.isArray(details?.data)
+          ? details.data
+          : [];
+
+      allRows.push(...rows);
+      totalPages = Array.isArray(details)
+        ? 1
+        : Number(details?.last_page) > 0
+          ? Number(details.last_page)
+          : 1;
+      page += 1;
+    } while (page <= totalPages);
+
+    if (!allRows.length) return [];
+
+    return enrichDesignRowsWithItemRates(orgId, allRows, getDesignDetailsAPI);
+  };
+
   const getDesignApiCall = async (
     orgId: number,
     page: number,
@@ -448,7 +494,14 @@ export const useDesign = () => {
             ? details.data
             : [];
 
-        dispatch(getDesignData(rows));
+        // Sample Print uses GetDesignDetails for Item_Rate; list API often returns 0.
+        const enrichedRows = await enrichDesignRowsWithItemRates(
+          orgId,
+          rows,
+          getDesignDetailsAPI,
+        );
+
+        dispatch(getDesignData(enrichedRows));
         setLastPage(
           Array.isArray(details)
             ? 1
@@ -475,6 +528,46 @@ export const useDesign = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePrintDesigns = async (): Promise<DesignTableData[]> => {
+    if (!orgId) {
+      toast.error("Something went wrong");
+      return [];
+    }
+
+    setPrintLoading(true);
+    try {
+      const rows = await fetchAllDesignsForPrint(
+        orgId,
+        designTableInput,
+        perPage,
+      );
+      if (!rows.length) {
+        toast.error("No designs to print");
+      }
+      return rows;
+    } catch {
+      toast.error("Something went wrong");
+      return [];
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
+  const refreshDesignDetails = async (row: DesignTableData) => {
+    if (!orgId) return;
+
+    try {
+      const enriched = await enrichSingleDesignWithItemRates(
+        orgId,
+        row,
+        getDesignDetailsAPI,
+      );
+      dispatch(patchDesignRow(enriched));
+    } catch {
+      // Keep existing row data if detail refresh fails.
     }
   };
 
@@ -569,6 +662,9 @@ export const useDesign = () => {
 
   return {
     getDesignApiCall,
+    refreshDesignDetails,
+    handlePrintDesigns,
+    printLoading,
     addDesignLoading,
     updateDesignLoading,
     loading,

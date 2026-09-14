@@ -1,17 +1,63 @@
-import { DesignTableData } from "@/types/master/DesignTypes";
+import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
+import { pickChildItemRate } from "@/utils/designItemRates";
+
+type ChildLoose = ChildRow & Record<string, unknown>;
+type DesignLoose = DesignTableData & Record<string, unknown>;
 
 const toNum = (value: unknown): number => {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 };
 
+const pickNum = (...values: unknown[]): number => {
+  for (const value of values) {
+    if (value == null || value === "") continue;
+    const n = toNum(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+};
+
+export const getDesignChildQty = (child: ChildRow): number => {
+  const row = child as ChildLoose;
+  return pickNum(row.Qnty, row.qnty, row.Quantity, row.quantity);
+};
+
+export const getDesignChildItemRate = (child: ChildRow): number => {
+  const rate = pickChildItemRate(child as ChildLoose);
+  return rate ? toNum(rate) : 0;
+};
+
+export const getDesignChildMakingRate = (child: ChildRow): number => {
+  const row = child as ChildLoose;
+  return pickNum(
+    row.Making_Rate,
+    row.making_rate,
+    row.MakingRate,
+    row.makingRate,
+  );
+};
+
+/** Same row total as sample print / order booking: qty × rate + qty × making */
+export const getDesignItemLineTotal = (child: ChildRow): number => {
+  const qty = getDesignChildQty(child);
+  return (
+    qty * getDesignChildItemRate(child) + qty * getDesignChildMakingRate(child)
+  );
+};
+
+/** Σ of item line totals (Item Grand Total in sample print). */
+export const getDesignItemsSum = (data: DesignTableData): number =>
+  (data.childrow ?? []).reduce(
+    (acc, child) => acc + getDesignItemLineTotal(child),
+    0,
+  );
+
 /** Same total as order booking / sample print: Σ(qty×rate + qty×making) + WT×Wt_Rate + Polish */
 export const getDesignTotalRate = (data: DesignTableData): number => {
-  const itemsSum = (data.childrow ?? []).reduce((acc, child) => {
-    const qty = toNum(child.Qnty);
-    return acc + qty * toNum(child.Item_Rate) + qty * toNum(child.Making_Rate);
-  }, 0);
+  const row = data as DesignLoose;
   const designExtras =
-    toNum(data.WT) * toNum(data.Wt_Rate) + toNum(data.Polish);
-  return itemsSum + designExtras;
+    pickNum(row.WT, row.wt) * pickNum(row.Wt_Rate, row.wt_rate, row.WtRate) +
+    pickNum(row.Polish, row.polish);
+  return getDesignItemsSum(data) + designExtras;
 };

@@ -27,6 +27,7 @@ import { getSamplePrintData } from "./SamplePrintReducer";
 import getCookieData from "@/utils/getCookieData";
 import { format } from "date-fns";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { computeSamplePrintHistoryTotal } from "@/utils/samplePrintTotal";
 
 /** Design item rates can include up to 3 decimal places (e.g. 0.250). */
 const itemRateRegex = /^\d+(\.\d{1,3})?$/;
@@ -340,10 +341,25 @@ const mergeSamplePrintRows = (
     flatRows[0] ||
     {};
 
+  const printId = pickValue(
+    wrapper.Print_Id,
+    wrapper.print_id,
+    wrapper.sampleprint_id,
+    printSlip.Print_Id,
+    printSlip.print_id,
+    header.Print_Id,
+    header.print_id,
+    wrapper.Id,
+    wrapper.id,
+    header.Id,
+    header.id,
+  );
+
   return {
     ...wrapper,
     ...printSlip,
     ...header,
+    ...(printId ? { Print_Id: printId, Id: printId } : {}),
     DesignRow: (designRows.length > 0 ? designRows : [header]).map(
       (design) => ({
         ...design,
@@ -435,6 +451,102 @@ const mapChildItems = (
     ),
   }));
 
+/** Reject client-generated ids (e.g. Date.now()) — API expects GetSamplePrint ids. */
+const isLikelyClientTimestampId = (value: unknown): boolean => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return true;
+  return n >= 1_000_000_000_000;
+};
+
+const resolveSamplePrintRowId = (row: Record<string, unknown>): number => {
+  const candidates = [
+    row.Print_Id,
+    row.print_id,
+    row.sampleprint_id,
+    row.SamplePrint_Id,
+    row.sample_print_id,
+    row.Id,
+    row.id,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate == null || String(candidate).trim() === "") continue;
+    const n = Number(candidate);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    if (isLikelyClientTimestampId(n)) continue;
+    return n;
+  }
+
+  return 0;
+};
+
+const historyRowHasItemRows = (row: SamplePrintTableData): boolean =>
+  (row.DesignRow || []).some(
+    (design) => Array.isArray(design.ItemRow) && design.ItemRow.length > 0,
+  );
+
+const historyTotalLooksInvalid = (total: unknown): boolean => {
+  const n = Number(total);
+  if (!Number.isFinite(n) || n <= 0) return true;
+  // List API sometimes exposes phone/order ids in total-like fields.
+  if (n >= 1_000_000) return true;
+  return false;
+};
+
+const finalizeHistoryRowTotal = (
+  row: SamplePrintTableData,
+): SamplePrintTableData => {
+  const recomputed = computeSamplePrintHistoryTotal(
+    row as unknown as Record<string, unknown>,
+    (row.DesignRow || []) as unknown as Record<string, unknown>[],
+  );
+  if (recomputed > 0 && !historyTotalLooksInvalid(recomputed)) {
+    return { ...row, Total: recomputed.toFixed(2) };
+  }
+  return row;
+};
+
+const enrichHistoryRowsFromPrintDetails = async (
+  orgId: number,
+  rows: SamplePrintTableData[],
+): Promise<SamplePrintTableData[]> =>
+  Promise.all(
+    rows.map(async (row) => {
+      const finalized = finalizeHistoryRowTotal(row);
+      if (
+        historyRowHasItemRows(finalized) &&
+        !historyTotalLooksInvalid(finalized.Total)
+      ) {
+        return finalized;
+      }
+
+      const printId = resolveSamplePrintRowId(
+        row as unknown as Record<string, unknown>,
+      );
+      if (!printId) {
+        return finalized;
+      }
+
+      try {
+        const detailRes: ApiResponse = await getSamplePrintDetailsAPI(
+          orgId,
+          printId,
+        );
+        const payload = resolveSamplePrintDetailsPayload(
+          detailRes.data.details,
+        );
+        if (detailRes.status === 200 && payload) {
+          const remapped = mapHistoryRow(payload, undefined);
+          return finalizeHistoryRowTotal({ ...row, ...remapped });
+        }
+      } catch {
+        // Keep list row when detail fetch fails.
+      }
+
+      return finalized;
+    }),
+  );
+
 const mapHistoryRow = (
   row: Record<string, any>,
   fallbackPrintData?: SamplePrintFormData
@@ -469,7 +581,7 @@ const mapHistoryRow = (
   const fallback = fallbackPrintData || undefined;
 
   return {
-    Id: Number(pickValue(row.Id, row.id, Date.now())),
+    Id: resolveSamplePrintRowId(row),
     Print_Date: String(printDate),
     Sample_No: sampleNo,
     Party_Name: String(
@@ -544,57 +656,16 @@ const mapHistoryRow = (
       );
     })(),
     Total: (() => {
-      const itemsTotal = pickValue(
-        row.Total_Amt,
-        row.Total_Order,
-        row.Total,
-        row.Grand_Total,
-        row.Sample_Total,
-        ""
-      );
-      const wtVal = pickValue(
-        row.Wt,
-        designRow.Wt,
-        designRow.wt,
-        designRow.WT,
-        fallback?.wt,
-        ""
-      );
-      const wtRateVal = pickValue(
-        row.Wt_Rate,
-        designRow.Wt_Rate,
-        designRow.wt_rate,
-        fallback?.wtRate,
-        ""
-      );
-      const polishVal = pickValue(
-        row.Polish,
-        designRow.Polish,
-        designRow.polish_rate,
-        designRow.polish,
-        fallback?.polish,
-        ""
-      );
-      // API Total is items-only; add WT * rate + Polish (same as PrintModal).
-      // fallback.totalRate is already a full grand total - use it only when API Total is absent.
-      if (itemsTotal !== "" && itemsTotal != null) {
-        return (
-          computeSamplePrintGrandTotal(
-            itemsTotal,
-            wtVal,
-            wtRateVal,
-            polishVal
-          ) ||
-          toTwoDecimalString(itemsTotal) ||
-          ""
-        );
+      const computed = computeSamplePrintHistoryTotal(row, designRows);
+      if (computed > 0) {
+        return computed.toFixed(2);
       }
       if (fallback?.totalRate) {
-        return toTwoDecimalString(fallback.totalRate) || String(fallback.totalRate);
+        return (
+          toTwoDecimalString(fallback.totalRate) || String(fallback.totalRate)
+        );
       }
-      return (
-        computeSamplePrintGrandTotal("", wtVal, wtRateVal, polishVal) || ""
-      );
+      return "";
     })(),
     Item_Type: normalizeItemType(
       pickValue(
@@ -1292,7 +1363,9 @@ export const useSamplePrint = () => {
       return;
     }
 
-    const printId = String(pickValue(row.Id, ""));
+    const printId = resolveSamplePrintRowId(
+      row as unknown as Record<string, unknown>,
+    );
     if (!printId) {
       toast.error("Sample print not found");
       return;
@@ -1684,7 +1757,8 @@ export const useSamplePrint = () => {
           }
         }
 
-        dispatch(getSamplePrintData(mapped));
+        mapped = await enrichHistoryRowsFromPrintDetails(orgId, mapped);
+
         setLastPage(
           res.data.details?.pagination?.last_page ||
             res.data.details?.last_page ||
@@ -1746,23 +1820,7 @@ export const useSamplePrint = () => {
               const polish = String(
                 pickValue(row.Polish, detail.Polish, "")
               );
-              const hadWtBefore =
-                !!(Number(row.Wt) || Number(row.Wt_Rate) || Number(row.Polish));
-              const stored = Number(row.Total) || 0;
-              const additive =
-                (Number(wt) || 0) * (Number(wtRate) || 0) +
-                (Number(polish) || 0);
-              const itemsBase = hadWtBefore
-                ? Math.max(0, stored - additive)
-                : stored;
-              const grandTotal = computeSamplePrintGrandTotal(
-                itemsBase,
-                wt,
-                wtRate,
-                polish
-              );
-
-              return {
+              const enrichedRow = {
                 ...row,
                 Design_Name:
                   row.Design_Name ||
@@ -1775,13 +1833,24 @@ export const useSamplePrint = () => {
                 Wt: toTwoDecimalString(wt) || wt,
                 Wt_Rate: toTwoDecimalString(wtRate) || wtRate,
                 Polish: toTwoDecimalString(polish) || polish,
-                Total: grandTotal || row.Total,
               };
-            });
+              const recomputed = computeSamplePrintHistoryTotal(
+                enrichedRow,
+                enrichedRow.DesignRow || [],
+              );
 
-            dispatch(getSamplePrintData(mapped));
+              return finalizeHistoryRowTotal({
+                ...enrichedRow,
+                Total:
+                  recomputed > 0
+                    ? recomputed.toFixed(2)
+                    : enrichedRow.Total,
+              });
+            });
           }
         }
+
+        dispatch(getSamplePrintData(mapped.map(finalizeHistoryRowTotal)));
       } else {
         dispatch(getSamplePrintData([]));
       }

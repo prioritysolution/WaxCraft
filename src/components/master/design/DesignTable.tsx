@@ -18,7 +18,14 @@ import {
   DesignTableData,
   DesignTableProps,
 } from "@/types/master/DesignTypes";
-import { getDesignTotalRate } from "@/utils/designTotalRate";
+import {
+  getDesignChildItemRate,
+  getDesignChildMakingRate,
+  getDesignChildQty,
+  getDesignItemLineTotal,
+  getDesignItemsSum,
+  getDesignTotalRate,
+} from "@/utils/designTotalRate";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
@@ -98,6 +105,7 @@ const compareChildRowsBySizeAsc = (a: ChildRow, b: ChildRow): number => {
 
 const DesignTable: FC<DesignTableProps> = ({
   handleEditData,
+  refreshDesignDetails,
   currentPage,
   setCurrentPage,
   lastPage,
@@ -119,11 +127,18 @@ const DesignTable: FC<DesignTableProps> = ({
     null,
   );
 
-  const toggleRow = (id: number) => {
+  const toggleRow = (data: DesignTableData) => {
+    const id = data.Id;
+    const willOpen = !openRows[id];
+
     setOpenRows((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [id]: willOpen,
     }));
+
+    if (willOpen && refreshDesignDetails) {
+      void refreshDesignDetails(data);
+    }
   };
 
   const designData: DesignTableData[] = useSelector(
@@ -165,6 +180,7 @@ const DesignTable: FC<DesignTableProps> = ({
           <TableColumn align="center">Design Name</TableColumn>
           <TableColumn align="center">Design No</TableColumn>
           <TableColumn align="center">WT</TableColumn>
+          <TableColumn align="center">WT Rate</TableColumn>
           <TableColumn align="center">Polish</TableColumn>
           <TableColumn align="center">Total Rate</TableColumn>
           <TableColumn align="center">Design Image</TableColumn>
@@ -194,7 +210,7 @@ const DesignTable: FC<DesignTableProps> = ({
                     variant="light"
                     aria-label={isOpen ? "Collapse items" : "Expand items"}
                     className="h-8 w-8 min-w-8 text-muted-foreground"
-                    onPress={() => toggleRow(data.Id)}
+                    onPress={() => toggleRow(data)}
                   >
                     <ChevronRight
                       className={cn(
@@ -214,6 +230,7 @@ const DesignTable: FC<DesignTableProps> = ({
                 </TableCell>
                 <TableCell>{data.Design_No}</TableCell>
                 <TableCell>{formatTwoDecimals(data.WT)}</TableCell>
+                <TableCell>{formatTwoDecimals(data.Wt_Rate)}</TableCell>
                 <TableCell>{formatTwoDecimals(data.Polish)}</TableCell>
                 <TableCell>
                   {formatTwoDecimals(getDesignTotalRate(data))}
@@ -257,25 +274,32 @@ const DesignTable: FC<DesignTableProps> = ({
             ];
 
             if (isOpen) {
+              const itemsSum = getDesignItemsSum(data);
               const totalRate = getDesignTotalRate(data);
               rows.push(
                 <TableRow key={`${data.Id}-details`}>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="bg-[#F7F5F3]/70 px-5 py-3"
                   >
                     <div className="w-full overflow-hidden rounded-xl border border-black/[0.06] bg-white">
                       <table className="w-full table-fixed border-collapse text-center">
                         <thead>
                           <tr className="bg-[#F7F5F3]">
-                            <th className="w-[50%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            <th className="w-[36%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                               Item Name
                             </th>
-                            <th className="w-[25%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            <th className="w-[16%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                               Quantity
                             </th>
-                            <th className="w-[25%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            <th className="w-[16%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                              Rate
+                            </th>
+                            <th className="w-[16%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                               Making Rate
+                            </th>
+                            <th className="w-[16%] px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                              Total
                             </th>
                           </tr>
                         </thead>
@@ -292,17 +316,23 @@ const DesignTable: FC<DesignTableProps> = ({
                                   {child.Item_Sh_Name || child.Item_Name}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-sm text-foreground">
-                                  {child.Qnty}
+                                  {getDesignChildQty(child)}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-sm text-foreground">
-                                  {formatTwoDecimals(child.Making_Rate)}
+                                  {formatTwoDecimals(getDesignChildItemRate(child))}
+                                </td>
+                                <td className="px-4 py-2.5 text-center text-sm text-foreground">
+                                  {formatTwoDecimals(getDesignChildMakingRate(child))}
+                                </td>
+                                <td className="px-4 py-2.5 text-center text-sm tabular-nums text-foreground">
+                                  {formatTwoDecimals(getDesignItemLineTotal(child))}
                                 </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
                               <td
-                                colSpan={3}
+                                colSpan={5}
                                 className="px-4 py-6 text-center text-sm text-muted-foreground"
                               >
                                 No items found.
@@ -313,13 +343,24 @@ const DesignTable: FC<DesignTableProps> = ({
                         {data.childrow?.length ? (
                           <tfoot>
                             <tr className="border-t border-black/[0.08] bg-[#F7F5F3]/60">
-                              <td className="px-4 py-2.5 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                              <td
+                                colSpan={4}
+                                className="px-4 py-2.5 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
+                              >
+                                Item Grand Total
+                              </td>
+                              <td className="px-4 py-2.5 text-center text-sm font-semibold tabular-nums text-primary">
+                                {formatTwoDecimals(itemsSum)}
+                              </td>
+                            </tr>
+                            <tr className="bg-[#F7F5F3]/60">
+                              <td
+                                colSpan={4}
+                                className="px-4 py-2.5 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
+                              >
                                 Total Rate
                               </td>
-                              <td
-                                colSpan={2}
-                                className="px-4 py-2.5 text-center text-sm font-semibold tabular-nums text-primary"
-                              >
+                              <td className="px-4 py-2.5 text-center text-sm font-semibold tabular-nums text-primary">
                                 {formatTwoDecimals(totalRate)}
                               </td>
                             </tr>

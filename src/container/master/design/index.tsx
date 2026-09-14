@@ -47,6 +47,9 @@ const DesignContainer = () => {
     totalCount,
     perPage,
     handlePerPageChange,
+    refreshDesignDetails,
+    handlePrintDesigns,
+    printLoading,
   } = useDesign();
 
   const {
@@ -97,8 +100,11 @@ const DesignContainer = () => {
   }, [token, orgId, categoryId]);
 
   return (
-    <Design
-      addDesignLoading={addDesignLoading}
+      <Design
+        refreshDesignDetails={refreshDesignDetails}
+        handlePrintDesigns={handlePrintDesigns}
+        printLoading={printLoading}
+        addDesignLoading={addDesignLoading}
       updateDesignLoading={updateDesignLoading}
       loading={loading}
       form={form}
