@@ -3,12 +3,13 @@
 import { DatePickerField } from "@/common/formFields/DatePickerField";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import {
   pageFormClassName,
   formGridClassName,
+  reportActionButtonClassName,
 } from "@/lib/uiStyles";
 import { PurchaseReportFormProps } from "@/types/inventoryReport/PurchaseReportTypes";
-import { Button } from "@heroui/react";
 import { FC } from "react";
 import { useSelector } from "react-redux";
 
@@ -80,28 +81,22 @@ const PurchaseReportForm: FC<PurchaseReportFormProps> = ({
         </div>
 
         <div className="flex w-full items-center justify-end gap-2">
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className="w-full sm:w-40"
+          <FormSubmitButton
+            className={reportActionButtonClassName}
             isLoading={getPurchaseReportLoading}
             isDisabled={getPurchaseReportLoading}
           >
             Process
-          </Button>
+          </FormSubmitButton>
 
-          <Button
-            color="primary"
-            size="lg"
-            radius="sm"
-            className="w-full sm:w-40 bg-blue-500 text-white"
+          <FormSubmitButton
+            type="button"
+            className={`${reportActionButtonClassName} !bg-blue-500 text-white data-[hover=true]:!bg-blue-600`}
             onPress={() => setShowPrintDialog(true)}
             isDisabled={!(purchaseReportData.length > 0)}
           >
             Preview
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

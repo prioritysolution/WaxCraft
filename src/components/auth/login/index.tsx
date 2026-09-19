@@ -1,11 +1,12 @@
 "use client";
 
 import { FC, useState } from "react";
-import { Button, Link, Spinner } from "@heroui/react";
-import { IoEye, IoEyeOff } from "react-icons/io5";
+import { Link, Spinner } from "@heroui/react";
+import { Eye, EyeOff } from "lucide-react";
 
 import InputField from "@/common/formFields/InputField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { LoginProps } from "@/types/auth/LoginTypes";
 
 const Login: FC<LoginProps> = ({
@@ -73,9 +74,9 @@ const Login: FC<LoginProps> = ({
                     onClick={toggleVisibility}
                   >
                     {isVisible ? (
-                      <IoEyeOff className="pointer-events-none text-xl text-default-400" />
+                      <EyeOff className="pointer-events-none text-xl text-default-400" />
                     ) : (
-                      <IoEye className="pointer-events-none text-xl text-default-400" />
+                      <Eye className="pointer-events-none text-xl text-default-400" />
                     )}
                   </button>
                 }
@@ -90,17 +91,14 @@ const Login: FC<LoginProps> = ({
                 Forgot Password
               </Link>
 
-              <Button
-                type="submit"
-                color="primary"
+              <FormSubmitButton
                 radius="md"
-                size="lg"
                 className="mt-1 h-11 w-full bg-primary text-sm font-medium text-white"
                 isLoading={loading}
                 isDisabled={loading}
               >
                 Login
-              </Button>
+              </FormSubmitButton>
             </form>
           </Form>
         </div>

@@ -57,6 +57,56 @@ interface RootState {
   orderBooking: OrderBookingState;
 }
 
+const extractOrderIds = (details: unknown): string[] => {
+  if (details == null || details === "") return [];
+
+  if (typeof details === "string" || typeof details === "number") {
+    const value = String(details).trim();
+    if (!value) return [];
+    if (value.includes(",")) {
+      return value
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+    return [value];
+  }
+
+  if (Array.isArray(details)) {
+    return details.flatMap((item) => extractOrderIds(item)).filter(Boolean);
+  }
+
+  if (typeof details === "object") {
+    const record = details as Record<string, unknown>;
+    const candidates = [
+      record.Order_No,
+      record.order_no,
+      record.OrderNo,
+      record.orderNo,
+      record.Order_Id,
+      record.order_id,
+      record.OrderId,
+      record.orderId,
+      record.Id,
+      record.id,
+      record.order_nos,
+      record.Order_Nos,
+      record.orders,
+      record.Order_List,
+      record.order_list,
+      record.data,
+      record.details,
+    ];
+
+    for (const candidate of candidates) {
+      const ids = extractOrderIds(candidate);
+      if (ids.length) return Array.from(new Set(ids));
+    }
+  }
+
+  return [];
+};
+
 export const useOrderBooking = () => {
   const dispatch = useDispatch();
 
@@ -113,6 +163,9 @@ export const useOrderBooking = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [tempDeleteId, setTempDeleteId] = useState<number | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successOrderIds, setSuccessOrderIds] = useState<string[]>([]);
 
   const orderPartyData: OrderPartyData[] = useSelector(
     (state: RootState) => state?.orderBooking?.orderPartyData
@@ -277,6 +330,12 @@ export const useOrderBooking = () => {
     if (orgId && tempDeleteId != null) {
       deleteOrderApiCall(orgId, tempDeleteId);
     }
+  };
+
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    setSuccessMessage("");
+    setSuccessOrderIds([]);
   };
 
   const handleShowPartyForm = () => {
@@ -461,6 +520,7 @@ export const useOrderBooking = () => {
       const res: ApiResponse = await addOrderBookingAPI(data);
 
       if (res.status === 200) {
+        const orderIds = extractOrderIds(res.data.details);
         form.reset({
           orderDate: new Date(),
           partyId: "",
@@ -486,7 +546,11 @@ export const useOrderBooking = () => {
         setCurrentPage(1);
         setSelected("table");
         getOrderBookingApiCall(orgId, 1, "", perPage);
-        toast.success(res.data.message);
+        setSuccessMessage(
+          String(res.data.message || "Order booked successfully").trim(),
+        );
+        setSuccessOrderIds(orderIds);
+        setShowSuccessDialog(true);
       } else {
         toast.error(res.data.message);
       }
@@ -836,6 +900,11 @@ export const useOrderBooking = () => {
     setShowDeleteDialog,
     setTempDeleteId,
     handleDeleteOrder,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successOrderIds,
+    handleCloseSuccessDialog,
     currentOrderPartyPage,
     setCurrentOrderPartyPage,
     lastOrderPartyPage,

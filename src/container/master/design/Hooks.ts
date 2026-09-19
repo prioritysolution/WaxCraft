@@ -10,12 +10,18 @@ import { DesignFormData, DesignTableData } from "@/types/master/DesignTypes";
 import { ApiResponse } from "@/types/ApiTypes";
 import { getDesignData, patchDesignRow } from "./DesignReducer";
 import { addDesignAPI, deleteDesignAPI, getDesignAPI, updateDesignAPI } from "./DesignApis";
-import { getDesignDetailsAPI } from "@/container/inventoryVoucher/orderBooking/OrderBookingApis";
 import {
+  clearDesignDetailsCache,
+  getDesignDetailsAPI,
+} from "@/container/inventoryVoucher/orderBooking/OrderBookingApis";
+import { refreshPaginatedList } from "@/lib/refreshPaginatedList";
+import {
+  designRowNeedsDetailRefresh,
   enrichDesignRowsWithItemRates,
   enrichSingleDesignWithItemRates,
 } from "@/utils/designItemRates";
 import { ItemTableData } from "@/types/master/ItemTypes";
+import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
 import { decimalRegex } from "@/utils/validationRegex";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
 import {
@@ -24,6 +30,7 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 const DESIGN_LIST_PER_PAGE = 50;
 
@@ -31,11 +38,15 @@ interface ItemState {
   itemData: ItemTableData[];
 }
 
-interface RootState {
-  item: ItemState;
+interface ItemUnitState {
+  itemUnitData: ItemUnitTableData[];
 }
 
-const DESIGN_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+interface RootState {
+  item: ItemState;
+  itemUnit: ItemUnitState;
+}
+
 const DESIGN_IMAGE_ALLOWED_EXTENSIONS = [
   "png",
   "jpg",
@@ -61,10 +72,6 @@ const validateDesignImageFile = (file: File): string | null => {
     return "Only PNG, JPG, JPEG, WEBP, and GIF files are allowed";
   }
 
-  if (file.size > DESIGN_IMAGE_MAX_BYTES) {
-    return "Image size must be 2 MB or less";
-  }
-
   return null;
 };
 
@@ -82,6 +89,86 @@ const toScalarString = (value: unknown): string => {
   }
 
   return String(value);
+};
+
+/** Ghat is stored/displayed without forced two-decimal formatting. */
+const toGhatString = (value: unknown): string => {
+  if (value == null || value === "") return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return raw;
+  if (Number.isInteger(num)) return String(num);
+  return String(parseFloat(num.toFixed(6)));
+};
+
+const pickDesignUnitId = (
+  source: Record<string, unknown> | null | undefined,
+): string => {
+  if (!source) return "";
+
+  const candidates = [
+    source.Design_Unit,
+    source.design_unit,
+    source.DesignUnit,
+    source.Unit_Id,
+    source.unit_id,
+    source.UnitId,
+    source.unitId,
+    source.Deg_Unit_Id,
+    source.deg_unit_id,
+  ];
+
+  for (const candidate of candidates) {
+    const value = toScalarString(candidate).trim();
+    if (value) return value;
+  }
+
+  const unitValue = toScalarString(source.Unit ?? source.unit).trim();
+  if (unitValue && /^\d+$/.test(unitValue)) return unitValue;
+
+  return "";
+};
+
+const pickDesignUnitName = (
+  source: Record<string, unknown> | null | undefined,
+): string => {
+  if (!source) return "";
+
+  const candidates = [
+    source.Unit_Name,
+    source.unit_name,
+    source.UnitName,
+    source.Unit,
+    source.unit,
+  ];
+
+  for (const candidate of candidates) {
+    const value = toScalarString(candidate).trim();
+    if (value && !/^\d+$/.test(value)) return value;
+  }
+
+  return "";
+};
+
+const resolveDesignUnitId = (
+  source: Record<string, unknown> | null | undefined,
+  units: Array<{ Id: number | string; Unit_Name?: string }>,
+): string => {
+  const unitId = pickDesignUnitId(source);
+  if (unitId) return unitId;
+
+  const unitName = pickDesignUnitName(source);
+  if (!unitName || !units.length) return "";
+
+  const match = units.find(
+    (unit) =>
+      String(unit.Unit_Name ?? "")
+        .trim()
+        .toLowerCase() === unitName.toLowerCase(),
+  );
+
+  return match ? String(match.Id) : "";
 };
 
 const toToastMessage = (
@@ -112,6 +199,7 @@ const toToastMessage = (
 
 export const useDesign = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addDesignLoading, setAddDesignLoading] = useState(false);
   const [updateDesignLoading, setUpdateDesignLoading] = useState(false);
@@ -149,6 +237,10 @@ export const useDesign = () => {
     (state: RootState) => state?.item?.itemData,
   );
 
+  const itemUnitData: ItemUnitTableData[] = useSelector(
+    (state: RootState) => state?.itemUnit?.itemUnitData,
+  );
+
   useEffect(() => {
     if (typeof window !== undefined) {
       setOrgId(getCookieData<number | null>("waxCraftClientOrgId"));
@@ -167,6 +259,13 @@ export const useDesign = () => {
         return decimalRegex.test(value);
       }),
     polish: yup.string().required("Polish is required"),
+    ghat: yup
+      .string()
+      .default("")
+      .test("is-valid-number", "Invalid ghat", (value) => {
+        if (!value) return true;
+        return decimalRegex.test(value);
+      }),
     designImage: yup
       .mixed()
       .default("")
@@ -185,6 +284,7 @@ export const useDesign = () => {
 
         return true;
       }),
+    unitId: yup.string().required("Unit is required"),
     categoryId: yup.string().required("Category is required"),
     itemId: yup.string().required("Item is required"),
     quantity: yup.string().required("Quantity is required"),
@@ -209,7 +309,9 @@ export const useDesign = () => {
       wt: "",
       wtRate: "",
       polish: "",
+      ghat: "",
       designImage: "",
+      unitId: "",
       categoryId: "",
       itemId: "",
       quantity: "",
@@ -237,7 +339,9 @@ export const useDesign = () => {
       wt: toTwoDecimalString(values.wt),
       wtRate: toTwoDecimalString(values.wtRate),
       polish: toTwoDecimalString(values.polish),
+      ghat: toGhatString(values.ghat),
       designImage: values.designImage,
+      unitId: values.unitId,
       categoryId: "",
       itemId: "",
       quantity: "",
@@ -249,8 +353,22 @@ export const useDesign = () => {
 
   const handleFilterTableData = (value: string) => {
     setDesignTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getDesignApiCall(orgId, 1, value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getDesignApiCall(orgId, 1, value);
+    });
+  };
+
+  const refreshDesignListAfterMutation = (keyword = "") => {
+    if (!orgId) return;
+    refreshPaginatedList({
+      currentPage,
+      setCurrentPage,
+      refetch: () => getDesignApiCall(orgId, 1, keyword),
+    });
   };
 
   const handleAddDesign = () => {
@@ -331,6 +449,9 @@ export const useDesign = () => {
     formData.append("wt", toTwoDecimalString(form.getValues("wt")));
     formData.append("wt_rate", toTwoDecimalString(form.getValues("wtRate")));
     formData.append("polish", toTwoDecimalString(form.getValues("polish")));
+    formData.append("ghat", toGhatString(form.getValues("ghat")));
+    formData.append("design_unit", toScalarString(form.getValues("unitId")));
+    formData.append("unit_id", toScalarString(form.getValues("unitId")));
 
     const designImage = form.getValues("designImage");
     if (designImage instanceof File) {
@@ -357,17 +478,19 @@ export const useDesign = () => {
           wt: "",
           wtRate: "",
           polish: "",
+          ghat: "",
           designImage: "",
+          unitId: "",
           categoryId: "",
           itemId: "",
           quantity: "",
           makingRate: "",
         });
         setIsOpen(false);
-        setCurrentPage(1);
         setCategoryInput("");
         setDesignTableInput("");
-        getDesignApiCall(orgId, 1, "");
+        clearDesignDetailsCache();
+        refreshDesignListAfterMutation("");
         setDesignFormTableData([]);
         setPhotoPreview(undefined);
         toast.success(toToastMessage(res.data.message, "Design added successfully"));
@@ -392,6 +515,9 @@ export const useDesign = () => {
     formData.append("wt", toTwoDecimalString(form.getValues("wt")));
     formData.append("wt_rate", toTwoDecimalString(form.getValues("wtRate")));
     formData.append("polish", toTwoDecimalString(form.getValues("polish")));
+    formData.append("ghat", toGhatString(form.getValues("ghat")));
+    formData.append("design_unit", toScalarString(form.getValues("unitId")));
+    formData.append("unit_id", toScalarString(form.getValues("unitId")));
 
     const designImage = form.getValues("designImage");
     if (designImage instanceof File) {
@@ -414,10 +540,10 @@ export const useDesign = () => {
       if (res.status === 200) {
         toast.success(toToastMessage(res.data.message, "Design updated successfully"));
         form.reset();
-        setCurrentPage(1);
         setCategoryInput("");
         setDesignTableInput("");
-        getDesignApiCall(orgId, 1, "");
+        clearDesignDetailsCache(orgId, designId);
+        refreshDesignListAfterMutation("");
         setIsOpen(false);
         setPhotoPreview(undefined);
         setDesignFormTableData([]);
@@ -494,14 +620,7 @@ export const useDesign = () => {
             ? details.data
             : [];
 
-        // Sample Print uses GetDesignDetails for Item_Rate; list API often returns 0.
-        const enrichedRows = await enrichDesignRowsWithItemRates(
-          orgId,
-          rows,
-          getDesignDetailsAPI,
-        );
-
-        dispatch(getDesignData(enrichedRows));
+        dispatch(getDesignData(rows));
         setLastPage(
           Array.isArray(details)
             ? 1
@@ -557,7 +676,7 @@ export const useDesign = () => {
   };
 
   const refreshDesignDetails = async (row: DesignTableData) => {
-    if (!orgId) return;
+    if (!orgId || !designRowNeedsDetailRefresh(row)) return;
 
     try {
       const enriched = await enrichSingleDesignWithItemRates(
@@ -590,9 +709,9 @@ export const useDesign = () => {
         setShowDeleteDialog(false);
         setTempDeleteId(null);
         setDeleteWarning(null);
-        setCurrentPage(1);
         setDesignTableInput("");
-        getDesignApiCall(orgId, 1, "");
+        clearDesignDetailsCache(orgId, designId);
+        refreshDesignListAfterMutation("");
       } else if (isMasterDeleteDependencyResponse(res)) {
         setDeleteWarning(getMasterDeleteWarningMessage(res));
       } else {
@@ -607,9 +726,7 @@ export const useDesign = () => {
 
   useEffect(() => {
     if (editData && Object.keys(editData).length > 0) {
-      const editRecord = editData as DesignTableData & {
-        wt_rate?: unknown;
-      };
+      const editRecord = editData as DesignTableData & Record<string, unknown>;
 
       form.reset({
         designName: toScalarString(editData.Design_Name),
@@ -617,7 +734,11 @@ export const useDesign = () => {
         wt: toTwoDecimalString(editData.WT),
         wtRate: toTwoDecimalString(editData.Wt_Rate ?? editRecord.wt_rate),
         polish: toTwoDecimalString(editData.Polish),
+        ghat: toGhatString(editData.Ghat ?? editRecord.ghat),
         designImage: editData.File_Name || editData.image || "",
+        unitId:
+          resolveDesignUnitId(editRecord, itemUnitData || []) ||
+          toScalarString(editData.Design_Unit),
         categoryId: "",
         itemId: "",
         quantity: "",
@@ -639,12 +760,92 @@ export const useDesign = () => {
         wt: "",
         wtRate: "",
         polish: "",
+        ghat: "",
         designImage: undefined,
+        unitId: "",
       });
       setPhotoPreview("");
       setDesignFormTableData([]);
     }
+    // itemUnitData is applied in a separate effect so unit list load does not wipe edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editData, form.reset]);
+
+  useEffect(() => {
+    if (!isOpen || !editData?.Id || !orgId) return;
+
+    let cancelled = false;
+
+    const hydrateUnitFromDetails = async () => {
+      try {
+        const res: ApiResponse = await getDesignDetailsAPI(
+          orgId,
+          String(editData.Id),
+        );
+        if (cancelled || res.status !== 200) return;
+
+        const details = res.data.details;
+        const detail = Array.isArray(details)
+          ? details[0]
+          : details && typeof details === "object"
+            ? details
+            : null;
+
+        if (!detail || typeof detail !== "object") return;
+
+        const detailRecord = detail as Record<string, unknown>;
+        const editRecord = editData as DesignTableData & Record<string, unknown>;
+        const unitId =
+          resolveDesignUnitId(detailRecord, itemUnitData || []) ||
+          resolveDesignUnitId(editRecord, itemUnitData || []);
+
+        if (unitId && form.getValues("unitId") !== unitId) {
+          form.setValue("unitId", unitId, {
+            shouldValidate: true,
+            shouldDirty: false,
+          });
+        }
+      } catch {
+        // Keep list-row unit hydration if details fetch fails.
+      }
+    };
+
+    void hydrateUnitFromDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, editData, orgId, itemUnitData, form]);
+
+  useEffect(() => {
+    if (!isOpen || !editData) return;
+    if (!itemUnitData?.length) return;
+
+    const currentUnitId = form.getValues("unitId");
+    if (currentUnitId) {
+      const exists = itemUnitData.some(
+        (unit) => String(unit.Id) === String(currentUnitId),
+      );
+      if (exists) {
+        form.setValue("unitId", String(currentUnitId), {
+          shouldValidate: true,
+          shouldDirty: false,
+        });
+      }
+      return;
+    }
+
+    const resolved = resolveDesignUnitId(
+      editData as DesignTableData & Record<string, unknown>,
+      itemUnitData,
+    );
+    if (resolved) {
+      form.setValue("unitId", resolved, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+    }
+  }, [isOpen, editData, itemUnitData, form]);
 
   useEffect(() => {
     if (editData && !isOpen) {

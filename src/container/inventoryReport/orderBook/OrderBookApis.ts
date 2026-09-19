@@ -1,6 +1,16 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getOrderBookInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetOrderBookKey = (
+  fromDate: string,
+  toDate: string,
+  partyId: string,
+  orgId: string | number,
+) => `${fromDate}:${toDate}:${partyId}:${orgId}`;
 
 export const getOrderBookAPI = async (
   fromDate: string,
@@ -8,12 +18,11 @@ export const getOrderBookAPI = async (
   partyId: string,
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getOrderBook(fromDate, toDate, partyId, orgId),
-  };
+  const key = buildGetOrderBookKey(fromDate, toDate, partyId, orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getOrderBookInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getOrderBook(fromDate, toDate, partyId, orgId),
+    }),
+  );
 };

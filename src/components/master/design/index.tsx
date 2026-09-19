@@ -47,6 +47,7 @@ const Design: FC<DesignProps> = ({
   setItemInput,
   getCategoryLoading,
   getItemLoading,
+  getUnitLoading,
   showDeleteDialog,
   setShowDeleteDialog,
   setTempDeleteId,
@@ -125,6 +126,7 @@ const Design: FC<DesignProps> = ({
         setItemInput={setItemInput}
         getCategoryLoading={getCategoryLoading}
         getItemLoading={getItemLoading}
+        getUnitLoading={getUnitLoading}
       />
       <DesignTable
         handleEditData={handleEditData}

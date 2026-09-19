@@ -122,6 +122,10 @@ export const formActionsClassName =
 export const formSubmitButtonClassName =
   "w-full min-w-[148px] sm:w-auto";
 
+/** Matched Process / Preview pair on report filter forms */
+export const reportActionButtonClassName =
+  "!h-10 w-full min-w-[10rem] justify-center sm:!w-40";
+
 export const primaryButtonClassName =
   "h-9 w-full min-w-[148px] bg-primary px-4 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:brightness-90 data-[hover=true]:!bg-primary data-[hover=true]:brightness-90 data-[pressed=true]:brightness-75 sm:w-auto";
 

@@ -6,11 +6,11 @@ import InputField from "@/common/formFields/InputField";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import TextareaField from "@/common/formFields/TextareaField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
   tableClassNames,
@@ -18,7 +18,6 @@ import {
 import { GstBillFormProps } from "@/types/inventoryVoucher/GstBillTypes";
 import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
 import {
-  Button,
   Divider,
   Table,
   TableBody,
@@ -188,15 +187,9 @@ const GstBillForm: FC<GstBillFormProps> = ({
             type="number"
           />
 
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className="w-auto min-w-[148px] justify-self-end self-end"
-          >
+          <FormSubmitButton className="w-auto min-w-[148px] justify-self-end self-end">
             Add To Table
-          </Button>
+          </FormSubmitButton>
         </div>
 
         <ScrollArea className="w-full mt-5">
@@ -330,18 +323,14 @@ const GstBillForm: FC<GstBillFormProps> = ({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
         <div className={formActionsClassName}>
-          <Button
-            // type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
+            type="button"
             onPress={handleAddGstBill}
             isLoading={addGstBillLoading}
             isDisabled={addGstBillLoading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

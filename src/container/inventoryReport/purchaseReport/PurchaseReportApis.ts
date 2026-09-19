@@ -1,6 +1,16 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getPurchaseReportInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetPurchaseReportKey = (
+  fromDate: string,
+  toDate: string,
+  partyId: string,
+  orgId: string | number,
+) => `${fromDate}:${toDate}:${partyId}:${orgId}`;
 
 export const getPurchaseReportAPI = async (
   fromDate: string,
@@ -8,12 +18,11 @@ export const getPurchaseReportAPI = async (
   partyId: string,
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getPurchaseReport(fromDate, toDate, partyId, orgId),
-  };
+  const key = buildGetPurchaseReportKey(fromDate, toDate, partyId, orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getPurchaseReportInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPurchaseReport(fromDate, toDate, partyId, orgId),
+    }),
+  );
 };

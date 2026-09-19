@@ -2,16 +2,16 @@
 
 import { DatePickerField } from "@/common/formFields/DatePickerField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
 } from "@/lib/uiStyles";
 import { SalesVoucherFormProps } from "@/types/inventoryVoucher/SalesVoucherTypes";
-import { Button, Divider } from "@heroui/react";
+import { Divider } from "@heroui/react";
 import { FC } from "react";
 import SalesVoucherTable from "./SalesVoucherTable";
 import RadioField from "@/common/formFields/RadioFields";
@@ -120,15 +120,12 @@ const SalesVoucherForm: FC<SalesVoucherFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
+            type="button"
             onPress={handleSalesVoucherProcess}
           >
             Process Invoice
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

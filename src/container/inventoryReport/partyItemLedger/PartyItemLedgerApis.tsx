@@ -1,6 +1,16 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getPartyItemLedgerInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetPartyItemLedgerKey = (
+  fromDate: string,
+  toDate: string,
+  partyId: string,
+  orgId: string | number,
+) => `${fromDate}:${toDate}:${partyId}:${orgId}`;
 
 export const getPartyItemLedgerAPI = async (
   fromDate: string,
@@ -8,12 +18,11 @@ export const getPartyItemLedgerAPI = async (
   partyId: string,
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getPartyItemLedger(fromDate, toDate, partyId, orgId),
-  };
+  const key = buildGetPartyItemLedgerKey(fromDate, toDate, partyId, orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getPartyItemLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPartyItemLedger(fromDate, toDate, partyId, orgId),
+    }),
+  );
 };

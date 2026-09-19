@@ -18,6 +18,7 @@ import {
   primaryButtonClassName,
   secondaryButtonClassName,
 } from "@/lib/uiStyles";
+import { ModalActionIcon } from "@/lib/modalActionIcons";
 import { cn } from "@/lib/utils";
 
 interface FormModalProps {
@@ -175,6 +176,7 @@ export function FormModalFooter({
         variant="bordered"
         radius="md"
         isDisabled={isBusy}
+        startContent={<ModalActionIcon label={cancelLabel} />}
         className={cn(secondaryButtonClassName, "w-auto")}
         onPress={onCancel}
       >
@@ -185,6 +187,9 @@ export function FormModalFooter({
           type={submitType}
           color={confirmColor}
           radius="md"
+          startContent={
+            isBusy ? null : <ModalActionIcon label={submitLabel} />
+          }
           className={cn(
             confirmColor === "danger"
               ? "h-9 min-w-[84px] px-4 text-sm font-medium"

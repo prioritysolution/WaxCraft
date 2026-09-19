@@ -1,7 +1,22 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { BankDepositBody } from "@/types/accountVoucher/BankDepositTypes";
+
+const getBankDepositInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetBankDepositKey = (
+  orgId: string | number,
+  page: number,
+  perPage?: number,
+  fromDate?: string,
+  toDate?: string,
+) => `${orgId}:${page}:${perPage ?? ""}:${fromDate ?? ""}:${toDate ?? ""}`;
+
+const invalidateBankDepositInFlight = () => {
+  getBankDepositInFlight.clear();
+};
 
 export const addBankDepositAPI = async (
   bodyData: BankDepositBody
@@ -10,6 +25,8 @@ export const addBankDepositAPI = async (
     url: endPoints.addBankDeposit,
     bodyData,
   };
+
+  invalidateBankDepositInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -26,6 +43,8 @@ export const deleteBankDepositAPI = async (bodyData: {
     bodyData,
   };
 
+  invalidateBankDepositInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -39,12 +58,11 @@ export const getBankDepositAPI = async (
   fromDate?: string,
   toDate?: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getBankDeposit(orgId, page, perPage, fromDate, toDate),
-  };
+  const key = buildGetBankDepositKey(orgId, page, perPage, fromDate, toDate);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getBankDepositInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getBankDeposit(orgId, page, perPage, fromDate, toDate),
+    }),
+  );
 };

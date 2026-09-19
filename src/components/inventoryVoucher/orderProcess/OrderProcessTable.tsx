@@ -12,7 +12,9 @@ import { TablePaginationBar } from "@/components/ui/table-pagination";
 import { useClientTableSearch } from "@/lib/useClientTableSearch";
 import { ChevronRight, Cog, Eye } from "lucide-react";
 
-import { getOrderStatusChipProps } from "@/lib/orderStatusChip";
+import {
+  getOrderStatusChipProps,
+} from "@/lib/orderStatusChip";
 import { tableClassNames } from "@/lib/uiStyles";
 import { cn } from "@/lib/utils";
 import { OrderBookingTableData } from "@/types/inventoryVoucher/OrderBookingTypes";
@@ -135,7 +137,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
           {getPaginatedTableRows(filtered, loading).flatMap((data, index) => {
             const isOpen = expandedOrderId === data.Id;
             const designs = data.DesignRow ?? [];
-            const statusChip = getOrderStatusChipProps(data.Order_Status);
+            const orderStatusChip = getOrderStatusChipProps(data.Order_Status);
             const rows = [
               <TableRow key={data.Id}>
                 <TableCell className="w-[56px]">
@@ -174,14 +176,19 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                 </TableCell>
                 <TableCell>{data.Total_Order}</TableCell>
                 <TableCell>
-                  <Chip
-                    className={cn("capitalize", statusChip.className)}
-                    color={statusChip.color}
-                    size="md"
-                    variant="flat"
-                  >
-                    {data.Order_Status}
-                  </Chip>
+                  <div className="flex justify-center">
+                    <Chip
+                      className={cn(
+                        "capitalize",
+                        orderStatusChip.className,
+                      )}
+                      color={orderStatusChip.color}
+                      size="md"
+                      variant="flat"
+                    >
+                      {data.Order_Status || "—"}
+                    </Chip>
+                  </div>
                 </TableCell>
                 <TableCell className="w-[120px]">
                   <div className="inline-flex items-center justify-center gap-2">

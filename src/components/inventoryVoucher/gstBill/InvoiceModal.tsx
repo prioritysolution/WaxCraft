@@ -1,6 +1,7 @@
 "use client";
 
 import { getModalClassNames } from "@/lib/uiStyles";
+import { ModalActionIcon } from "@/lib/modalActionIcons";
 
 import { InvoiceModalProps } from "@/types/inventoryVoucher/GstBillTypes";
 import getCookieData from "@/utils/getCookieData";
@@ -319,6 +320,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             size="lg"
             radius="sm"
             className="w-32"
+            startContent={<ModalActionIcon label="Cancel" />}
           >
             Cancel
           </Button>
@@ -328,6 +330,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             radius="sm"
             className="w-32"
             onPress={() => generatePDF()}
+            startContent={<ModalActionIcon label="Print" />}
           >
             Print
           </Button>

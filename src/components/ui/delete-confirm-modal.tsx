@@ -8,6 +8,7 @@ import {
   ModalFooter,
   Spinner,
 } from "@heroui/react";
+import { AlertTriangle, Ban, Check, Trash2, X } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 
 interface DeleteConfirmModalProps {
@@ -35,6 +36,9 @@ export function DeleteConfirmModal({
 }: DeleteConfirmModalProps) {
   const isBlocked = Boolean(warning);
   const resolvedCancelLabel = cancelLabel ?? (isBlocked ? "OK" : "Cancel");
+  const isCancelAction = confirmLabel.trim().toLowerCase() === "cancel";
+  const ConfirmIcon = isCancelAction ? Ban : Trash2;
+  const MessageIcon = isCancelAction ? AlertTriangle : Trash2;
 
   return (
     <Modal
@@ -57,13 +61,22 @@ export function DeleteConfirmModal({
       <ModalContent>
         <ModalBody>
           {isBlocked ? (
-            <p className="w-full rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2.5 text-center text-sm leading-5 text-[#B91C1C]">
-              {warning}
-            </p>
+            <div className="flex w-full items-start gap-3 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2.5">
+              <AlertTriangle
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#B91C1C]"
+                aria-hidden="true"
+              />
+              <p className="text-sm leading-5 text-[#B91C1C]">{warning}</p>
+            </div>
           ) : (
-            <p className="w-full text-center text-[18px] font-medium leading-7 text-[#212121] sm:text-[20px]">
-              {message}
-            </p>
+            <div className="flex w-full items-start gap-3">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FCE7F0] text-[#E91E63]">
+                <MessageIcon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <p className="min-w-0 flex-1 pt-1.5 text-left text-[18px] font-medium leading-7 text-[#212121] sm:text-[20px]">
+                {message}
+              </p>
+            </div>
           )}
         </ModalBody>
         <ModalFooter>
@@ -71,6 +84,13 @@ export function DeleteConfirmModal({
             type="button"
             radius="md"
             isDisabled={isBusy}
+            startContent={
+              isBlocked ? (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <X className="h-4 w-4" aria-hidden="true" />
+              )
+            }
             className="h-10 min-w-[92px] rounded-lg bg-[#E9EAEE] px-5 text-sm font-medium text-[#30475E] shadow-none data-[hover=true]:!bg-[#DCDDE3]"
             onPress={onCancel}
           >
@@ -81,6 +101,11 @@ export function DeleteConfirmModal({
               type="button"
               color="danger"
               radius="md"
+              startContent={
+                isBusy ? null : (
+                  <ConfirmIcon className="h-4 w-4" aria-hidden="true" />
+                )
+              }
               className="h-10 min-w-[92px] rounded-lg bg-[#E91E63] px-5 text-sm font-medium text-white shadow-none data-[hover=true]:!bg-[#C2185B]"
               isLoading={isBusy}
               isDisabled={isBusy}

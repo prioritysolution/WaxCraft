@@ -24,6 +24,7 @@ const PurchaseVoucherContainer = () => {
     handleAddPurchase,
     purchaseTableData,
     handleDeletePurchaseTableData,
+    handleUpdatePurchaseTableRate,
     handleShowDeleteDialog,
     showDeleteDialog,
     setShowDeleteDialog,
@@ -48,6 +49,11 @@ const PurchaseVoucherContainer = () => {
     setShowRequisitionModal,
     requisitionLoading,
     handleAddRequisitionItems,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successPurchaseNos,
+    handleCloseSuccessDialog,
   } = usePurchaseVoucher();
 
   const {
@@ -118,6 +124,7 @@ const PurchaseVoucherContainer = () => {
       handleAddPurchase={handleAddPurchase}
       purchaseTableData={purchaseTableData}
       handleDeletePurchaseTableData={handleDeletePurchaseTableData}
+      handleUpdatePurchaseTableRate={handleUpdatePurchaseTableRate}
       handleShowDeleteDialog={handleShowDeleteDialog}
       showDeleteDialog={showDeleteDialog}
       setShowDeleteDialog={setShowDeleteDialog}
@@ -143,6 +150,11 @@ const PurchaseVoucherContainer = () => {
       setShowRequisitionModal={setShowRequisitionModal}
       requisitionLoading={requisitionLoading}
       handleAddRequisitionItems={handleAddRequisitionItems}
+      showSuccessDialog={showSuccessDialog}
+      setShowSuccessDialog={setShowSuccessDialog}
+      successMessage={successMessage}
+      successPurchaseNos={successPurchaseNos}
+      handleCloseSuccessDialog={handleCloseSuccessDialog}
     />
   );
 };

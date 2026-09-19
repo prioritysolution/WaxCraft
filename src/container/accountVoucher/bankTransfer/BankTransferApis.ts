@@ -1,7 +1,22 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { BankTransferBody } from "@/types/accountVoucher/BankTransferTypes";
+
+const getBankTransferInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetBankTransferKey = (
+  orgId: string | number,
+  page: number,
+  perPage?: number,
+  fromDate?: string,
+  toDate?: string,
+) => `${orgId}:${page}:${perPage ?? ""}:${fromDate ?? ""}:${toDate ?? ""}`;
+
+const invalidateBankTransferInFlight = () => {
+  getBankTransferInFlight.clear();
+};
 
 export const addBankTransferAPI = async (
   bodyData: BankTransferBody
@@ -10,6 +25,8 @@ export const addBankTransferAPI = async (
     url: endPoints.addBankTransfer,
     bodyData,
   };
+
+  invalidateBankTransferInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -26,6 +43,8 @@ export const deleteBankTransferAPI = async (bodyData: {
     bodyData,
   };
 
+  invalidateBankTransferInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -39,12 +58,11 @@ export const getBankTransferAPI = async (
   fromDate?: string,
   toDate?: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getBankTransfer(orgId, page, perPage, fromDate, toDate),
-  };
+  const key = buildGetBankTransferKey(orgId, page, perPage, fromDate, toDate);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getBankTransferInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getBankTransfer(orgId, page, perPage, fromDate, toDate),
+    }),
+  );
 };

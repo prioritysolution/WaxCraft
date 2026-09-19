@@ -4,6 +4,7 @@ import { UseFormReturn, SubmitHandler } from "react-hook-form";
 // Define the types for form data and API response
 export interface WorkProcessFormData {
   processName: string;
+  processStep: string;
 }
 
 // Define the structure of the body you expect for the WorkProcess API (adjust based on your API's requirements)
@@ -11,6 +12,7 @@ interface WorkProcessBody {
   org_id: number | null;
   work_id?: number;
   process_name: string;
+  process_step: string | number;
 }
 
 export interface WorkProcessProps {
@@ -58,4 +60,5 @@ export interface WorkProcessTableProps {
 export interface WorkProcessTableData {
   Id: number;
   Process_Name: string;
+  Process_SI_No: string | number | null;
 }

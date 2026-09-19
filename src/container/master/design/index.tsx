@@ -6,6 +6,7 @@ import getCookieData from "@/utils/getCookieData";
 import { useEffect } from "react";
 import { useItemCategory } from "../itemCategory/Hooks";
 import { useItem } from "../item/Hooks";
+import { useItemUnit } from "../itemUnit/Hooks";
 
 const DesignContainer = () => {
   const token = getCookieData<any>("waxCraftClientToken");
@@ -62,6 +63,8 @@ const DesignContainer = () => {
 
   const { getItemUnderCategoryApiCall, loading: getItemLoading } = useItem();
 
+  const { getItemUnitApiCall, loading: getUnitLoading } = useItemUnit();
+
   const handleSearchCategory = () => {
     setCurrentCategoryPage(1);
     if (orgId) getItemCategoryApiCall(orgId, 1, categoryInput, "DROPDOWN");
@@ -90,6 +93,12 @@ const DesignContainer = () => {
       getDesignApiCall(orgId, currentPage, designTableInput);
     }
   }, [token, orgId, currentPage, perPage]);
+
+  useEffect(() => {
+    if (token && orgId) {
+      getItemUnitApiCall(orgId);
+    }
+  }, [token, orgId]);
 
   useEffect(() => {
     if (token && orgId && categoryId) {
@@ -131,6 +140,7 @@ const DesignContainer = () => {
       setItemInput={setItemInput}
       getCategoryLoading={getCategoryLoading}
       getItemLoading={getItemLoading}
+      getUnitLoading={getUnitLoading}
       showDeleteDialog={showDeleteDialog}
       setShowDeleteDialog={setShowDeleteDialog}
       setTempDeleteId={setTempDeleteId}

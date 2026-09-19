@@ -12,6 +12,7 @@ import { FileInput } from "lucide-react";
 import { FC } from "react";
 import PurchaseVoucherForm from "./PurchaseVoucherForm";
 import PurchaseVoucherTable from "./PurchaseVoucherTable";
+import { OrderBookingSuccessModal } from "@/components/inventoryVoucher/orderBooking/OrderBookingSuccessModal";
 
 const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
   addPurchaseVoucherLoading,
@@ -23,6 +24,7 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
   setSelected,
   purchaseTableData,
   handleDeletePurchaseTableData,
+  handleUpdatePurchaseTableRate,
   handleShowDeleteDialog,
   showDeleteDialog,
   setShowDeleteDialog,
@@ -49,6 +51,11 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
   setShowRequisitionModal,
   requisitionLoading,
   handleAddRequisitionItems,
+  showSuccessDialog,
+  setShowSuccessDialog,
+  successMessage,
+  successPurchaseNos,
+  handleCloseSuccessDialog,
 }) => {
   return (
     <PageShell>
@@ -74,6 +81,7 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
               handleSubmit={handleSubmit}
               purchaseTableData={purchaseTableData}
               handleDeletePurchaseTableData={handleDeletePurchaseTableData}
+              handleUpdatePurchaseTableRate={handleUpdatePurchaseTableRate}
               purchaseType={purchaseType}
               handleAddPurchase={handleAddPurchase}
               handleSearchItem={handleSearchItem}
@@ -96,21 +104,33 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
 
         <Tab key="table" title="Active Purchase List">
           <PurchaseVoucherTable
-              loading={loading}
-              handleShowDeleteDialog={handleShowDeleteDialog}
-              showDeleteDialog={showDeleteDialog}
-              setShowDeleteDialog={setShowDeleteDialog}
-              setTempDeleteId={setTempDeleteId}
-              handleDeletePurchase={handleDeletePurchase}
-              deletePurchaseVoucherLoading={deletePurchaseVoucherLoading}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              lastPage={lastPage}
-              perPage={perPage}
-              onPerPageChange={onPerPageChange}
-            />
+            loading={loading}
+            handleShowDeleteDialog={handleShowDeleteDialog}
+            showDeleteDialog={showDeleteDialog}
+            setShowDeleteDialog={setShowDeleteDialog}
+            setTempDeleteId={setTempDeleteId}
+            handleDeletePurchase={handleDeletePurchase}
+            deletePurchaseVoucherLoading={deletePurchaseVoucherLoading}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            lastPage={lastPage}
+            perPage={perPage}
+            onPerPageChange={onPerPageChange}
+          />
         </Tab>
       </Tabs>
+
+      <OrderBookingSuccessModal
+        isOpen={showSuccessDialog}
+        onOpenChange={setShowSuccessDialog}
+        message={successMessage}
+        orderIds={successPurchaseNos}
+        onClose={handleCloseSuccessDialog}
+        idLabel={
+          successPurchaseNos.length > 1 ? "Purchase Nos." : "Purchase No."
+        }
+        fallbackMessage="Purchase added successfully"
+      />
     </PageShell>
   );
 };

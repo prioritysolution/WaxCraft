@@ -54,6 +54,10 @@ export const useWorkProcess = () => {
   // Form validation schema with yup
   const formSchema = yup.object({
     processName: yup.string().required("Process name is required"),
+    processStep: yup
+      .string()
+      .required("Process step is required")
+      .matches(/^\d+$/, "Process step must be a number"),
   });
 
   // Initialize the form with react-hook-form and yup resolver
@@ -61,6 +65,7 @@ export const useWorkProcess = () => {
     resolver: yupResolver(formSchema),
     defaultValues: {
       processName: "",
+      processStep: "",
     },
   });
 
@@ -103,6 +108,7 @@ export const useWorkProcess = () => {
     const data = {
       org_id: orgId,
       process_name: item.processName,
+      process_step: item.processStep,
     };
 
     try {
@@ -132,6 +138,7 @@ export const useWorkProcess = () => {
       org_id: orgId,
       work_id: workId,
       process_name: item.processName,
+      process_step: item.processStep,
     };
     setUpdateWorkProcessLoading(true);
     try {
@@ -208,9 +215,13 @@ export const useWorkProcess = () => {
     if (editData && Object.keys(editData).length > 0) {
       form.reset({
         processName: editData.Process_Name || "",
+        processStep:
+          editData.Process_SI_No !== undefined && editData.Process_SI_No !== null
+            ? String(editData.Process_SI_No)
+            : "",
       });
     } else {
-      form.reset({ processName: "" });
+      form.reset({ processName: "", processStep: "" });
     }
   }, [editData, form.reset]);
 

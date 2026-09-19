@@ -1,7 +1,21 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { EmployeeBody } from "@/types/master/EmployeeTypes";
+
+const getEmployeeInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetEmployeeKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const invalidateGetEmployeeInFlight = () => {
+  getEmployeeInFlight.clear();
+};
 
 export const addEmployeeAPI = async (
   bodyData: EmployeeBody
@@ -10,6 +24,8 @@ export const addEmployeeAPI = async (
     url: endPoints.addEmployee,
     bodyData,
   };
+
+  invalidateGetEmployeeInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +41,8 @@ export const updateEmployeeAPI = async (
     bodyData,
   };
 
+  invalidateGetEmployeeInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -37,14 +55,13 @@ export const getEmployeeAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getEmployee(orgId, page, keyword, perPage),
-  };
+  const key = buildGetEmployeeKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getEmployeeInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getEmployee(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const deleteEmployeeAPI = async (bodyData: {
@@ -55,6 +72,8 @@ export const deleteEmployeeAPI = async (bodyData: {
     url: endPoints.deleteEmployee,
     bodyData,
   };
+
+  invalidateGetEmployeeInFlight();
 
   const res = await doPutApiCall(data);
 

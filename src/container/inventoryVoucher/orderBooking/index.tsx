@@ -56,6 +56,11 @@ const OrderBookingContainer = () => {
     getPartyLedgerLoading,
     getOrderPartyLoading,
     getOrderDesignLoading,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successOrderIds,
+    handleCloseSuccessDialog,
   } = useOrderBooking();
 
   const handleSearchOrderParty = () => {
@@ -153,6 +158,11 @@ const OrderBookingContainer = () => {
       getPartyLedgerLoading={getPartyLedgerLoading}
       getOrderPartyLoading={getOrderPartyLoading}
       getOrderDesignLoading={getOrderDesignLoading}
+      showSuccessDialog={showSuccessDialog}
+      setShowSuccessDialog={setShowSuccessDialog}
+      successMessage={successMessage}
+      successOrderIds={successOrderIds}
+      handleCloseSuccessDialog={handleCloseSuccessDialog}
     />
   );
 };

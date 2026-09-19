@@ -3,15 +3,16 @@
 import DropdownField from "@/common/formFields/DropdownField";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Form, FormField, FormItem } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { formGridClassName, pageFormClassName } from "@/lib/uiStyles";
 import {
   ChildData,
   ModuleData,
   RoleAssignFormProps,
 } from "@/types/tools/RoleAssignTypes";
-import { Button, Checkbox, CheckboxGroup } from "@heroui/react";
+import { Checkbox, CheckboxGroup } from "@heroui/react";
+import { MinusCircle, PlusCircle } from "lucide-react";
 import { FC, useEffect, useState } from "react";
-import { FaMinusCircle, FaPlusCircle } from "react-icons/fa";
 import { useSelector } from "react-redux";
 
 // Define types for User Data
@@ -157,9 +158,9 @@ const RoleAssignForm: FC<RoleAssignFormProps> = ({
                       }}
                     >
                       {openModuleId.includes(module.Module_Id) ? (
-                        <FaMinusCircle />
+                        <MinusCircle />
                       ) : (
-                        <FaPlusCircle />
+                        <PlusCircle />
                       )}
                     </div>
                   </div>
@@ -200,17 +201,13 @@ const RoleAssignForm: FC<RoleAssignFormProps> = ({
           </div>
         </div>
         <div className="flex w-full justify-end">
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
+          <FormSubmitButton
             className="w-auto min-w-[148px]"
             isDisabled={loading}
             isLoading={loading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

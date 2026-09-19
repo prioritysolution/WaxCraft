@@ -5,6 +5,7 @@ import { FormField, FormItem, FormControl, FormLabel } from "@/components/ui/for
 import { Autocomplete, AutocompleteItem, Spinner } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import { fieldInputClassNames, getSelectPlaceholder } from "@/lib/uiStyles";
+import { SEARCH_DEBOUNCE_MS } from "@/lib/useSearchDebounce";
 import {
   Dispatch,
   ReactNode,
@@ -125,7 +126,7 @@ const SearchDropdownControl = <T extends FieldValues>({
 
     const delaySearch = setTimeout(() => {
       handleSearch();
-    }, 500);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(delaySearch);
   }, [input]);

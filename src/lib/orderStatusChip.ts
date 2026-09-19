@@ -1,3 +1,5 @@
+import { OrderProcessDesignRow } from "@/types/inventoryVoucher/OrderProcessTypes";
+
 export type OrderStatusChipColor =
   | "default"
   | "primary"
@@ -44,4 +46,14 @@ export function getOrderStatusChipProps(
   }
 
   return { color: "default" };
+}
+
+export function getDesignOrderStatus(
+  design: OrderProcessDesignRow,
+  orderStatus: string,
+) {
+  if (design.Order_Status) return design.Order_Status;
+  if (design.Process_Name) return design.Process_Name;
+  if (Number(design.Is_Complete) === 1) return "Product Ready";
+  return orderStatus;
 }

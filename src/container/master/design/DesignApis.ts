@@ -1,6 +1,20 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getDesignInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetDesignKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage: number,
+) => `${orgId}:${page}:${keyword}:${perPage}`;
+
+const invalidateGetDesignInFlight = () => {
+  getDesignInFlight.clear();
+};
 
 export const addDesignAPI = async (
   bodyData: FormData
@@ -10,7 +24,8 @@ export const addDesignAPI = async (
     bodyData,
   };
 
-  // Call the API
+  invalidateGetDesignInFlight();
+
   const res = await doPostApiCall(data, "multipart/form-data");
 
   return res;
@@ -24,7 +39,8 @@ export const updateDesignAPI = async (
     bodyData,
   };
 
-  // Call the API
+  invalidateGetDesignInFlight();
+
   const res = await doPostApiCall(data, "multipart/form-data");
 
   return res;
@@ -34,16 +50,20 @@ export const getDesignAPI = async (
   orgId: string | number,
   page: number,
   keyword: string,
-  perPage = 50
+  perPage = 50,
+  options?: { force?: boolean },
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getDesign(orgId, page, keyword, perPage),
-  };
+  const key = buildGetDesignKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
+  if (options?.force) {
+    getDesignInFlight.clear();
+  }
 
-  return res;
+  return getDesignInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getDesign(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const deleteDesignAPI = async (bodyData: {
@@ -54,6 +74,8 @@ export const deleteDesignAPI = async (bodyData: {
     url: endPoints.deleteDesign,
     bodyData,
   };
+
+  invalidateGetDesignInFlight();
 
   const res = await doPutApiCall(data);
 

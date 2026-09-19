@@ -1,6 +1,6 @@
 import { UseFormReturn, SubmitHandler } from "react-hook-form";
 import { PartyFormData } from "../master/PartyTypes";
-import { SetStateAction } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { string } from "yup";
 
 // Define the types for form data and API response
@@ -100,6 +100,11 @@ export interface OrderBookingProps {
   getPartyLedgerLoading: boolean;
   getOrderPartyLoading: boolean;
   getOrderDesignLoading: boolean;
+  showSuccessDialog: boolean;
+  setShowSuccessDialog: Dispatch<SetStateAction<boolean>>;
+  successMessage: string;
+  successOrderIds: string[];
+  handleCloseSuccessDialog: () => void;
 }
 
 export interface OrderBookingFormProps {
@@ -159,6 +164,9 @@ export interface OrderBookingTableData {
     Design_No: string;
     Order_Qnty: string;
     Design_Rate: string;
+    Design_Unit?: number | string | null;
+    Unit_Id?: number | string | null;
+    Unit_Name?: string | null;
     Wt: string;
     Wt_Rate: string;
     Tot_Wt: string;

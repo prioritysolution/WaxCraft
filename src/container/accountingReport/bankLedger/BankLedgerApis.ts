@@ -1,6 +1,16 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getBankLedgerInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetBankLedgerKey = (
+  fromDate: string,
+  toDate: string,
+  bankId: string,
+  orgId: string | number,
+) => `${fromDate}:${toDate}:${bankId}:${orgId}`;
 
 export const getBankLedgerAPI = async (
   fromDate: string,
@@ -8,12 +18,11 @@ export const getBankLedgerAPI = async (
   bankId: string,
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getBankLedger(fromDate, toDate, bankId, orgId),
-  };
+  const key = buildGetBankLedgerKey(fromDate, toDate, bankId, orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getBankLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getBankLedger(fromDate, toDate, bankId, orgId),
+    }),
+  );
 };

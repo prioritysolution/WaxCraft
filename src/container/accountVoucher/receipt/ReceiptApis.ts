@@ -1,7 +1,37 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ReceiptBody } from "@/types/accountVoucher/ReceiptTypes";
+
+const getReceiptInFlight = createInFlightRequest<ApiResponse>();
+const getReceiptLedgerInFlight = createInFlightRequest<ApiResponse>();
+const getCheckReceiptPartyInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetReceiptKey = (
+  orgId: string | number,
+  page: number,
+  perPage?: number,
+  fromDate?: string,
+  toDate?: string,
+) => `${orgId}:${page}:${perPage ?? ""}:${fromDate ?? ""}:${toDate ?? ""}`;
+
+const buildGetReceiptLedgerKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const buildGetCheckReceiptPartyKey = (
+  orgId: string | number,
+  ledgerId: string | number,
+) => `${orgId}:${ledgerId}`;
+
+const invalidateReceiptInFlight = () => {
+  getReceiptInFlight.clear();
+  getReceiptLedgerInFlight.clear();
+  getCheckReceiptPartyInFlight.clear();
+};
 
 export const addReceiptAPI = async (
   bodyData: ReceiptBody
@@ -10,6 +40,8 @@ export const addReceiptAPI = async (
     url: endPoints.addReceipt,
     bodyData,
   };
+
+  invalidateReceiptInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -26,6 +58,8 @@ export const deleteReceiptAPI = async (bodyData: {
     bodyData,
   };
 
+  invalidateReceiptInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -39,14 +73,13 @@ export const getReceiptAPI = async (
   fromDate?: string,
   toDate?: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getReceipt(orgId, page, perPage, fromDate, toDate),
-  };
+  const key = buildGetReceiptKey(orgId, page, perPage, fromDate, toDate);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getReceiptInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getReceipt(orgId, page, perPage, fromDate, toDate),
+    }),
+  );
 };
 
 export const getReceiptLedgerAPI = async (
@@ -54,26 +87,24 @@ export const getReceiptLedgerAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getReceiptLedger(orgId, page, keyword),
-  };
+  const key = buildGetReceiptLedgerKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getReceiptLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getReceiptLedger(orgId, page, keyword),
+    }),
+  );
 };
 
 export const getCheckReceiptPartyAPI = async (
   orgId: string | number,
   ledgerId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getCheckReceiptParty(orgId, ledgerId),
-  };
+  const key = buildGetCheckReceiptPartyKey(orgId, ledgerId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getCheckReceiptPartyInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getCheckReceiptParty(orgId, ledgerId),
+    }),
+  );
 };

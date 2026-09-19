@@ -317,7 +317,7 @@ export const mapDashboardStatsResponse = (
       href: "/inventoryReport/purchaseReport",
     },
     {
-      label: "Order Pipeline",
+      label: "Order Process",
       value: formatCurrency(orderPipeline),
       hint: `${formatCount(ordersBookedCount)} booked order lines`,
       icon: TrendingUp,
@@ -345,7 +345,7 @@ export const mapDashboardStatsResponse = (
       href: "/accountingReport/dayBook",
     },
     {
-      label: "Orders Booked",
+      label: "Order Book",
       value: formatCount(ordersBookedCount),
       hint: "Order lines in current FY",
       icon: Banknote,

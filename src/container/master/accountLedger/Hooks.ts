@@ -27,6 +27,7 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 interface AccountLedgerState {
   accountLedgerData: AccountLedgerTableData[];
@@ -38,6 +39,7 @@ interface RootState {
 
 export const useAccountLedger = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addAccountLedgerLoading, setAddAccountLedgerLoading] = useState(false);
   const [updateAccountLedgerLoading, setUpdateAccountLedgerLoading] =
@@ -158,8 +160,13 @@ export const useAccountLedger = () => {
 
   const handleFilterTableData = (value: string) => {
     setLedgerTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getAccountLedgerApiCall(orgId, 1, value, "TABLE");
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getAccountLedgerApiCall(orgId, 1, value, "TABLE");
+    });
   };
 
   const addAccountLedgerApiCall = async (

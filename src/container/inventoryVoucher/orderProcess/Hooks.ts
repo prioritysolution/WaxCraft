@@ -23,6 +23,8 @@ import { format } from "date-fns";
 import { getOrderBookingAPI } from "../orderBooking/OrderBookingApis";
 import { getOrderBookingData } from "../orderBooking/OrderBookingReducer";
 import { resolveListLastPage } from "@/lib/listTotalCount";
+import { decimalRegex } from "@/utils/validationRegex";
+import { toTwoDecimalString } from "@/utils/formatDecimal";
 
 const formatOrderDate = (value?: string | Date | null) => {
   if (!value) return "";
@@ -63,8 +65,6 @@ export const useOrderProcess = () => {
 
   const [orgId, setOrgId] = useState<number | null>(null);
 
-  const [employeeInput, setEmployeeInput] = useState("");
-
   const [isOpenProcess, setIsOpenProcess] = useState(false);
 
   const [showFormFields, setShowFormFields] = useState(false);
@@ -101,7 +101,15 @@ export const useOrderProcess = () => {
   // Form validation schema with yup
   const formSchema = yup.object({
     orderId: yup.string().default(""),
-    designId: yup.string().default(""),
+    designId: yup
+      .string()
+      .default("")
+      .test("is-required", "Design is required", function (value) {
+        if (processPostType === "FurtherProcess" && !value) {
+          return false;
+        }
+        return true;
+      }),
     orderDate: yup.string().default(""),
     orderNo: yup.string().default(""),
     partyName: yup.string().default(""),
@@ -133,10 +141,9 @@ export const useOrderProcess = () => {
         }
         return true;
       }),
-    employeeId: yup
-      .string()
-      .default("")
-      .test("is-required", "Employee is required", function (value) {
+    endDate: yup
+      .date()
+      .test("is-required", "End date is required", function (value) {
         if (processPostType === "FurtherProcess" && !value) {
           return false;
         }
@@ -151,6 +158,74 @@ export const useOrderProcess = () => {
         }
         return true;
       }),
+    isFinalStep: yup.boolean().default(false),
+    finalWeight: yup
+      .string()
+      .default("")
+      .when("isFinalStep", {
+        is: true,
+        then: (schema) =>
+          schema
+            .required("Final weight is required")
+            .matches(decimalRegex, "Enter a valid weight"),
+        otherwise: (schema) => schema.notRequired(),
+      }),
+    employeeWorkRows: yup
+      .array()
+      .of(
+        yup.object({
+          employeeId: yup.string().default(""),
+          quantity: yup
+            .string()
+            .default("")
+            .test(
+              "valid-qty",
+              "Enter a valid quantity",
+              (value) => !value || decimalRegex.test(String(value)),
+            )
+            .test(
+              "qty-required-with-employee",
+              "Quantity is required",
+              function (value) {
+                if (processPostType !== "FurtherProcess") return true;
+                const employeeId = String(this.parent?.employeeId || "").trim();
+                if (!employeeId) return true;
+                return Boolean(String(value || "").trim());
+              },
+            ),
+        }),
+      )
+      .default([])
+      .test(
+        "employee-required",
+        "Select employee for each work row",
+        function (rows) {
+          if (processPostType !== "FurtherProcess") return true;
+          const list = Array.isArray(rows) ? rows : [];
+          const filled = list.filter(
+            (row) =>
+              String(row?.employeeId || "").trim() ||
+              String(row?.quantity || "").trim(),
+          );
+          if (!filled.length) return true;
+          return filled.every((row) => String(row?.employeeId || "").trim());
+        },
+      )
+      .test(
+        "allocation-not-exceed",
+        "Allocated quantity cannot exceed order qty",
+        function (rows) {
+          if (processPostType !== "FurtherProcess") return true;
+          const orderQty = Number(this.parent?.orderQuantity) || 0;
+          if (!(orderQty > 0)) return true;
+          const list = Array.isArray(rows) ? rows : [];
+          const allocated = list.reduce(
+            (sum, row) => sum + (Number(row?.quantity) || 0),
+            0,
+          );
+          return allocated <= orderQty + 0.0001;
+        },
+      ),
   });
 
   // Initialize the form with react-hook-form and yup resolver
@@ -177,8 +252,11 @@ export const useOrderProcess = () => {
       image: "",
       closeDate: undefined,
       startDate: undefined,
-      employeeId: "",
+      endDate: undefined,
       workDetails: "",
+      isFinalStep: false,
+      finalWeight: "",
+      employeeWorkRows: [],
     },
   });
 
@@ -244,8 +322,13 @@ export const useOrderProcess = () => {
       image: primaryDesign?.Image || "",
       closeDate: currentValues?.closeDate,
       startDate: currentValues?.startDate,
-      employeeId: currentValues?.employeeId || "",
+      endDate: currentValues?.endDate,
       workDetails: currentValues?.workDetails || "",
+      isFinalStep: currentValues?.isFinalStep || false,
+      finalWeight: currentValues?.finalWeight || "",
+      employeeWorkRows: currentValues?.employeeWorkRows?.length
+        ? currentValues.employeeWorkRows
+        : [],
     });
   };
 
@@ -298,8 +381,14 @@ export const useOrderProcess = () => {
   };
 
   const handleFurtherProcess = () => {
-    setShowFormFields(!showFormFields);
+    const nextShow = !showFormFields;
+    setShowFormFields(nextShow);
     setProcessPostType("FurtherProcess");
+    if (nextShow && !(form.getValues("employeeWorkRows")?.length > 0)) {
+      form.setValue("employeeWorkRows", [{ employeeId: "", quantity: "" }], {
+        shouldValidate: false,
+      });
+    }
   };
 
   const handleFinalClose = () => {
@@ -313,17 +402,40 @@ export const useOrderProcess = () => {
   ) => {
     setAddOrderProcessLoading(true);
 
+    const sharedWorkDetail = {
+      design_id: item.designId,
+      start_date: format(item.startDate, "yyyy-MM-dd"),
+      end_date: format(item.endDate, "yyyy-MM-dd"),
+      work_details: item.workDetails,
+      is_final: item.isFinalStep ? 1 : 0,
+      final_weight: item.isFinalStep
+        ? toTwoDecimalString(item.finalWeight)
+        : "",
+    };
+
+    const employeeRows = (item.employeeWorkRows || []).filter((row) =>
+      String(row?.employeeId || "").trim(),
+    );
+
+    const work_details =
+      employeeRows.length > 0
+        ? employeeRows.map((row) => ({
+            ...sharedWorkDetail,
+            work_under: String(row.employeeId).trim(),
+            work_qty: toTwoDecimalString(row.quantity) || String(row.quantity || "").trim() || "0",
+          }))
+        : [
+            {
+              ...sharedWorkDetail,
+              work_under: "",
+              work_qty: toTwoDecimalString(item.orderQuantity) || "",
+            },
+          ];
+
     const data = {
       org_id: orgId,
       order_id: item.orderId,
-      work_details: [
-        {
-          design_id: item.designId,
-          start_date: format(item.startDate, "yyyy-MM-dd"),
-          work_under: item.employeeId,
-          work_details: item.workDetails,
-        },
-      ],
+      work_details,
     };
 
     try {
@@ -331,7 +443,6 @@ export const useOrderProcess = () => {
 
       if (res.status === 200) {
         form.reset();
-        setEmployeeInput("");
         setIsOpenProcess(false);
         getOrderBookingApiCall(orgId, currentPage, "", perPage);
         setDialogType("View");
@@ -366,7 +477,6 @@ export const useOrderProcess = () => {
 
       if (res.status === 200) {
         form.reset();
-        setEmployeeInput("");
         setIsOpenProcess(false);
         getOrderBookingApiCall(orgId, currentPage, "", perPage);
         setDialogType("View");
@@ -395,9 +505,24 @@ export const useOrderProcess = () => {
         setShowFormFields(true);
         setProcessTableData([]);
         setProcessPostType("FurtherProcess");
+        if (!(form.getValues("employeeWorkRows")?.length > 0)) {
+          form.setValue(
+            "employeeWorkRows",
+            [{ employeeId: "", quantity: "" }],
+            { shouldValidate: false },
+          );
+        }
       }
     } catch (err) {
       setShowFormFields(true);
+      setProcessPostType("FurtherProcess");
+      if (!(form.getValues("employeeWorkRows")?.length > 0)) {
+        form.setValue(
+          "employeeWorkRows",
+          [{ employeeId: "", quantity: "" }],
+          { shouldValidate: false },
+        );
+      }
       toast.error("Something went wrong");
       setProcessTableData([]);
     }
@@ -442,7 +567,6 @@ export const useOrderProcess = () => {
 
   useResetFormOnModalClose(isOpenProcess, () => {
     form.reset();
-    setEmployeeInput("");
     setShowFormFields(false);
     setProcessTableData([]);
     setProcessPostType("FurtherProcess");
@@ -472,7 +596,5 @@ export const useOrderProcess = () => {
     lastPage,
     perPage,
     handlePerPageChange,
-    employeeInput,
-    setEmployeeInput,
   };
 };

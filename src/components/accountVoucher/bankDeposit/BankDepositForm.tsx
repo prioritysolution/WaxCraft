@@ -4,16 +4,16 @@ import { DatePickerField } from "@/common/formFields/DatePickerField";
 import DropdownField from "@/common/formFields/DropdownField";
 import InputField from "@/common/formFields/InputField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { BankDepositFormProps } from "@/types/accountVoucher/BankDepositTypes";
 import { BankAccountTableData } from "@/types/master/BankAccountTypes";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
 } from "@/lib/uiStyles";
-import { Button, Divider } from "@heroui/react";
+import { Divider } from "@heroui/react";
 import { FC } from "react";
 import { useSelector } from "react-redux";
 
@@ -90,17 +90,12 @@ const BankDepositForm: FC<BankDepositFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
             isLoading={addBankDepositLoading}
             isDisabled={addBankDepositLoading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

@@ -14,6 +14,7 @@ import OrderBookingForm from "./OrderBookingForm";
 import OrderBookingTable from "./OrderBookingTable";
 import PartyForm from "@/components/master/party/PartyForm";
 import DesignModal from "./DesignModal";
+import { OrderBookingSuccessModal } from "./OrderBookingSuccessModal";
 
 const OrderBooking: FC<OrderBookingProps> = ({
   addOrderBookingLoading,
@@ -55,6 +56,11 @@ const OrderBooking: FC<OrderBookingProps> = ({
   getPartyLedgerLoading,
   getOrderPartyLoading,
   getOrderDesignLoading,
+  showSuccessDialog,
+  setShowSuccessDialog,
+  successMessage,
+  successOrderIds,
+  handleCloseSuccessDialog,
 }) => {
   return (
     <PageShell>
@@ -129,6 +135,14 @@ const OrderBooking: FC<OrderBookingProps> = ({
         form={form}
         handleAddDesign={handleAddDesign}
         setDesignInput={setOrderDesignInput}
+      />
+
+      <OrderBookingSuccessModal
+        isOpen={showSuccessDialog}
+        onOpenChange={setShowSuccessDialog}
+        message={successMessage}
+        orderIds={successOrderIds}
+        onClose={handleCloseSuccessDialog}
       />
     </PageShell>
   );

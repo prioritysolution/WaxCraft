@@ -6,6 +6,7 @@ import DropdownField from "@/common/formFields/DropdownField";
 import InputField from "@/common/formFields/InputField";
 import RadioField from "@/common/formFields/RadioFields";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useSalesVoucher } from "@/container/inventoryVoucher/salesVoucher/Hooks";
 import { useBankAccount } from "@/container/master/bankAccount/Hooks";
@@ -13,7 +14,6 @@ import { SalesVoucherTableData } from "@/types/inventoryVoucher/SalesVoucherType
 import { BankAccountTableData } from "@/types/master/BankAccountTypes";
 import getCookieData from "@/utils/getCookieData";
 import {
-  Button,
   Input,
   Table,
   TableBody,
@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import InvoiceModal from "./InvoiceModal";
+import { OrderBookingSuccessModal } from "@/components/inventoryVoucher/orderBooking/OrderBookingSuccessModal";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { FileSpreadsheet } from "lucide-react";
 
@@ -67,6 +68,11 @@ const SalesVoucherProcess = () => {
     handleSubmit,
     showInvoiceDialog,
     setShowInvoiceDialog,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successInvoiceNos,
+    handleCloseSuccessDialog,
   } = useSalesVoucher();
 
   const { getBankAccountApiCall } = useBankAccount();
@@ -91,7 +97,9 @@ const SalesVoucherProcess = () => {
 
   useEffect(() => {
     if (!(salesVoucherProcessData.length > 0)) {
-      router.push(`/inventoryVoucher/salesVoucher`);
+      if (!showSuccessDialog) {
+        router.push(`/inventoryVoucher/salesVoucher`);
+      }
     } else {
       const totalAmount = salesVoucherProcessData
         .reduce((sum, item) => {
@@ -104,7 +112,7 @@ const SalesVoucherProcess = () => {
       setTotalOrderAmount(parseFloat(totalAmount)); // Convert the string back to a number
       form.setValue("partyName", salesVoucherProcessData[0]?.Party_Name || "");
     }
-  }, [salesVoucherProcessData]);
+  }, [salesVoucherProcessData, showSuccessDialog]);
 
   useEffect(() => {
     if (token && orgId) {
@@ -404,8 +412,8 @@ const SalesVoucherProcess = () => {
             </div>
 
             <div className="flex w-full justify-end">
-              <Button
-                color="primary"
+              <FormSubmitButton
+                type="button"
                 size="md"
                 radius="md"
                 className="h-9 w-auto min-w-[148px] bg-primary px-4 text-sm font-medium text-white"
@@ -414,7 +422,7 @@ const SalesVoucherProcess = () => {
                 onPress={handleSubmit}
               >
                 Add
-              </Button>
+              </FormSubmitButton>
             </div>
           </div>
         </div>
@@ -422,6 +430,18 @@ const SalesVoucherProcess = () => {
         <InvoiceModal
           showInvoiceDialog={showInvoiceDialog}
           setShowInvoiceDialog={setShowInvoiceDialog}
+        />
+
+        <OrderBookingSuccessModal
+          isOpen={showSuccessDialog}
+          onOpenChange={setShowSuccessDialog}
+          message={successMessage}
+          orderIds={successInvoiceNos}
+          onClose={handleCloseSuccessDialog}
+          idLabel={
+            successInvoiceNos.length > 1 ? "Invoice Nos." : "Invoice No."
+          }
+          fallbackMessage="Invoice processed successfully"
         />
       </form>
     </Form>

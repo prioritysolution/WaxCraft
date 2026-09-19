@@ -1,13 +1,18 @@
 "use client";
 
+import { useItemUnit } from "@/container/master/itemUnit/Hooks";
+import { getDesignAPI } from "@/container/master/design/DesignApis";
+import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
 import { getModalClassNames } from "@/lib/uiStyles";
 import { cn } from "@/lib/utils";
+import { ModalActionIcon } from "@/lib/modalActionIcons";
+import { ApiResponse } from "@/types/ApiTypes";
 import {
   InvoiceModalProps,
   InvoiceTableData,
 } from "@/types/inventoryVoucher/SalesVoucherTypes";
+import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
 import getCookieData from "@/utils/getCookieData";
-import convertToWords from "@/utils/numberToWords";
 import {
   Button,
   Image,
@@ -17,7 +22,7 @@ import {
   ModalFooter,
 } from "@heroui/react";
 import { format } from "date-fns";
-import { FC, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { FC, ReactNode, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useReactToPrint } from "react-to-print";
 
@@ -25,38 +30,13 @@ interface SalesVoucherState {
   invoicePrintData: InvoiceTableData[];
 }
 
+interface ItemUnitState {
+  itemUnitData: ItemUnitTableData[];
+}
+
 interface RootState {
   salesVoucher: SalesVoucherState;
-}
-
-interface InvoiceLine {
-  description: string;
-  quantity: string | number;
-  rate: string | number;
-  makingRate: string | number;
-  total: string | number;
-  isGroup?: boolean;
-}
-
-const FIRST_PAGE_WITH_FOOTER = 10;
-const FIRST_PAGE_ROWS = 16;
-const CONT_PAGE_WITH_FOOTER = 12;
-const CONT_PAGE_ROWS = 22;
-
-function paginateRows(rows: InvoiceLine[]) {
-  if (rows.length <= FIRST_PAGE_WITH_FOOTER) return [rows];
-
-  const pages: InvoiceLine[][] = [];
-  const remaining = [...rows];
-  pages.push(remaining.splice(0, FIRST_PAGE_ROWS));
-
-  while (remaining.length > CONT_PAGE_WITH_FOOTER) {
-    const take = Math.min(CONT_PAGE_ROWS, remaining.length - CONT_PAGE_WITH_FOOTER);
-    pages.push(remaining.splice(0, take > 0 ? take : CONT_PAGE_ROWS));
-  }
-
-  if (remaining.length) pages.push(remaining);
-  return pages;
+  itemUnit: ItemUnitState;
 }
 
 function formatAmount(value: string | number | null | undefined) {
@@ -66,6 +46,60 @@ function formatAmount(value: string | number | null | undefined) {
   return num.toFixed(2);
 }
 
+function resolveDesignUnitLabel(
+  design:
+    | {
+        Design_Id?: number | string;
+        Design_Unit?: number | string | null;
+        Unit_Id?: number | string | null;
+        Unit_Name?: string | null;
+        design_unit?: number | string | null;
+      }
+    | null
+    | undefined,
+  units: ItemUnitTableData[],
+  designUnitById: Record<string, string>,
+) {
+  const unitName = String(design?.Unit_Name ?? "").trim();
+  if (unitName) return unitName;
+
+  const unitId =
+    design?.Design_Unit ??
+    design?.Unit_Id ??
+    design?.design_unit ??
+    designUnitById[String(design?.Design_Id ?? "")];
+
+  if (unitId != null && String(unitId).trim() !== "") {
+    const match = units.find((unit) => String(unit.Id) === String(unitId));
+    if (match?.Unit_Name) return match.Unit_Name;
+  }
+
+  return "SET";
+}
+
+function pickOwnFlag(
+  ...sources: Array<Record<string, unknown> | null | undefined>
+) {
+  for (const source of sources) {
+    if (!source) continue;
+    const value =
+      source.Is_Own ??
+      source.is_own ??
+      source.Item_Type ??
+      source.item_type ??
+      source.Own_Item;
+    if (value != null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+  return "1";
+}
+
+function isPartyItemFlag(flag: string) {
+  const value = flag.toLowerCase();
+  return value === "0" || value === "party" || value === "false";
+}
+
 const InvoiceModal: FC<InvoiceModalProps> = ({
   showInvoiceDialog,
   setShowInvoiceDialog,
@@ -73,14 +107,23 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
   const [orgName, setOrgName] = useState<string | null>(null);
   const [orgAddress, setOrgAddress] = useState<string | null>(null);
   const [orgGstNo, setOrgGstNo] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<number | null>(null);
+  const [designUnitById, setDesignUnitById] = useState<Record<string, string>>(
+    {},
+  );
+  const [fetchedItemRates, setFetchedItemRates] = useState<
+    Record<string, string>
+  >({});
 
   const printRef = useRef(null);
+  const { getItemUnitApiCall } = useItemUnit();
 
   useEffect(() => {
     if (typeof window !== undefined) {
       setOrgName(getCookieData<string | null>("waxCraftClientOrgName"));
       setOrgAddress(getCookieData<string | null>("waxCraftClientOrgAddress"));
       setOrgGstNo(getCookieData<string | null>("waxCraftClientOrgGst"));
+      setOrgId(getCookieData<number | null>("waxCraftClientOrgId"));
     }
   }, []);
 
@@ -88,64 +131,168 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     (state: RootState) => state.salesVoucher.invoicePrintData,
   );
 
+  const itemUnitData: ItemUnitTableData[] =
+    useSelector((state: RootState) => state?.itemUnit?.itemUnitData) ?? [];
+
+  useEffect(() => {
+    if (!showInvoiceDialog || !orgId) return;
+
+    getItemUnitApiCall(orgId);
+
+    let cancelled = false;
+
+    const loadDesignUnits = async () => {
+      try {
+        const res: ApiResponse = await getDesignAPI(orgId, 1, "", 100);
+        if (cancelled || res.status !== 200) return;
+
+        const details = res.data.details;
+        const rows = Array.isArray(details)
+          ? details
+          : Array.isArray(details?.data)
+            ? details.data
+            : [];
+
+        const nextMap: Record<string, string> = {};
+        rows.forEach((row: Record<string, unknown>) => {
+          const designId = row?.Id;
+          const designUnit = row?.Design_Unit ?? row?.design_unit;
+          if (
+            designId != null &&
+            designUnit != null &&
+            String(designUnit).trim() !== ""
+          ) {
+            nextMap[String(designId)] = String(designUnit);
+          }
+        });
+        setDesignUnitById(nextMap);
+      } catch {
+        if (!cancelled) setDesignUnitById({});
+      }
+    };
+
+    void loadDesignUnits();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showInvoiceDialog, orgId]);
+
+  useEffect(() => {
+    if (!showInvoiceDialog || !orgId || !invoiceData?.length) {
+      setFetchedItemRates({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadMissingOwnItemRates = async () => {
+      const pendingIds = new Set<string>();
+
+      invoiceData.forEach((invoiceRow) => {
+        const design = invoiceRow.DesignRow?.[0];
+        if (!design) return;
+
+        const ownFlag = pickOwnFlag(
+          invoiceRow as unknown as Record<string, unknown>,
+          design as unknown as Record<string, unknown>,
+        );
+        if (isPartyItemFlag(ownFlag)) return;
+
+        (design.ItemRow || []).forEach((item) => {
+          const itemId = String(item.Item_Id ?? "");
+          if (!itemId) return;
+          const existingRate = Number(item.Item_Rate);
+          if (Number.isFinite(existingRate) && existingRate > 0) return;
+          pendingIds.add(itemId);
+        });
+      });
+
+      if (!pendingIds.size) {
+        if (!cancelled) setFetchedItemRates({});
+        return;
+      }
+
+      const entries = await Promise.all(
+        [...pendingIds].map(async (itemId) => {
+          try {
+            const res: ApiResponse = await getItemRateAPI(orgId, itemId);
+            if (res.status === 200 && res.data.details != null) {
+              const rate = formatAmount(res.data.details);
+              if (rate) return [itemId, rate] as const;
+            }
+          } catch {
+            return null;
+          }
+          return null;
+        }),
+      );
+
+      if (cancelled) return;
+
+      setFetchedItemRates(
+        Object.fromEntries(
+          entries.filter(Boolean) as Array<readonly [string, string]>,
+        ),
+      );
+    };
+
+    void loadMissingOwnItemRates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showInvoiceDialog, orgId, invoiceData]);
+
   const invoice = invoiceData?.[0];
   const isTaxInvoice = !!invoice?.CGST_Rate;
-
-  const invoiceTableData = useMemo<InvoiceLine[]>(
-    () =>
-      invoiceData?.flatMap((data) => [
-        {
-          description: `${data.DesignRow[0].Design_Name} - ${data.DesignRow[0].Design_No}`,
-          quantity: data.DesignRow[0].Order_Qnty,
-          rate: "",
-          makingRate: "",
-          total: "",
-          isGroup: true,
-        },
-        {
-          description: "WT",
-          quantity: data.DesignRow[0].Wt,
-          rate: data.DesignRow[0].Wt_Rate,
-          makingRate: "",
-          total: data.DesignRow[0].Tot_Wt,
-        },
-        ...data.DesignRow[0].ItemRow.map((item) => ({
-          description: item.Item_Name,
-          quantity: item.Item_Qnty,
-          rate: item.Item_Rate,
-          makingRate: item.Making_Rate ?? "",
-          total: item.Item_Tot,
-        })),
-        {
-          description: "Polish",
-          quantity: data.DesignRow[0].Order_Qnty,
-          rate: data.DesignRow[0].Polish,
-          makingRate: "",
-          total: data.DesignRow[0].Tot_Polish,
-        },
-      ]) ?? [],
-    [invoiceData],
-  );
-
-  const itemPages = useMemo(
-    () => paginateRows(invoiceTableData),
-    [invoiceTableData],
-  );
-
-  const grandTotal = Math.ceil(
-    (Number(invoice?.Tot_Amount) || 0) +
-      (Number(invoice?.Tot_CGST) || 0) +
-      (Number(invoice?.Tot_SGST) || 0) +
-      (Number(invoice?.Tot_Round) || 0) -
-      (Number(invoice?.Tot_Disc) || 0),
-  );
 
   const generatePDF = useReactToPrint({
     contentRef: printRef,
     documentTitle: "Sale Invoice",
   });
 
-  const totalPages = itemPages.length + (invoiceData?.length ? invoiceData.length : 0);
+  const totalPages = invoiceData?.length ? invoiceData.length : 0;
+
+  const getMarkRows = (
+    designInvoice: InvoiceTableData,
+  ) => {
+    const design = designInvoice.DesignRow?.[0];
+    if (!design) return [];
+
+    const orderQty = Number(design.Order_Qnty) || 0;
+    const safeOrderQty = orderQty > 0 ? orderQty : 1;
+    const ownFlag = pickOwnFlag(
+      designInvoice as unknown as Record<string, unknown>,
+      design as unknown as Record<string, unknown>,
+    );
+    const partyItem = isPartyItemFlag(ownFlag);
+
+    return (design.ItemRow || []).map((item) => {
+      const itemId = String(item.Item_Id ?? "");
+      const consumed = Number(item.Item_Qnty) || 0;
+      const perSet = consumed / safeOrderQty;
+      const fetchedRate = Number(fetchedItemRates[itemId]);
+      const rowRate = Number(item.Item_Rate);
+      const rate = partyItem
+        ? 0
+        : Number.isFinite(rowRate) && rowRate > 0
+          ? rowRate
+          : Number.isFinite(fetchedRate) && fetchedRate > 0
+            ? fetchedRate
+            : 0;
+      const total = partyItem ? 0 : consumed * rate;
+
+      return {
+        itemId,
+        itemName: item.Item_Name || "—",
+        perSet,
+        consumed,
+        rate,
+        total,
+      };
+    });
+  };
 
   const OrgHeader = ({ compact = false }: { compact?: boolean }) => (
     <div
@@ -188,11 +335,6 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
         <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           {isTaxInvoice ? "Tax Invoice" : "Invoice"}
         </span>
-        {compact ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {invoice?.Sale_No}
-          </p>
-        ) : null}
       </div>
     </div>
   );
@@ -248,127 +390,6 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     </div>
   );
 
-  const LineTable = ({
-    rows,
-    startIndex,
-  }: {
-    rows: InvoiceLine[];
-    startIndex: number;
-  }) => (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-black/[0.08]">
-      <table className="h-full w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-[#F7F5F3] text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            <th className="w-14 px-3 py-2 text-left">Sl. No</th>
-            <th className="px-3 py-2 text-left">Description</th>
-            <th className="w-[100px] px-3 py-2 text-right">Quantity</th>
-            <th className="w-[100px] px-3 py-2 text-right">Rate</th>
-            <th className="w-[110px] px-3 py-2 text-right">Making Rate</th>
-            <th className="w-[110px] px-3 py-2 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr
-              key={`${startIndex}-${index}`}
-              className={cn(
-                "border-t border-black/[0.05]",
-                row.isGroup ? "bg-primary/[0.04]" : index % 2 === 1 && "bg-[#F7F5F3]/50",
-              )}
-            >
-              <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                {startIndex + index + 1}
-              </td>
-              <td
-                className={cn(
-                  "px-3 py-2 text-foreground",
-                  row.isGroup && "font-semibold",
-                )}
-              >
-                {row.description}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {formatAmount(row.quantity)}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {formatAmount(row.rate)}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {formatAmount(row.makingRate)}
-              </td>
-              <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                {formatAmount(row.total)}
-              </td>
-            </tr>
-          ))}
-          <tr>
-            <td className="h-full border-t border-black/[0.05] p-0" />
-            <td className="h-full border-t border-l border-black/[0.05] p-0" />
-            <td className="h-full border-t border-l border-black/[0.05] p-0" />
-            <td className="h-full border-t border-l border-black/[0.05] p-0" />
-            <td className="h-full border-t border-l border-black/[0.05] p-0" />
-            <td className="h-full border-t border-l border-black/[0.05] p-0" />
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-
-  const TotalsFooter = () => (
-    <div className="grid grid-cols-[1.4fr_1fr] items-start gap-4 border-t border-black/[0.08] px-5 py-3.5">
-      <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Amount Chargeable (in words)
-          </p>
-          <p className="mt-1 text-sm font-semibold leading-5 text-foreground">
-            {convertToWords(grandTotal)} Only
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Company Bank Account Details
-          </p>
-          <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
-            <p>Bank Name :</p>
-            <p>Branch Name :</p>
-            <p>IFSC :</p>
-            <p>Account No. :</p>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Note — Please make cheques in favor of &quot;{orgName}&quot;
-          </p>
-        </div>
-      </div>
-      <div>
-        <div className="overflow-hidden rounded-xl border border-black/[0.08]">
-          <SummaryRow
-            label={isTaxInvoice ? "Taxable Total" : "Total"}
-            value={invoice?.Tot_Amount}
-          />
-          {Number(invoice?.CGST_Rate) > 0 ? (
-            <SummaryRow label="CGST" value={invoice?.Tot_CGST} />
-          ) : null}
-          {Number(invoice?.SGST_Rate) > 0 ? (
-            <SummaryRow label="SGST" value={invoice?.Tot_SGST} />
-          ) : null}
-          <SummaryRow label="Round off" value={invoice?.Tot_Round} />
-          <SummaryRow label="Discount" value={invoice?.Tot_Disc} />
-          <div className="flex items-center justify-between bg-primary px-4 py-2.5 text-sm font-semibold text-white">
-            <span>Grand Total</span>
-            <span className="tabular-nums">{formatAmount(grandTotal)}</span>
-          </div>
-        </div>
-        <div className="mt-3 text-right text-xs text-muted-foreground">
-          <p>For {orgName}</p>
-          <div className="mt-8 text-sm font-medium text-foreground">
-            Authorised Signature
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const PageShell = ({
     children,
     pageNo,
@@ -411,91 +432,118 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                 }
               `}</style>
 
-              {itemPages.map((rows, pageIndex) => {
-                const startIndex = itemPages
-                  .slice(0, pageIndex)
-                  .reduce((sum, page) => sum + page.length, 0);
-                const isLastItemPage = pageIndex === itemPages.length - 1;
+              {invoiceData?.map((designInvoice, designIndex) => {
+                const design = designInvoice.DesignRow[0];
+                const unitLabel = resolveDesignUnitLabel(
+                  design,
+                  itemUnitData,
+                  designUnitById,
+                );
+                const markRows = getMarkRows(designInvoice);
+                const grandTotal = markRows.reduce(
+                  (sum, row) => sum + (Number(row.total) || 0),
+                  0,
+                );
 
                 return (
-                  <PageShell key={`item-page-${pageIndex}`} pageNo={pageIndex + 1}>
-                    <OrgHeader compact={pageIndex > 0} />
-                    {pageIndex === 0 ? <PartyMeta /> : null}
-                    <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
-                      <LineTable rows={rows} startIndex={startIndex} />
-                      {!isLastItemPage ? (
-                        <p className="px-1 py-2 text-right text-xs italic text-muted-foreground">
-                          Continued on next page
-                        </p>
-                      ) : null}
-                    </div>
-                    {isLastItemPage ? <TotalsFooter /> : null}
-                  </PageShell>
-                );
-              })}
-
-              {invoiceData?.map((designInvoice, designIndex) => (
                 <PageShell
                   key={`design-page-${designInvoice.Id}-${designIndex}`}
-                  pageNo={itemPages.length + designIndex + 1}
+                  pageNo={designIndex + 1}
                 >
                   <OrgHeader compact />
                   <PartyMeta />
-                  <div className="grid flex-1 grid-cols-[168px_1fr] items-start gap-4 px-5 py-3.5">
+                  <div className="grid flex-1 grid-cols-[148px_1fr] items-start gap-4 px-5 py-3.5">
                     <div className="flex flex-col items-center self-start">
                       <div className="overflow-hidden rounded-xl border border-black/[0.08] bg-[#F7F5F3]">
                         <Image
-                          src={designInvoice.DesignRow[0].Image}
+                          src={design.Image}
                           alt="Design"
-                          width={160}
-                          height={160}
-                          className="h-40 w-40 object-cover"
+                          width={140}
+                          height={140}
+                          className="h-[140px] w-[140px] object-cover"
                         />
                       </div>
                       <div className="mt-2 grid w-full grid-cols-2 overflow-hidden rounded-lg border border-black/[0.08] text-center text-xs">
                         <p className="border-r border-black/[0.08] bg-[#F7F5F3] px-2 py-2 font-medium">
-                          {formatAmount(designInvoice.DesignRow[0].Order_Qnty)} SET
+                          {formatAmount(design.Order_Qnty)} {unitLabel}
                         </p>
                         <p className="px-2 py-2 font-medium">
-                          {formatAmount(designInvoice.DesignRow[0].Wt)} gm
+                          {formatAmount(design.Wt)} gm
                         </p>
                       </div>
                     </div>
-                    <div className="self-start overflow-hidden rounded-xl border border-black/[0.08]">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-[#F7F5F3]">
-                            <th
-                              colSpan={2}
-                              className="px-3 py-2 text-center text-xs font-semibold"
-                            >
-                              {designInvoice.DesignRow[0].Design_Name} -{" "}
-                              {designInvoice.DesignRow[0].Design_No}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {designInvoice?.DesignRow[0]?.ItemRow?.map((item, itemIndex) => (
-                            <tr
-                              key={`mix-${designInvoice.Id}-${designIndex}-${item.Item_Id}-${itemIndex}`}
-                              className="border-t border-black/[0.05]"
-                            >
-                              <td className="px-3 py-2">{item.Item_Name}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">
-                                {formatAmount(
-                                  (Number(item.Item_Qnty) || 0) /
-                                    (Number(designInvoice?.DesignRow[0]?.Order_Qnty) ||
-                                      1),
-                                )}
+                    <div className="min-w-0 self-start overflow-hidden rounded-xl border border-black/[0.08]">
+                      <div className="border-b border-black/[0.06] bg-[#F7F5F3] px-3 py-2 text-center text-xs font-semibold">
+                        {design.Design_Name} - {design.Design_No}
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[520px] border-collapse text-sm">
+                          <thead>
+                            <tr className="bg-[#F7F5F3]/70 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                              <th className="px-3 py-2 text-left">Item</th>
+                              <th className="px-3 py-2 text-right">
+                                Per {unitLabel}
+                              </th>
+                              <th className="px-3 py-2 text-right">Consumed</th>
+                              <th className="px-3 py-2 text-right">Rate</th>
+                              <th className="px-3 py-2 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {markRows.length ? (
+                              markRows.map((row, itemIndex) => (
+                                <tr
+                                  key={`mix-${designInvoice.Id}-${designIndex}-${row.itemId}-${itemIndex}`}
+                                  className="border-t border-black/[0.05]"
+                                >
+                                  <td className="px-3 py-2 text-left">
+                                    {row.itemName}
+                                  </td>
+                                  <td className="px-3 py-2 text-right tabular-nums">
+                                    {formatAmount(row.perSet)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right tabular-nums">
+                                    {formatAmount(row.consumed)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right tabular-nums">
+                                    {formatAmount(row.rate)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-medium tabular-nums">
+                                    {formatAmount(row.total)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={5}
+                                  className="px-3 py-6 text-center text-sm text-muted-foreground"
+                                >
+                                  No items found.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-black/[0.08] bg-[#F7F5F3]/80">
+                              <td
+                                colSpan={4}
+                                className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.12em]"
+                              >
+                                Grand Total
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-sm font-semibold tabular-nums">
+                                {formatAmount(grandTotal)}
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </tfoot>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </PageShell>
-              ))}
+                );
+              })}
             </div>
           </div>
         </ModalBody>
@@ -509,6 +557,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             size="lg"
             radius="sm"
             className="w-32"
+            startContent={<ModalActionIcon label="Cancel" />}
           >
             Cancel
           </Button>
@@ -518,6 +567,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             radius="sm"
             className="w-32"
             onPress={() => generatePDF()}
+            startContent={<ModalActionIcon label="Print" />}
           >
             Print
           </Button>
@@ -526,20 +576,5 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     </Modal>
   );
 };
-
-function SummaryRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null | undefined;
-}) {
-  return (
-    <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-1.5 text-sm last:border-b-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium tabular-nums">{formatAmount(value)}</span>
-    </div>
-  );
-}
 
 export default InvoiceModal;

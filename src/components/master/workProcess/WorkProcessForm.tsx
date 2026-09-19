@@ -40,8 +40,8 @@ const WorkProcessForm: FC<WorkProcessFormProps> = ({
             title={isEdit ? "Edit Work Process" : "Add New Work Process"}
             description={
               isEdit
-                ? "Update the process name and save your changes."
-                : "Enter a process name to add it to the list."
+                ? "Update the process name and step, then save your changes."
+                : "Enter a process name and step to add it to the list."
             }
             isEdit={isEdit}
             onClose={() => setIsOpen(false)}
@@ -52,6 +52,23 @@ const WorkProcessForm: FC<WorkProcessFormProps> = ({
               control={form.control}
               name="processName"
               label="Process Name"
+              required
+            />
+            <InputField
+              control={form.control}
+              name="processStep"
+              label="Process Step"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              required
+              onInput={(e) => {
+                const input = e.currentTarget;
+                input.value = input.value.replace(/\D/g, "");
+                form.setValue("processStep", input.value, {
+                  shouldValidate: true,
+                });
+              }}
             />
           </FormModalBody>
           <FormModalFooter

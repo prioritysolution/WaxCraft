@@ -6,6 +6,7 @@ import RadioField from "@/common/formFields/RadioFields";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import TextareaField from "@/common/formFields/TextareaField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   TableDeleteButton,
@@ -19,7 +20,6 @@ import {
 import { SamplePrintFormProps } from "@/types/inventoryVoucher/SamplePrintTypes";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
-  Button,
   Image,
   Table,
   TableBody,
@@ -233,17 +233,13 @@ const SamplePrintForm: FC<SamplePrintFormProps> = ({
         </ScrollArea>
 
         <div className="flex w-full justify-end">
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
+          <FormSubmitButton
             className="w-auto min-w-[148px]"
             isLoading={addSamplePrintLoading}
             isDisabled={addSamplePrintLoading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

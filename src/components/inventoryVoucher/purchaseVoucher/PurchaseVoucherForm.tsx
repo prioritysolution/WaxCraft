@@ -6,12 +6,12 @@ import InputField from "@/common/formFields/InputField";
 import RadioField from "@/common/formFields/RadioFields";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
   tableClassNames,
@@ -30,6 +30,8 @@ import {
   TableRow,
 } from "@heroui/react";
 import { TableDeleteButton } from "@/components/ui/table-edit-button";
+import { Input } from "@/components/ui/input";
+import { sanitizeDecimalInput } from "@/utils/formatDecimal";
 import { FC, useState } from "react";
 import { useSelector } from "react-redux";
 import RequisitionModal from "./RequisitionModal";
@@ -63,6 +65,7 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
   handleSubmit,
   purchaseTableData,
   handleDeletePurchaseTableData,
+  handleUpdatePurchaseTableRate,
   handleAddPurchase,
   handleSearchItem,
   handleScrollItem,
@@ -197,17 +200,13 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
             type="number"
           />
 
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
+          <FormSubmitButton
             className="w-auto min-w-[148px] justify-self-end self-end"
             isLoading={addPurchaseVoucherLoading}
             isDisabled={addPurchaseVoucherLoading || orderPurchaseType === "O"}
           >
             Add To Table
-          </Button>
+          </FormSubmitButton>
 
           {orderPurchaseType === "O" && (
             <Button
@@ -259,7 +258,23 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
                   </TableCell>
                   <TableCell>{data?.itemName}</TableCell>
                   <TableCell>{data?.quantity}</TableCell>
-                  <TableCell>{data?.rate}</TableCell>
+                  <TableCell>
+                    {data.orderPurchaseType === "O" ? (
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={String(data?.rate ?? "")}
+                        aria-label={`Edit rate for ${data?.itemName || "item"}`}
+                        className="mx-auto h-9 w-[96px] rounded-lg border border-black/15 bg-[#F7F5F3] px-2 text-center text-sm tabular-nums shadow-none focus-visible:border-black/25 focus-visible:outline-none focus-visible:ring-0"
+                        onChange={(e) => {
+                          const next = sanitizeDecimalInput(e.target.value);
+                          handleUpdatePurchaseTableRate(index, next);
+                        }}
+                      />
+                    ) : (
+                      data?.rate
+                    )}
+                  </TableCell>
                   {/* {purchaseType === "Y" ? (
                     <> */}
                   <TableCell>{data?.taxableTotal}</TableCell>
@@ -336,17 +351,14 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
+            type="button"
             isLoading={addPurchaseVoucherLoading}
             isDisabled={addPurchaseVoucherLoading}
             onPress={handleAddPurchase}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
 
         <DeleteConfirmModal

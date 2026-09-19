@@ -1,7 +1,29 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { AccountGroupBody } from "@/types/master/AccountGroupTypes";
+
+const getAccountGroupInFlight = createInFlightRequest<ApiResponse>();
+const getAccountMainHeadInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetAccountGroupKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetAccountMainHeadKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const invalidateGetAccountGroupInFlight = () => {
+  getAccountGroupInFlight.clear();
+  getAccountMainHeadInFlight.clear();
+};
 
 export const addAccountGroupAPI = async (
   bodyData: AccountGroupBody
@@ -10,6 +32,8 @@ export const addAccountGroupAPI = async (
     url: endPoints.addAccountGroup,
     bodyData,
   };
+
+  invalidateGetAccountGroupInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +49,8 @@ export const updateAccountGroupAPI = async (
     bodyData,
   };
 
+  invalidateGetAccountGroupInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -37,14 +63,13 @@ export const getAccountGroupAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getAccountGroup(orgId, page, keyword, perPage),
-  };
+  const key = buildGetAccountGroupKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getAccountGroupInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getAccountGroup(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getAccountMainHeadAPI = async (
@@ -52,14 +77,13 @@ export const getAccountMainHeadAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getAccountMainHead(orgId, page, keyword),
-  };
+  const key = buildGetAccountMainHeadKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getAccountMainHeadInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getAccountMainHead(orgId, page, keyword),
+    }),
+  );
 };
 
 export const deleteAccountGroupAPI = async (bodyData: {
@@ -70,6 +94,8 @@ export const deleteAccountGroupAPI = async (bodyData: {
     url: endPoints.deleteAccountGroup,
     bodyData,
   };
+
+  invalidateGetAccountGroupInFlight();
 
   const res = await doPutApiCall(data);
 

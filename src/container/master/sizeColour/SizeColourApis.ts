@@ -1,7 +1,28 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { SizeColourBody } from "@/types/master/SizeColourTypes";
+
+const getSizeColourInFlight = createInFlightRequest<ApiResponse>();
+const getColourUnderSizeInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetSizeColourKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetColourUnderSizeKey = (
+  orgId: string | number,
+  sizeId: string,
+) => `${orgId}:${sizeId}`;
+
+const invalidateGetSizeColourInFlight = () => {
+  getSizeColourInFlight.clear();
+  getColourUnderSizeInFlight.clear();
+};
 
 export const addSizeColourAPI = async (
   bodyData: SizeColourBody
@@ -10,6 +31,8 @@ export const addSizeColourAPI = async (
     url: endPoints.addSizeColour,
     bodyData,
   };
+
+  invalidateGetSizeColourInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +48,8 @@ export const updateSizeColourAPI = async (
     bodyData,
   };
 
+  invalidateGetSizeColourInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -37,28 +62,26 @@ export const getSizeColourAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getSizeColour(orgId, page, keyword, perPage),
-  };
+  const key = buildGetSizeColourKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getSizeColourInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getSizeColour(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getColourUnderSizeAPI = async (
   orgId: string | number,
   sizeId: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getColourUnderSize(orgId, sizeId),
-  };
+  const key = buildGetColourUnderSizeKey(orgId, sizeId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getColourUnderSizeInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getColourUnderSize(orgId, sizeId),
+    }),
+  );
 };
 
 export const deleteSizeColourAPI = async (bodyData: {
@@ -69,6 +92,8 @@ export const deleteSizeColourAPI = async (bodyData: {
     url: endPoints.deleteSizeColour,
     bodyData,
   };
+
+  invalidateGetSizeColourInFlight();
 
   const res = await doPutApiCall(data);
 

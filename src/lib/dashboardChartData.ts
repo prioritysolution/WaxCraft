@@ -114,7 +114,7 @@ export const buildDashboardCharts = ({
     { name: "Parties", value: partiesCount, fill: CHART_COLORS.parties },
     { name: "Items", value: itemsCount, fill: CHART_COLORS.items },
     {
-      name: "Orders Booked",
+      name: "Order Book",
       value: ordersBookedCount,
       fill: CHART_COLORS.booked,
     },

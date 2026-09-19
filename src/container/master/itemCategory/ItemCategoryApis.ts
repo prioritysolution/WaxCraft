@@ -1,7 +1,21 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ItemCategoryBody } from "@/types/master/ItemCategoryTypes";
+
+const getItemCategoryInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetItemCategoryKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const invalidateGetItemCategoryInFlight = () => {
+  getItemCategoryInFlight.clear();
+};
 
 export const addItemCategoryAPI = async (
   bodyData: ItemCategoryBody
@@ -10,6 +24,8 @@ export const addItemCategoryAPI = async (
     url: endPoints.addItemCategory,
     bodyData,
   };
+
+  invalidateGetItemCategoryInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +41,8 @@ export const updateItemCategoryAPI = async (
     bodyData,
   };
 
+  invalidateGetItemCategoryInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -37,14 +55,13 @@ export const getItemCategoryAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getItemCategory(orgId, page, keyword, perPage),
-  };
+  const key = buildGetItemCategoryKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getItemCategoryInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemCategory(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const deleteItemCategoryAPI = async (bodyData: {
@@ -55,6 +72,8 @@ export const deleteItemCategoryAPI = async (bodyData: {
     url: endPoints.deleteItemCategory,
     bodyData,
   };
+
+  invalidateGetItemCategoryInFlight();
 
   const res = await doPutApiCall(data);
 

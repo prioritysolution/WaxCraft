@@ -9,7 +9,7 @@ import {
   getPaginatedTableRows,
 } from "@/components/ui/table-edit-button";
 import { useClientTableSearch } from "@/lib/useClientTableSearch";
-import { ChevronRight, ClipboardCheck } from "lucide-react";
+import { ChevronRight, ClipboardCheck, Printer } from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
@@ -31,11 +31,13 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
+  Tooltip,
 } from "@heroui/react";
 import { format } from "date-fns";
 import { FC, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { TablePaginationBar } from "@/components/ui/table-pagination";
+import JobSheetModal from "./JobSheetModal";
 
 interface OrderBookingState {
   orderBookingData: OrderBookingTableData[];
@@ -65,9 +67,17 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
   onPerPageChange,
 }) => {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [jobSheetOrder, setJobSheetOrder] =
+    useState<OrderBookingTableData | null>(null);
+  const [showJobSheetDialog, setShowJobSheetDialog] = useState(false);
 
   const toggleRow = (id: number) => {
     setExpandedOrderId((current) => (current === id ? null : id));
+  };
+
+  const handlePrintJobSheet = (order: OrderBookingTableData) => {
+    setJobSheetOrder(order);
+    setShowJobSheetDialog(true);
   };
 
   const orderBookingData: OrderBookingTableData[] = useSelector(
@@ -122,7 +132,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
           <TableColumn align="center">Party Name</TableColumn>
           <TableColumn align="center">Order Amount</TableColumn>
           <TableColumn align="center">Order Status</TableColumn>
-          <TableColumn align="center" className="w-[100px]">
+          <TableColumn align="center" className="w-[120px]">
             Actions
           </TableColumn>
         </TableHeader>
@@ -189,14 +199,29 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                     {data.Order_Status}
                   </Chip>
                 </TableCell>
-                <TableCell className="w-[100px]">
-                    <div className="flex justify-center">
-                      <TableCancelButton
-                        label="Cancel order"
-                        onPress={() => handleShowDeleteDialog(data.Id)}
-                        isDisabled={data.Order_Status !== "Ordered"}
-                      />
-                    </div>
+                <TableCell className="w-[120px]">
+                  <div className="inline-flex items-center justify-center gap-2">
+                    <Tooltip content="Print Job Sheet" delay={200}>
+                      <span className="inline-flex">
+                        <Button
+                          type="button"
+                          isIconOnly
+                          size="sm"
+                          radius="md"
+                          aria-label="Print Job Sheet"
+                          className="h-8 w-8 min-w-8 bg-[#E8F1FB] text-[#1D4ED8] shadow-none transition-colors data-[hover=true]:bg-[#D7E7F8] data-[hover=true]:text-[#1E40AF]"
+                          onPress={() => handlePrintJobSheet(data)}
+                        >
+                          <Printer className="h-3.5 w-3.5" strokeWidth={2} />
+                        </Button>
+                      </span>
+                    </Tooltip>
+                    <TableCancelButton
+                      label="Cancel order"
+                      onPress={() => handleShowDeleteDialog(data.Id)}
+                      isDisabled={data.Order_Status !== "Ordered"}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>,
             ];
@@ -411,6 +436,15 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
           setTempDeleteId(null);
         }}
         onConfirm={handleDeleteOrder}
+      />
+
+      <JobSheetModal
+        order={jobSheetOrder}
+        isOpen={showJobSheetDialog}
+        onOpenChange={(open) => {
+          setShowJobSheetDialog(open);
+          if (!open) setJobSheetOrder(null);
+        }}
       />
     </div>
   );

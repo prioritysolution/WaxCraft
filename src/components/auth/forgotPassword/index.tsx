@@ -2,12 +2,12 @@
 
 import { FC, useState } from "react";
 import { Button, Link } from "@heroui/react";
-import { IoEye, IoEyeOff } from "react-icons/io5";
+import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 import InputField from "@/common/formFields/InputField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ForgotPasswordProps } from "@/types/auth/ForgotPasswordTypes";
-import { FaCheckCircle } from "react-icons/fa";
 
 const ForgotPassword: FC<ForgotPasswordProps> = ({
   loading,
@@ -84,7 +84,7 @@ const ForgotPassword: FC<ForgotPasswordProps> = ({
                       isIconOnly
                       aria-label="Verify OTP"
                     >
-                      <FaCheckCircle />
+                      <CheckCircle2 />
                     </Button>
                   </div>
 
@@ -101,9 +101,9 @@ const ForgotPassword: FC<ForgotPasswordProps> = ({
                         onClick={togglePasswordVisibility}
                       >
                         {isPasswordVisible ? (
-                          <IoEyeOff className="pointer-events-none text-xl text-default-400" />
+                          <EyeOff className="pointer-events-none text-xl text-default-400" />
                         ) : (
-                          <IoEye className="pointer-events-none text-xl text-default-400" />
+                          <Eye className="pointer-events-none text-xl text-default-400" />
                         )}
                       </button>
                     }
@@ -122,9 +122,9 @@ const ForgotPassword: FC<ForgotPasswordProps> = ({
                         onClick={toggleConfirmPasswordVisibility}
                       >
                         {isConfirmPasswordVisible ? (
-                          <IoEyeOff className="pointer-events-none text-xl text-default-400" />
+                          <EyeOff className="pointer-events-none text-xl text-default-400" />
                         ) : (
-                          <IoEye className="pointer-events-none text-xl text-default-400" />
+                          <Eye className="pointer-events-none text-xl text-default-400" />
                         )}
                       </button>
                     }
@@ -141,17 +141,14 @@ const ForgotPassword: FC<ForgotPasswordProps> = ({
                 Back to Login
               </Link>
 
-              <Button
-                type="submit"
-                color="primary"
+              <FormSubmitButton
                 radius="md"
-                size="lg"
                 className="mt-1 h-11 w-full bg-primary text-sm font-medium text-white"
                 isLoading={loading}
                 isDisabled={loading || currentStep === 2}
               >
                 {currentStep === 1 ? "Next" : "Submit"}
-              </Button>
+              </FormSubmitButton>
             </form>
           </Form>
         </div>

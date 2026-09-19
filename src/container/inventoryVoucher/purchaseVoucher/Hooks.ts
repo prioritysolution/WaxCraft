@@ -26,6 +26,8 @@ import {
   getPurchaseVoucherData,
 } from "./PurchaseVoucherReducer";
 import { ItemTableData } from "@/types/master/ItemTypes";
+import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
+import { toTwoDecimalString } from "@/utils/formatDecimal";
 
 interface PurchasePartyData {
   Id: number;
@@ -81,6 +83,10 @@ export const usePurchaseVoucher = () => {
   const lastOrderPurchaseTypeRef = useRef("R");
 
   const [tempDeleteId, setTempDeleteId] = useState<number | null>(null);
+
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successPurchaseNos, setSuccessPurchaseNos] = useState<string[]>([]);
 
   const purchasePartyData: PurchasePartyData[] = useSelector(
     (state: RootState) => state?.purchaseVoucher?.purchasePartyData
@@ -208,6 +214,94 @@ export const usePurchaseVoucher = () => {
     resetLineFields();
   };
 
+  const pickRequisitionRate = (row: Record<string, unknown>) => {
+    const candidates = [
+      row.Item_Rate,
+      row.item_rate,
+      row.Rate,
+      row.rate,
+      row.Pur_Rate,
+      row.pur_rate,
+      row.Purchase_Rate,
+      row.purchase_rate,
+      row.Order_Rate,
+      row.order_rate,
+    ];
+
+    for (const candidate of candidates) {
+      const value = toTwoDecimalString(candidate);
+      if (value && Number(value) >= 0 && String(candidate ?? "").trim() !== "") {
+        return value;
+      }
+    }
+
+    return "";
+  };
+
+  const fetchItemPurchaseRate = async (
+    orgId: number,
+    itemId: string,
+    fallbackRate?: unknown,
+  ) => {
+    const fromFallback = toTwoDecimalString(fallbackRate);
+    if (fromFallback && Number(fromFallback) > 0) return fromFallback;
+
+    if (!itemId) return fromFallback || "";
+
+    try {
+      const res: ApiResponse = await getItemRateAPI(orgId, itemId);
+      if (res.status === 200 && res.data.details != null) {
+        const fetched = toTwoDecimalString(res.data.details);
+        if (fetched) return fetched;
+      }
+    } catch {
+      // Keep fallback rate if fetch fails.
+    }
+
+    return fromFallback || "";
+  };
+
+  const enrichRequisitionRowsWithRates = async (
+    orgId: number,
+    rows: ItemRequisitionRow[],
+  ) => {
+    const uniqueItemIds = [
+      ...new Set(
+        rows
+          .map((row) => String(row.Item_Id ?? row.Id ?? "").trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    const rateEntries = await Promise.all(
+      uniqueItemIds.map(async (itemId) => {
+        const existing = rows.find(
+          (row) => String(row.Item_Id ?? row.Id ?? "") === itemId,
+        );
+        const rate = await fetchItemPurchaseRate(
+          orgId,
+          itemId,
+          pickRequisitionRate((existing || {}) as Record<string, unknown>),
+        );
+        return [itemId, rate] as const;
+      }),
+    );
+
+    const rateByItemId = Object.fromEntries(rateEntries);
+
+    return rows.map((row) => {
+      const itemId = String(row.Item_Id ?? row.Id ?? "");
+      const rate =
+        rateByItemId[itemId] ||
+        pickRequisitionRate(row as unknown as Record<string, unknown>);
+
+      return {
+        ...row,
+        Item_Rate: rate,
+      };
+    });
+  };
+
   const normalizeRequisitionRows = (details: unknown): ItemRequisitionRow[] => {
     const source = details as
       | ItemRequisitionRow[]
@@ -224,13 +318,14 @@ export const usePurchaseVoucher = () => {
     raw.forEach((row, rowIndex) => {
       if (Array.isArray(row.ItemRow) && row.ItemRow.length > 0) {
         row.ItemRow.forEach((item, itemIndex) => {
+          const itemRecord = item as unknown as Record<string, unknown>;
           rows.push({
             ...item,
             Id: item.Id ?? item.Item_Id ?? row.Id,
             Item_Id: item.Item_Id ?? item.Id,
             Item_Name: item.Item_Name,
             Item_Qnty: item.Item_Qnty ?? item.Qnty ?? item.Quantity,
-            Item_Rate: item.Item_Rate ?? item.Rate ?? item.Pur_Rate,
+            Item_Rate: pickRequisitionRate(itemRecord),
             Order_No: item.Order_No ?? row.Order_No ?? row.Req_No,
             Req_No: item.Req_No ?? row.Req_No,
             Party_Name: item.Party_Name ?? row.Party_Name,
@@ -242,13 +337,14 @@ export const usePurchaseVoucher = () => {
         return;
       }
 
+      const rowRecord = row as unknown as Record<string, unknown>;
       rows.push({
         ...row,
         Id: row.Id ?? row.Item_Id,
         Item_Id: row.Item_Id ?? row.Id,
         Item_Name: row.Item_Name,
         Item_Qnty: row.Item_Qnty ?? row.Qnty ?? row.Quantity,
-        Item_Rate: row.Item_Rate ?? row.Rate ?? row.Pur_Rate,
+        Item_Rate: pickRequisitionRate(rowRecord),
         Order_No: row.Order_No ?? row.Req_No,
         Party_Name: row.Party_Name,
         Req_Id: row.Req_Id ?? row.Id,
@@ -266,7 +362,12 @@ export const usePurchaseVoucher = () => {
       const res: ApiResponse = await getItemRequisitionAPI(orgId, 1, "");
 
       if (res.status === 200) {
-        dispatch(getItemRequisitionData(normalizeRequisitionRows(res.data.details)));
+        const normalized = normalizeRequisitionRows(res.data.details);
+        const enriched = await enrichRequisitionRowsWithRates(
+          orgId,
+          normalized,
+        );
+        dispatch(getItemRequisitionData(enriched));
       } else {
         dispatch(getItemRequisitionData([]));
         toast.error(res.data.message || "Unable to load requisition list");
@@ -313,37 +414,51 @@ export const usePurchaseVoucher = () => {
     setShowRequisitionModal(false);
   };
 
-  const handleAddRequisitionItems = (rows: ItemRequisitionRow[]) => {
+  const handleAddRequisitionItems = async (rows: ItemRequisitionRow[]) => {
     if (!rows.length) {
       toast.error("Select at least one requisition item.");
       return;
     }
 
+    if (!orgId) {
+      toast.error("Something went wrong");
+      return;
+    }
+
     const values = form.getValues();
     const existingIds = new Set(purchaseTableData.map((item) => item.itemId));
-    const nextRows = rows
-      .filter((row) => {
+    const filtered = rows.filter((row) => {
+      const itemId = String(row.Item_Id ?? row.Id ?? "");
+      return itemId && !existingIds.has(itemId);
+    });
+
+    if (!filtered.length) {
+      toast.error("Selected items are already in the table.");
+      return;
+    }
+
+    const nextRows = await Promise.all(
+      filtered.map(async (row) => {
         const itemId = String(row.Item_Id ?? row.Id ?? "");
-        return itemId && !existingIds.has(itemId);
-      })
-      .map((row) =>
-        buildPurchaseRow({
-          itemId: String(row.Item_Id ?? row.Id ?? ""),
+        const rate = await fetchItemPurchaseRate(
+          orgId,
+          itemId,
+          pickRequisitionRate(row as unknown as Record<string, unknown>),
+        );
+
+        return buildPurchaseRow({
+          itemId,
           itemName: row.Item_Name || "",
           quantity: String(row.Item_Qnty ?? row.Qnty ?? row.Quantity ?? ""),
-          rate: String(row.Item_Rate ?? row.Rate ?? row.Pur_Rate ?? ""),
+          rate,
           itemGl: row.Purchase_Gl || "",
           values: {
             ...values,
             orderPurchaseType: "O",
           },
-        })
-      );
-
-    if (!nextRows.length) {
-      toast.error("Selected items are already in the table.");
-      return;
-    }
+        });
+      }),
+    );
 
     setPurchaseTableData((prev) => [...prev, ...nextRows]);
     setShowRequisitionModal(false);
@@ -352,6 +467,12 @@ export const usePurchaseVoucher = () => {
   const handleShowDeleteDialog = (id: number) => {
     setShowDeleteDialog(true);
     setTempDeleteId(id);
+  };
+
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    setSuccessMessage("");
+    setSuccessPurchaseNos([]);
   };
 
   const handleDeletePurchase = () => {
@@ -401,6 +522,38 @@ export const usePurchaseVoucher = () => {
   const handleDeletePurchaseTableData = (Id: number) => {
     const newPurchaseTableData = purchaseTableData.filter((_, i) => i !== Id);
     setPurchaseTableData(newPurchaseTableData);
+  };
+
+  const handleUpdatePurchaseTableRate = (index: number, rate: string) => {
+    setPurchaseTableData((prev) =>
+      prev.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+
+        const quantity = Number(row.quantity) || 0;
+        const nextRate = Number(rate) || 0;
+        const taxableTotal = quantity * nextRate;
+        const masterItem = itemData.find(
+          (item) => item.Id.toString() === String(row.itemId),
+        );
+        const cgstRate = Number(masterItem?.CGST) || 0;
+        const sgstRate = Number(masterItem?.SGST) || 0;
+        const withGst = purchaseType === "Y";
+        const cgst = withGst ? (cgstRate * taxableTotal) / 100 : "";
+        const sgst = withGst ? (sgstRate * taxableTotal) / 100 : "";
+        const gstTotal = withGst
+          ? (cgstRate * taxableTotal) / 100 + (sgstRate * taxableTotal) / 100
+          : 0;
+
+        return {
+          ...row,
+          rate,
+          taxableTotal,
+          cgst,
+          sgst,
+          grandTotal: taxableTotal + gstTotal,
+        };
+      }),
+    );
   };
 
   const addPurchaseVoucherApiCall = async (orgId: number) => {
@@ -458,6 +611,7 @@ export const usePurchaseVoucher = () => {
       const res: ApiResponse = await addPurchaseVoucherAPI(data);
 
       if (res.status === 200) {
+        const savedPurchaseNo = String(purchaseNo || "").trim();
         form.reset({
           purchaseType: "N",
           orderPurchaseType: "R",
@@ -476,8 +630,13 @@ export const usePurchaseVoucher = () => {
         setItemInput("");
         setPurchaseTableData([]);
         setCurrentPage(1);
+        setSelected("table");
         getPurchaseVoucherApiCall(orgId, 1, "");
-        toast.success(res.data.message || "Purchase added successfully");
+        setSuccessMessage(
+          String(res.data.message || "Purchase added successfully").trim(),
+        );
+        setSuccessPurchaseNos(savedPurchaseNo ? [savedPurchaseNo] : []);
+        setShowSuccessDialog(true);
       } else {
         toast.error(res.data.message || "Unable to add purchase");
       }
@@ -612,6 +771,7 @@ export const usePurchaseVoucher = () => {
     handleAddPurchase,
     purchaseTableData,
     handleDeletePurchaseTableData,
+    handleUpdatePurchaseTableRate,
     handleShowDeleteDialog,
     showDeleteDialog,
     setShowDeleteDialog,
@@ -624,6 +784,11 @@ export const usePurchaseVoucher = () => {
     setShowRequisitionModal,
     requisitionLoading,
     handleAddRequisitionItems,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successPurchaseNos,
+    handleCloseSuccessDialog,
     currentPurchasePartyPage,
     setCurrentPurchasePartyPage,
     lastPurchasePartyPage,

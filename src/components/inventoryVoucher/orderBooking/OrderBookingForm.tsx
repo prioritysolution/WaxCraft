@@ -6,11 +6,11 @@ import RadioField from "@/common/formFields/RadioFields";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import TextareaField from "@/common/formFields/TextareaField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
   tableClassNames,
@@ -255,17 +255,12 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
             isLoading={addOrderBookingLoading}
             isDisabled={addOrderBookingLoading}
           >
-            Add
-          </Button>
+            Add Order
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

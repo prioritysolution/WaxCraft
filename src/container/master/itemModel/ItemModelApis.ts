@@ -1,7 +1,27 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ItemModelBody } from "@/types/master/ItemModelTypes";
+
+const getItemModelInFlight = createInFlightRequest<ApiResponse>();
+const getItemModelUnderCategoryInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetItemModelKey = (
+  orgId: string | number,
+  page: number,
+  perPage?: number,
+) => `${orgId}:${page}:${perPage ?? ""}`;
+
+const buildGetItemModelUnderCategoryKey = (
+  orgId: string | number,
+  catId: string,
+) => `${orgId}:${catId}`;
+
+const invalidateGetItemModelInFlight = () => {
+  getItemModelInFlight.clear();
+  getItemModelUnderCategoryInFlight.clear();
+};
 
 export const addItemModelAPI = async (
   bodyData: ItemModelBody
@@ -10,6 +30,8 @@ export const addItemModelAPI = async (
     url: endPoints.addItemModel,
     bodyData,
   };
+
+  invalidateGetItemModelInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +47,8 @@ export const updateItemModelAPI = async (
     bodyData,
   };
 
+  invalidateGetItemModelInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -36,28 +60,26 @@ export const getItemModelAPI = async (
   page: number,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getItemModel(orgId, page, perPage),
-  };
+  const key = buildGetItemModelKey(orgId, page, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getItemModelInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemModel(orgId, page, perPage),
+    }),
+  );
 };
 
 export const getItemModelUnderCategoryAPI = async (
   orgId: string | number,
   catId: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getItemModelUnderCategory(orgId, catId),
-  };
+  const key = buildGetItemModelUnderCategoryKey(orgId, catId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getItemModelUnderCategoryInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemModelUnderCategory(orgId, catId),
+    }),
+  );
 };
 
 export const deleteItemModelAPI = async (bodyData: {
@@ -68,6 +90,8 @@ export const deleteItemModelAPI = async (bodyData: {
     url: endPoints.deleteItemModel,
     bodyData,
   };
+
+  invalidateGetItemModelInFlight();
 
   const res = await doPutApiCall(data);
 

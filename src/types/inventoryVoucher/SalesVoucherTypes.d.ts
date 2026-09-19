@@ -144,6 +144,9 @@ export interface SalesVoucherTableData {
     Polish: string;
     Tot_Polish: string;
     Image: string;
+    Design_Unit?: number | string | null;
+    Unit_Id?: number | string | null;
+    Unit_Name?: string | null;
     ItemRow: {
       Item_Id: number;
       Item_Name: string;
@@ -172,6 +175,10 @@ export interface InvoiceTableData {
   Tot_IGST: string;
   Tot_Round: string;
   Tot_Disc: string;
+  Is_Own?: string | number | null;
+  is_own?: string | number | null;
+  Item_Type?: string | number | null;
+  item_type?: string | number | null;
   DesignRow: {
     Design_Id: number;
     Design_Name: string;
@@ -184,6 +191,12 @@ export interface InvoiceTableData {
     Polish: string;
     Tot_Polish: string;
     Image: string;
+    Design_Unit?: number | string | null;
+    Unit_Id?: number | string | null;
+    Unit_Name?: string | null;
+    Is_Own?: string | number | null;
+    is_own?: string | number | null;
+    Item_Type?: string | number | null;
     ItemRow: {
       Item_Id: number;
       Item_Name: string;

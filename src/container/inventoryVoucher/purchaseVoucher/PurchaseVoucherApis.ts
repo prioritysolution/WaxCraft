@@ -1,7 +1,37 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { PurchaseVoucherBody } from "@/types/inventoryVoucher/PurchaseVoucherTypes";
+
+const getPurchaseVoucherInFlight = createInFlightRequest<ApiResponse>();
+const getPurchasePartyInFlight = createInFlightRequest<ApiResponse>();
+const getItemRequisitionInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetPurchaseVoucherKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetPurchasePartyKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const buildGetItemRequisitionKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const invalidatePurchaseVoucherInFlight = () => {
+  getPurchaseVoucherInFlight.clear();
+  getPurchasePartyInFlight.clear();
+  getItemRequisitionInFlight.clear();
+};
 
 export const addPurchaseVoucherAPI = async (
   bodyData: PurchaseVoucherBody
@@ -10,6 +40,8 @@ export const addPurchaseVoucherAPI = async (
     url: endPoints.addPurchaseVoucher,
     bodyData,
   };
+
+  invalidatePurchaseVoucherInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -26,6 +58,8 @@ export const deletePurchaseVoucherAPI = async (bodyData: {
     bodyData,
   };
 
+  invalidatePurchaseVoucherInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -38,14 +72,13 @@ export const getPurchaseVoucherAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getPurchaseVoucher(orgId, page, keyword, perPage),
-  };
+  const key = buildGetPurchaseVoucherKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getPurchaseVoucherInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPurchaseVoucher(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getPurchasePartyAPI = async (
@@ -53,14 +86,13 @@ export const getPurchasePartyAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getPurchaseParty(orgId, page, keyword),
-  };
+  const key = buildGetPurchasePartyKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getPurchasePartyInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPurchaseParty(orgId, page, keyword),
+    }),
+  );
 };
 
 export const getItemRequisitionAPI = async (
@@ -68,9 +100,11 @@ export const getItemRequisitionAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getItemRequisition(orgId, page, keyword),
-  };
+  const key = buildGetItemRequisitionKey(orgId, page, keyword);
 
-  return doGetApiCall(data);
+  return getItemRequisitionInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemRequisition(orgId, page, keyword),
+    }),
+  );
 };

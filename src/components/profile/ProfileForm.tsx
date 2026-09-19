@@ -2,13 +2,11 @@
 
 import InputField from "@/common/formFields/InputField";
 import { Form } from "@/components/ui/form";
-import { formActionsClassName, primaryButtonClassName } from "@/lib/uiStyles";
-import { cn } from "@/lib/utils";
+import { FormSubmitButton } from "@/components/ui/form-actions";
+import { formActionsClassName } from "@/lib/uiStyles";
 import { ProfileFormProps } from "@/types/ProfileTypes";
-import { Button, Spinner } from "@heroui/react";
-import { LockKeyhole, Mail, Phone, Shield, UserRound } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, Phone, Shield, UserRound } from "lucide-react";
 import { FC, useState } from "react";
-import { IoEye, IoEyeOff } from "react-icons/io5";
 
 const ProfileForm: FC<ProfileFormProps> = ({
   updateProfileLoading,
@@ -114,9 +112,9 @@ const ProfileForm: FC<ProfileFormProps> = ({
                   onClick={togglePasswordVisibility}
                 >
                   {isPasswordVisible ? (
-                    <IoEyeOff className="pointer-events-none text-2xl text-default-400" />
+                    <EyeOff className="pointer-events-none text-2xl text-default-400" />
                   ) : (
-                    <IoEye className="pointer-events-none text-2xl text-default-400" />
+                    <Eye className="pointer-events-none text-2xl text-default-400" />
                   )}
                 </button>
               }
@@ -138,9 +136,9 @@ const ProfileForm: FC<ProfileFormProps> = ({
                   onClick={toggleConfirmPasswordVisibility}
                 >
                   {isConfirmPasswordVisible ? (
-                    <IoEyeOff className="pointer-events-none text-2xl text-default-400" />
+                    <EyeOff className="pointer-events-none text-2xl text-default-400" />
                   ) : (
-                    <IoEye className="pointer-events-none text-2xl text-default-400" />
+                    <Eye className="pointer-events-none text-2xl text-default-400" />
                   )}
                 </button>
               }
@@ -148,12 +146,10 @@ const ProfileForm: FC<ProfileFormProps> = ({
           </div>
         </div>
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
+          <FormSubmitButton
             size="md"
             radius="md"
-            className={cn(primaryButtonClassName, "w-auto")}
+            className="w-auto"
             isDisabled={
               updateProfileLoading ||
               (userName === watchedName &&
@@ -161,10 +157,9 @@ const ProfileForm: FC<ProfileFormProps> = ({
                 !watchedPassword)
             }
             isLoading={updateProfileLoading}
-            spinner={<Spinner size="sm" color="current" />}
           >
             Update
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

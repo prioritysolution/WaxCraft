@@ -88,6 +88,7 @@ const WorkProcessTable: FC<WorkProcessTableProps> = ({
         <TableHeader>
           <TableColumn align="center">Serial No.</TableColumn>
           <TableColumn align="center">Process Name</TableColumn>
+          <TableColumn align="center">Process Step</TableColumn>
           <TableColumn align="center">Actions</TableColumn>
         </TableHeader>
         <TableBody
@@ -101,6 +102,9 @@ const WorkProcessTable: FC<WorkProcessTableProps> = ({
             <TableRow key={data.Id}>
               <TableCell>{formatTableSerial(index)}</TableCell>
               <TableCell><TableNameCell name={data.Process_Name} /></TableCell>
+              <TableCell className="text-center">
+                {data.Process_SI_No ?? "-"}
+              </TableCell>
               <TableCell className="text-center">
                 <div className="inline-flex items-center gap-2">
                   <TableEditButton onPress={() => handleEditData(data)} />

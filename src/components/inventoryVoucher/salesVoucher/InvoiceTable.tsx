@@ -4,7 +4,7 @@ import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { getPaginatedTableRows, getTableSerialIndex } from "@/components/ui/table-edit-button";
 import { useClientTableSearch } from "@/lib/useClientTableSearch";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Printer } from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
@@ -27,7 +27,6 @@ import {
 import { format } from "date-fns";
 import { FC } from "react";
 import { TableCancelButton } from "@/components/ui/table-edit-button";
-import { MdLocalPrintshop } from "react-icons/md";
 import { useSelector } from "react-redux";
 import InvoiceModal from "./process/InvoiceModal";
 
@@ -127,7 +126,7 @@ const InvoiceTable: FC<InvoiceTableProps> = ({
                       onClick={() => handleShowInvoiceDialog(data.Id)}
                       className="text-xl text-primary cursor-pointer active:opacity-50"
                     >
-                      <MdLocalPrintshop />
+                      <Printer className="h-5 w-5" />
                     </span>
                   </Tooltip>
                   <TableCancelButton

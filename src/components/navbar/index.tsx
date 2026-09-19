@@ -1,5 +1,6 @@
 import { useModalOpen } from "@/utils/ContextProvider";
 import { getModalClassNames, secondaryButtonClassName } from "@/lib/uiStyles";
+import { ModalActionIcon } from "@/lib/modalActionIcons";
 import { cn } from "@/lib/utils";
 import {
   Button,
@@ -15,10 +16,9 @@ import {
   Spinner,
   User,
 } from "@heroui/react";
-import { ChevronDown, LogOut, UserRound } from "lucide-react";
+import { ChevronDown, LogOut, Menu, UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { FC, useEffect, useState } from "react";
-import { IoMenu } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import getCookieData from "@/utils/getCookieData";
 
@@ -103,7 +103,7 @@ export const Navbar: FC<NavbarProps> = ({ loading, handleLogout }) => {
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-black/10 bg-white text-foreground md:hidden"
           onClick={handleOpen}
         >
-          <IoMenu className="text-xl" />
+          <Menu className="text-xl" />
         </button>
         <div className="min-w-0">
           {parentTitle ? (
@@ -226,6 +226,7 @@ export const Navbar: FC<NavbarProps> = ({ loading, handleLogout }) => {
               radius="md"
               isDisabled={loading}
               className={secondaryButtonClassName}
+              startContent={<ModalActionIcon label="Cancel" />}
               onPress={() => setIsLogoutOpen(false)}
             >
               Cancel
@@ -237,6 +238,9 @@ export const Navbar: FC<NavbarProps> = ({ loading, handleLogout }) => {
               isLoading={loading}
               isDisabled={loading}
               spinner={<Spinner size="sm" color="current" />}
+              startContent={
+                loading ? null : <ModalActionIcon label="Log Out" />
+              }
               onPress={handleLogout}
             >
               Log Out

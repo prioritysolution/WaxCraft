@@ -4,11 +4,11 @@ export const DASHBOARD_STAT_LINKS: Record<string, string> = {
   "Active Orders": "/inventoryVoucher/orderBooking",
   "FY Sales": "/inventoryVoucher/salesVoucher",
   "FY Purchases": "/inventoryVoucher/purchaseVoucher",
-  "Order Pipeline": "/inventoryVoucher/orderProcess",
+  "Order Process": "/inventoryVoucher/orderProcess",
   Parties: "/master/party",
   "Inventory Items": "/master/item",
   "Net Business": "/accountingReport/dayBook",
-  "Orders Booked": "/inventoryReport/orderBook",
+  "Order Book": "/inventoryReport/orderBook",
 };
 
 export const DASHBOARD_OVERVIEW_LINKS: Record<string, string> = {

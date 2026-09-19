@@ -1,6 +1,7 @@
 "use client";
 
 import InputField from "@/common/formFields/InputField";
+import DropdownField from "@/common/formFields/DropdownField";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import {
   Form,
@@ -10,6 +11,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import {
   FormModal,
   FormModalFooter,
@@ -24,9 +26,9 @@ import { Input } from "@/components/ui/input";
 import { ItemCategoryTableData } from "@/types/master/ItemCategoryTypes";
 import { DesignFormProps } from "@/types/master/DesignTypes";
 import { ItemTableData } from "@/types/master/ItemTypes";
+import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
-  Button,
   Image,
   Modal,
   ModalBody,
@@ -44,9 +46,14 @@ interface ItemState {
   itemData: ItemTableData[];
 }
 
+interface ItemUnitState {
+  itemUnitData: ItemUnitTableData[];
+}
+
 interface RootState {
   itemCategory: ItemCategoryState;
   item: ItemState;
+  itemUnit: ItemUnitState;
 }
 
 /** Item names follow: Category - Model - Size [- Colour] */
@@ -110,6 +117,7 @@ const DesignForm: FC<DesignFormProps> = ({
   setItemInput,
   getCategoryLoading,
   getItemLoading,
+  getUnitLoading,
 }) => {
   const [showImagePreview, setShowImagePreview] = useState(false);
 
@@ -121,11 +129,16 @@ const DesignForm: FC<DesignFormProps> = ({
     (state: RootState) => state?.item?.itemData,
   );
 
+  const itemUnitData: ItemUnitTableData[] = useSelector(
+    (state: RootState) => state?.itemUnit?.itemUnitData,
+  );
+
   const isEdit = !!(editData && Object.keys(editData).length > 0);
   const isBusy = addDesignLoading || updateDesignLoading;
   const lockDesignFields = designFormTableData.length > 0;
   const categoryId = form.watch("categoryId");
   const designName = form.watch("designName");
+  const unitId = form.watch("unitId");
 
   useEffect(() => {
     if (!isOpen) setShowImagePreview(false);
@@ -166,6 +179,7 @@ const DesignForm: FC<DesignFormProps> = ({
           "wtRate",
           "polish",
           "designImage",
+          "unitId",
           "categoryId",
           "itemId",
           "quantity",
@@ -246,6 +260,13 @@ const DesignForm: FC<DesignFormProps> = ({
                 type="number"
               />
 
+              <InputField
+                control={form.control}
+                name="ghat"
+                label="Ghat"
+                type="number"
+              />
+
               <FormField
                 control={form.control}
                 name="designImage"
@@ -294,6 +315,16 @@ const DesignForm: FC<DesignFormProps> = ({
                 )}
               />
 
+              <DropdownField
+                key={`design-unit-${unitId || "empty"}-${itemUnitData?.length ?? 0}`}
+                label="Unit"
+                name="unitId"
+                control={form.control}
+                options={itemUnitData || []}
+                optionLabelKey="Unit_Name"
+                loading={getUnitLoading}
+              />
+
               <SearchDropdownField
                 label="Category"
                 name="categoryId"
@@ -338,7 +369,7 @@ const DesignForm: FC<DesignFormProps> = ({
               />
 
               <div className="flex justify-stretch sm:col-span-2 sm:justify-end">
-                <Button
+                <FormSubmitButton
                   color="success"
                   variant="solid"
                   type="button"
@@ -349,7 +380,7 @@ const DesignForm: FC<DesignFormProps> = ({
                   }}
                 >
                   Add To Table
-                </Button>
+                </FormSubmitButton>
               </div>
             </div>
 

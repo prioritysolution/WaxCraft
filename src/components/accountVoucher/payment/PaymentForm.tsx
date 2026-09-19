@@ -6,16 +6,16 @@ import InputField from "@/common/formFields/InputField";
 import RadioField from "@/common/formFields/RadioFields";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   formTitleClassName,
   pageFormClassName,
 } from "@/lib/uiStyles";
 import { PaymentFormProps } from "@/types/accountVoucher/PaymentTypes";
 import { BankAccountTableData } from "@/types/master/BankAccountTypes";
-import { Button, Divider } from "@heroui/react";
+import { Divider } from "@heroui/react";
 import { FC } from "react";
 import { useSelector } from "react-redux";
 
@@ -167,17 +167,12 @@ const PaymentForm: FC<PaymentFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
-            size="lg"
-            radius="sm"
-            className={formSubmitButtonClassName}
+          <FormSubmitButton
             isLoading={addPaymentLoading}
             isDisabled={addPaymentLoading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

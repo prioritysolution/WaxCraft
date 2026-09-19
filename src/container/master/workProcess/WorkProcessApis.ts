@@ -1,7 +1,16 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { WorkProcessBody } from "@/types/master/WorkProcessTypes";
+
+const getWorkProcessInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetWorkProcessKey = (orgId: string | number) => `${orgId}`;
+
+const invalidateGetWorkProcessInFlight = () => {
+  getWorkProcessInFlight.clear();
+};
 
 export const addWorkProcessAPI = async (
   bodyData: WorkProcessBody
@@ -10,6 +19,8 @@ export const addWorkProcessAPI = async (
     url: endPoints.addWorkProcess,
     bodyData,
   };
+
+  invalidateGetWorkProcessInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -25,6 +36,8 @@ export const updateWorkProcessAPI = async (
     bodyData,
   };
 
+  invalidateGetWorkProcessInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -34,14 +47,13 @@ export const updateWorkProcessAPI = async (
 export const getWorkProcessAPI = async (
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getWorkProcess(orgId),
-  };
+  const key = buildGetWorkProcessKey(orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getWorkProcessInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getWorkProcess(orgId),
+    }),
+  );
 };
 
 export const deleteWorkProcessAPI = async (bodyData: {
@@ -52,6 +64,8 @@ export const deleteWorkProcessAPI = async (bodyData: {
     url: endPoints.deleteWorkProcess,
     bodyData,
   };
+
+  invalidateGetWorkProcessInFlight();
 
   const res = await doPutApiCall(data);
 

@@ -1,3 +1,4 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
@@ -6,6 +7,17 @@ import {
   OrderProcessBody,
 } from "@/types/inventoryVoucher/OrderProcessTypes";
 
+const getWorkStatusInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetWorkStatusKey = (
+  orgId: number | string,
+  orderId: number,
+) => `${orgId}:${orderId}`;
+
+const invalidateOrderProcessInFlight = () => {
+  getWorkStatusInFlight.clear();
+};
+
 export const addOrderProcessAPI = async (
   bodyData: OrderProcessBody
 ): Promise<ApiResponse> => {
@@ -13,6 +25,8 @@ export const addOrderProcessAPI = async (
     url: endPoints.addOrderProcess,
     bodyData,
   };
+
+  invalidateOrderProcessInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -24,14 +38,13 @@ export const getWorkStatusAPI = async (
   orgId: number | string,
   orderId: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getWorkStatus(orgId, orderId),
-  };
+  const key = buildGetWorkStatusKey(orgId, orderId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getWorkStatusInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getWorkStatus(orgId, orderId),
+    }),
+  );
 };
 
 export const addOrderFinalCloseAPI = async (
@@ -41,6 +54,8 @@ export const addOrderFinalCloseAPI = async (
     url: endPoints.addOrderFinalClose,
     bodyData,
   };
+
+  invalidateOrderProcessInFlight();
 
   // Call the API
   const res = await doPutApiCall(data);

@@ -1,6 +1,5 @@
 "use client";
 import { configureStore } from "@reduxjs/toolkit";
-import logger from "redux-logger";
 
 import demoSlice from "./demoReducer"; // <--- Not for use, this is just an example
 import sidebarSlice from "@/container/sidebar/SidebarReducer";
@@ -86,5 +85,12 @@ export const store = configureStore({
     roleAssign: roleAssignSlice,
     userAccess: userAccessSlice,
   },
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
+  middleware: (getDefaultMiddleware) => {
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { default: logger } = require("redux-logger");
+      return getDefaultMiddleware().concat(logger);
+    }
+    return getDefaultMiddleware();
+  },
 });

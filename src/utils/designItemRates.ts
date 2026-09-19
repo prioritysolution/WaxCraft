@@ -83,6 +83,15 @@ const hasResolvedItemRate = (rate: unknown): boolean => {
   return Number.isFinite(n) && n > 0;
 };
 
+/** True when row still needs GetDesignDetails for item rates (lazy expand path). */
+export const designRowNeedsDetailRefresh = (row: DesignTableData): boolean => {
+  const children = row.childrow || [];
+  if (!children.length) return false;
+  return children.some(
+    (child) => !hasResolvedItemRate(pickChildItemRate(child as unknown as LooseRecord)),
+  );
+};
+
 /** Merge list row with GetDesignDetails payload (Sample Print source). */
 export const mergeDesignRowWithDetails = (
   row: DesignTableData,
@@ -126,6 +135,33 @@ export const mergeDesignRowWithDetails = (
       row.Wt_Rate,
     Polish:
       pickValue(row.Polish, detail.Polish, detail.polish) || row.Polish,
+    Unit_Id:
+      pickValue(
+        row.Unit_Id,
+        row.Design_Unit,
+        detail.Design_Unit,
+        detail.design_unit,
+        detail.Unit_Id,
+        detail.unit_id,
+        detail.UnitId,
+        detail.unitId,
+      ) || row.Unit_Id,
+    Design_Unit:
+      pickValue(
+        row.Design_Unit,
+        detail.Design_Unit,
+        detail.design_unit,
+        row.Unit_Id,
+        detail.Unit_Id,
+        detail.unit_id,
+      ) || row.Design_Unit,
+    Unit_Name:
+      pickValue(
+        row.Unit_Name,
+        detail.Unit_Name,
+        detail.unit_name,
+        detail.UnitName,
+      ) || row.Unit_Name,
     childrow: mergedChildren,
   };
 };

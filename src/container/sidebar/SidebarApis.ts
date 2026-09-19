@@ -1,16 +1,20 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { ApiResponse } from "@/types/ApiTypes";
 import { doGetApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 
+const getSidebarInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetSidebarKey = (orgId: number | string) => `${orgId}`;
+
 export const getSidebarAPI = async (
   orgId: number | string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getSidebar(orgId),
-  };
+  const key = buildGetSidebarKey(orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getSidebarInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getSidebar(orgId),
+    }),
+  );
 };

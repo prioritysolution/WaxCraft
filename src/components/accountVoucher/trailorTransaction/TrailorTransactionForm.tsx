@@ -5,14 +5,13 @@ import DropdownField from "@/common/formFields/DropdownField";
 import InputField from "@/common/formFields/InputField";
 import RadioField from "@/common/formFields/RadioFields";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   pageFormClassName,
 } from "@/lib/uiStyles";
 import { TrailorTransactionFormProps } from "@/types/accountVoucher/TrailorTransactionTypes";
-import { Button } from "@heroui/react";
 import { FC } from "react";
 import { useSelector } from "react-redux";
 
@@ -101,17 +100,14 @@ const TrailorTransactionForm: FC<TrailorTransactionFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
+          <FormSubmitButton
             size="md"
             radius="md"
-            className={formSubmitButtonClassName}
             isLoading={loading}
             isDisabled={loading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

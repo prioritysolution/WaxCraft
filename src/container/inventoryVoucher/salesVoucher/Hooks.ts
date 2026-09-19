@@ -44,6 +44,82 @@ interface RootState {
   salesVoucher: SalesVoucherState;
 }
 
+const extractInvoiceNos = (
+  details: unknown,
+  message?: string,
+): string[] => {
+  const fromMessage = (text?: string) => {
+    const raw = String(text || "");
+    const matches = raw.match(/\bINV[\w.\-\/]+\b/gi);
+    return matches ? Array.from(new Set(matches.map((m) => m.trim()))) : [];
+  };
+
+  if (details == null || details === "") {
+    return fromMessage(message);
+  }
+
+  if (typeof details === "string") {
+    const value = details.trim();
+    if (!value) return fromMessage(message);
+
+    if (/^INV[\w.\-\/]+$/i.test(value)) {
+      return [value];
+    }
+
+    if (value.includes(",")) {
+      const parts = value
+        .split(",")
+        .map((part) => part.trim())
+        .filter((part) => /^INV/i.test(part) || part.includes("/"));
+      if (parts.length) return Array.from(new Set(parts));
+    }
+
+    const fromMsg = fromMessage(message);
+    if (fromMsg.length) return fromMsg;
+
+    // Prefer invoice-style values (e.g. INV24-25/9); skip bare numeric sales IDs
+    if (!/^\d+$/.test(value) && value.includes("/")) {
+      return [value];
+    }
+
+    return [];
+  }
+
+  if (typeof details === "number") {
+    return fromMessage(message);
+  }
+
+  if (Array.isArray(details)) {
+    const nested = details
+      .flatMap((item) => extractInvoiceNos(item))
+      .filter(Boolean);
+    return nested.length ? Array.from(new Set(nested)) : fromMessage(message);
+  }
+
+  if (typeof details === "object") {
+    const record = details as Record<string, unknown>;
+    const candidates = [
+      record.Sales_No,
+      record.sales_no,
+      record.Invoice_No,
+      record.invoice_no,
+      record.Inv_No,
+      record.inv_no,
+      record.Bill_No,
+      record.bill_no,
+      record.invoiceNo,
+      record.salesNo,
+    ];
+
+    for (const candidate of candidates) {
+      const ids = extractInvoiceNos(candidate);
+      if (ids.length) return Array.from(new Set(ids));
+    }
+  }
+
+  return fromMessage(message);
+};
+
 export const useSalesVoucher = () => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -80,6 +156,9 @@ export const useSalesVoucher = () => {
   const [value, setValue] = useState("");
 
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successInvoiceNos, setSuccessInvoiceNos] = useState<string[]>([]);
 
   const postPartyId: string = useSelector(
     (state: RootState) => state?.salesVoucher?.partyId
@@ -184,6 +263,14 @@ export const useSalesVoucher = () => {
     if (orgId) getInvoicePrintDataApiCall(orgId, id);
   };
 
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    setSuccessMessage("");
+    setSuccessInvoiceNos([]);
+    dispatch(getSalesVoucherProcessData([]));
+    router.push(`/inventoryVoucher/salesVoucher`);
+  };
+
   const handleDeleteInvoiceData = () => {
     if (orgId && tempDeleteId) deleteInvoiceDataApiCall(orgId, tempDeleteId);
   };
@@ -274,16 +361,20 @@ export const useSalesVoucher = () => {
       const res: ApiResponse = await addSalesVoucherAPI(data);
 
       if (res.status === 200) {
+        const invoiceNos = extractInvoiceNos(
+          res.data.details,
+          res.data.message,
+        );
         form.reset();
         setOrderPartyInput("");
         setValue("");
         setTotalOrderAmount(0);
         setParentSelected(false);
-        setShowInvoiceDialog(true);
-        if (orgId && res.data.details)
-          getInvoicePrintDataApiCall(orgId, res.data.details);
-        dispatch(getSalesVoucherProcessData([]));
-        toast.success(res.data.message);
+        setSuccessMessage(
+          String(res.data.message || "Invoice processed successfully").trim(),
+        );
+        setSuccessInvoiceNos(invoiceNos);
+        setShowSuccessDialog(true);
       } else {
         toast.error(res.data.message);
       }
@@ -447,6 +538,11 @@ export const useSalesVoucher = () => {
     showInvoiceDialog,
     setShowInvoiceDialog,
     handleShowInvoiceDialog,
+    showSuccessDialog,
+    setShowSuccessDialog,
+    successMessage,
+    successInvoiceNos,
+    handleCloseSuccessDialog,
     currentPage,
     setCurrentPage,
     lastPage,

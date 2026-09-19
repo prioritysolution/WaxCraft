@@ -24,9 +24,11 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 export const useItemColour = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addItemColourLoading, setAddItemColourLoading] = useState(false);
   const [updateItemColourLoading, setUpdateItemColourLoading] = useState(false);
@@ -99,8 +101,13 @@ export const useItemColour = () => {
 
   const handleFilterTableData = (value: string) => {
     setColourTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getItemColourApiCall(orgId, 1, value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getItemColourApiCall(orgId, 1, value);
+    });
   };
 
   const addItemColourApiCall = async (

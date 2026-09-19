@@ -14,6 +14,7 @@ import {
 } from "@heroui/react";
 import Cookies from "js-cookie";
 import { ReactNode, RefObject, useEffect, useState } from "react";
+import { ModalActionIcon } from "@/lib/modalActionIcons";
 
 export const PRINT_ROWS_PER_PAGE = 16;
 export const PRINT_SPLIT_ROWS_PER_PAGE = 12;
@@ -200,7 +201,16 @@ export function PrintPreviewModal({
               <style>{`
                 @media print {
                   @page { size: A4 ${isLandscape ? "landscape" : "portrait"}; margin: 0; }
-                  .print-report-page { page-break-after: always; break-after: page; }
+                  html, body {
+                    background: #ffffff !important;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                  .print-report-page {
+                    background: #ffffff !important;
+                    page-break-after: always;
+                    break-after: page;
+                  }
                   .print-report-page:last-child { page-break-after: auto; break-after: auto; }
                 }
               `}</style>
@@ -216,6 +226,7 @@ export function PrintPreviewModal({
             size="lg"
             radius="sm"
             className="w-32"
+            startContent={<ModalActionIcon label="Cancel" />}
           >
             Cancel
           </Button>
@@ -226,6 +237,7 @@ export function PrintPreviewModal({
             className="w-32"
             onPress={onPrint}
             aria-label={`Print ${documentTitle}`}
+            startContent={<ModalActionIcon label="Print" />}
           >
             Print
           </Button>

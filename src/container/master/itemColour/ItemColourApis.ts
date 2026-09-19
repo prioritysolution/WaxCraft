@@ -1,7 +1,21 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ItemColourBody } from "@/types/master/ItemColourTypes";
+
+const getItemColourInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetItemColourKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage: number,
+) => `${orgId}:${page}:${keyword}:${perPage}`;
+
+const invalidateGetItemColourInFlight = () => {
+  getItemColourInFlight.clear();
+};
 
 export const addItemColourAPI = async (
   bodyData: ItemColourBody,
@@ -10,6 +24,8 @@ export const addItemColourAPI = async (
     url: endPoints.addItemColour,
     bodyData,
   };
+
+  invalidateGetItemColourInFlight();
 
   return await doPostApiCall(data);
 };
@@ -22,6 +38,8 @@ export const updateItemColourAPI = async (
     bodyData,
   };
 
+  invalidateGetItemColourInFlight();
+
   return await doPutApiCall(data);
 };
 
@@ -31,11 +49,13 @@ export const getItemColourAPI = async (
   keyword: string,
   perPage = 10,
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getItemColour(orgId, page, keyword, perPage),
-  };
+  const key = buildGetItemColourKey(orgId, page, keyword, perPage);
 
-  return await doGetApiCall(data);
+  return getItemColourInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemColour(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const deleteItemColourAPI = async (bodyData: {
@@ -46,6 +66,8 @@ export const deleteItemColourAPI = async (bodyData: {
     url: endPoints.deleteItemColour,
     bodyData,
   };
+
+  invalidateGetItemColourInFlight();
 
   return await doPutApiCall(data);
 };

@@ -3,14 +3,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, LayoutGrid, X } from "lucide-react";
 import { useSelector } from "react-redux";
 
 import { useModalOpen } from "@/utils/ContextProvider";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import IconDisplay from "@/common/IconDisplay";
 import { Link } from "@heroui/react";
 import { getSidebarIcon } from "./sidebar-icons";
 
@@ -113,7 +112,7 @@ const Sidebar = ({ loading = false }: { loading: boolean }) => {
                       link.childLinks.filter(
                         (item) => item.Page_Allies === pathname,
                       ).length > 0);
-                  const SidebarIcon = getSidebarIcon(link.title);
+                  const SidebarIcon = getSidebarIcon(link.title) || LayoutGrid;
 
                   return (
                     <li key={id} className="px-3">
@@ -138,23 +137,11 @@ const Sidebar = ({ loading = false }: { loading: boolean }) => {
                         }}
                       >
                         <span className="flex items-center justify-center gap-2.5">
-                          {SidebarIcon ? (
-                            <SidebarIcon
-                              className="h-[18px] w-[18px] shrink-0"
-                              strokeWidth={1.75}
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <IconDisplay
-                              iconName={link.Icon ? link.Icon : ""}
-                              iconSet={
-                                link.Icon
-                                  ? link.Icon.slice(0, 2).toLowerCase()
-                                  : ""
-                              }
-                              className="text-xl"
-                            />
-                          )}
+                          <SidebarIcon
+                            className="h-[18px] w-[18px] shrink-0"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                          />
                           {link.title}
                         </span>
                         {hasChildren && (

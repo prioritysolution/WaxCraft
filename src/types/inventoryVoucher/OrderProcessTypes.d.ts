@@ -1,8 +1,12 @@
 import { UseFormReturn, SubmitHandler } from "react-hook-form";
-import { PartyFormData } from "../master/PartyTypes";
-import { SetStateAction } from "react";
+import { Dispatch, SetStateAction } from "react";
 
 // Define the types for form data and API response
+export interface OrderProcessEmployeeWorkRow {
+  employeeId: string;
+  quantity: string;
+}
+
 export interface OrderProcessFormData {
   orderId: string;
   designId: string;
@@ -23,23 +27,30 @@ export interface OrderProcessFormData {
   image: string;
   closeDate: Date;
   startDate: Date;
-  employeeId: string;
+  endDate: Date;
   workDetails: string;
+  isFinalStep: boolean;
+  finalWeight: string;
+  employeeWorkRows: OrderProcessEmployeeWorkRow[];
 }
 
 // Define the structure of the body you expect for the OrderProcess API (adjust based on your API's requirements)
-interface OrderProcessBody {
+export interface OrderProcessBody {
   org_id: number | null;
   order_id: string;
   work_details: {
     design_id: string;
     work_details: string;
     start_date: string;
+    end_date: string;
     work_under: string;
+    work_qty: string | number;
+    is_final: number;
+    final_weight: string;
   }[];
 }
 
-interface OrderFinalCloseBody {
+export interface OrderFinalCloseBody {
   org_id: number | null;
   order_id: string;
   comp_date: string;
@@ -64,17 +75,13 @@ export interface OrderProcessProps {
   processTableData: ProcessTableData[];
   processDesignRows: OrderProcessDesignRow[];
   selectedProcessOrder: OrderProcessTableData | null;
-  handleSearchEmployee: () => void;
-  handleScrollEmployee: () => void;
   currentPage: number;
   setCurrentPage: Dispatch<SetStateAction<number>>;
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
-  employeeInput: string;
-  setEmployeeInput: Dispatch<SetStateAction<string>>;
-  getEmployeeLoading: boolean;
   getWorkProcessLoading: boolean;
+  getEmployeeLoading: boolean;
 }
 
 export interface OrderProcessFormProps {
@@ -91,12 +98,8 @@ export interface OrderProcessFormProps {
   processTableData: ProcessTableData[];
   processDesignRows: OrderProcessDesignRow[];
   selectedProcessOrder: OrderProcessTableData | null;
-  handleSearchEmployee: () => void;
-  handleScrollEmployee: () => void;
-  employeeInput: string;
-  setEmployeeInput: Dispatch<SetStateAction<string>>;
-  getEmployeeLoading: boolean;
   getWorkProcessLoading: boolean;
+  getEmployeeLoading: boolean;
 }
 
 export interface OrderProcessTableProps {
@@ -117,6 +120,7 @@ export interface ProcessTableData {
   Work_Start: string;
   Work_End: string | null;
   Work_Under: string;
+  Work_Qty?: string | number | null;
 }
 
 export interface OrderProcessTableData {
@@ -139,6 +143,9 @@ export interface OrderProcessTableData {
     Polish: string;
     Tot_Polish: string;
     Image: string;
+    Is_Complete?: string | number | null;
+    Order_Status?: string;
+    Process_Name?: string;
     ItemRow: {
       Item_Id: number;
       Item_Name: string;

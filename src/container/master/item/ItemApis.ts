@@ -1,13 +1,52 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ItemBody } from "@/types/master/ItemTypes";
+
+const getItemInFlight = createInFlightRequest<ApiResponse>();
+const getItemUnderCategoryInFlight = createInFlightRequest<ApiResponse>();
+const getPurchaseLedgerInFlight = createInFlightRequest<ApiResponse>();
+const getSalesLedgerInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetItemKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetItemUnderCategoryKey = (
+  orgId: string | number,
+  catId: string,
+) => `${orgId}:${catId}`;
+
+const buildGetPurchaseLedgerKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const buildGetSalesLedgerKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
+
+const invalidateGetItemInFlight = () => {
+  getItemInFlight.clear();
+  getItemUnderCategoryInFlight.clear();
+  getPurchaseLedgerInFlight.clear();
+  getSalesLedgerInFlight.clear();
+};
 
 export const addItemAPI = async (bodyData: ItemBody): Promise<ApiResponse> => {
   let data = {
     url: endPoints.addItem,
     bodyData,
   };
+
+  invalidateGetItemInFlight();
 
   // Call the API
   const res = await doPostApiCall(data);
@@ -23,6 +62,8 @@ export const updateItemAPI = async (
     bodyData,
   };
 
+  invalidateGetItemInFlight();
+
   // Call the API
   const res = await doPutApiCall(data);
 
@@ -35,28 +76,26 @@ export const getItemAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getItem(orgId, page, keyword, perPage),
-  };
+  const key = buildGetItemKey(orgId, page, keyword, perPage);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getItemInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItem(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getItemUnderCategoryAPI = async (
   orgId: string | number,
   catId: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getItemUnderCategory(orgId, catId),
-  };
+  const key = buildGetItemUnderCategoryKey(orgId, catId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getItemUnderCategoryInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemUnderCategory(orgId, catId),
+    }),
+  );
 };
 
 export const getPurchaseLedgerAPI = async (
@@ -64,14 +103,13 @@ export const getPurchaseLedgerAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getPurchaseLedger(orgId, page, keyword),
-  };
+  const key = buildGetPurchaseLedgerKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getPurchaseLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPurchaseLedger(orgId, page, keyword),
+    }),
+  );
 };
 
 export const getSalesLedgerAPI = async (
@@ -79,14 +117,13 @@ export const getSalesLedgerAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getSalesLedger(orgId, page, keyword),
-  };
+  const key = buildGetSalesLedgerKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getSalesLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getSalesLedger(orgId, page, keyword),
+    }),
+  );
 };
 
 export const deleteItemAPI = async (bodyData: {
@@ -97,6 +134,8 @@ export const deleteItemAPI = async (bodyData: {
     url: endPoints.deleteItem,
     bodyData,
   };
+
+  invalidateGetItemInFlight();
 
   const res = await doPutApiCall(data);
 

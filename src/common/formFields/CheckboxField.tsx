@@ -3,8 +3,15 @@
 import { Checkbox } from "@heroui/react";
 import { FieldValues, Control, Path } from "react-hook-form";
 
-import { FormControl, FormField, FormItem } from "@/components/ui/form";
-import { isFieldRequired, RequiredAsterisk } from "@/lib/formRequired";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
+import { isFieldRequired } from "@/lib/formRequired";
+import { cn } from "@/lib/utils";
 
 interface InputProps<T extends FieldValues> {
   control: Control<T>;
@@ -19,6 +26,7 @@ interface InputProps<T extends FieldValues> {
     | "danger"
     | undefined;
   className?: string;
+  description?: string;
 }
 
 const CheckboxField = <T extends FieldValues>({
@@ -27,24 +35,35 @@ const CheckboxField = <T extends FieldValues>({
   label,
   color = "default",
   className,
+  description,
 }: InputProps<T>) => {
   return (
     <FormField
       control={control}
       name={name}
       render={({ field, fieldState }) => (
-        <FormItem className="flex h-11 items-center gap-3 self-end rounded-2xl border border-black/15 bg-white px-4 text-sm">
+        <FormItem className="flex-1">
+          <FormLabel required={isFieldRequired(control, name)}>{label}</FormLabel>
           <FormControl>
-            <Checkbox
-              isSelected={field.value}
-              onValueChange={field.onChange}
-              isInvalid={!!fieldState?.error?.message}
-              color={color}
-              className={className}
+            <div
+              className={cn(
+                "flex min-h-11 items-center gap-3 text-sm",
+                className,
+              )}
             >
-              {label}
-              <RequiredAsterisk show={isFieldRequired(control, name)} />
-            </Checkbox>
+              <Checkbox
+                isSelected={field.value}
+                onValueChange={field.onChange}
+                isInvalid={!!fieldState?.error?.message}
+                color={color}
+                aria-label={label}
+              />
+              {description ? (
+                <FormDescription className="m-0 leading-snug">
+                  {description}
+                </FormDescription>
+              ) : null}
+            </div>
           </FormControl>
         </FormItem>
       )}

@@ -2,14 +2,13 @@
 
 import InputField from "@/common/formFields/InputField";
 import { Form } from "@/components/ui/form";
+import { FormSubmitButton } from "@/components/ui/form-actions";
 import {
   formActionsClassName,
   formGridClassName,
-  formSubmitButtonClassName,
   pageFormClassName,
 } from "@/lib/uiStyles";
 import { ItemRateFormProps } from "@/types/master/ItemRateTypes";
-import { Button } from "@heroui/react";
 import { FC } from "react";
 import { useSelector } from "react-redux";
 import { ItemTableData } from "@/types/master/ItemTypes";
@@ -74,17 +73,14 @@ const ItemRateForm: FC<ItemRateFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
-          <Button
-            type="submit"
-            color="primary"
+          <FormSubmitButton
             size="md"
             radius="md"
-            className={formSubmitButtonClassName}
             isLoading={addItemRateLoading}
             isDisabled={addItemRateLoading}
           >
             Add
-          </Button>
+          </FormSubmitButton>
         </div>
       </form>
     </Form>

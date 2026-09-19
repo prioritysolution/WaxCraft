@@ -1,7 +1,28 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { SamplePrintBody } from "@/types/inventoryVoucher/SamplePrintTypes";
+
+const getSamplePrintInFlight = createInFlightRequest<ApiResponse>();
+const getSamplePrintDetailsInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetSamplePrintKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetSamplePrintDetailsKey = (
+  orgId: string | number,
+  printId: string | number,
+) => `${orgId}:${printId}`;
+
+const invalidateSamplePrintInFlight = () => {
+  getSamplePrintInFlight.clear();
+  getSamplePrintDetailsInFlight.clear();
+};
 
 export const addSamplePrintAPI = async (
   bodyData: SamplePrintBody
@@ -10,6 +31,8 @@ export const addSamplePrintAPI = async (
     url: endPoints.addSamplePrint,
     bodyData,
   };
+
+  invalidateSamplePrintInFlight();
 
   const res = await doPostApiCall(data);
 
@@ -22,26 +45,26 @@ export const getSamplePrintAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getSamplePrint(orgId, page, keyword, perPage),
-  };
+  const key = buildGetSamplePrintKey(orgId, page, keyword, perPage);
 
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getSamplePrintInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getSamplePrint(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getSamplePrintDetailsAPI = async (
   orgId: string | number,
   printId: string | number
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getSamplePrintDetails(orgId, printId),
-  };
+  const key = buildGetSamplePrintDetailsKey(orgId, printId);
 
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getSamplePrintDetailsInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getSamplePrintDetails(orgId, printId),
+    }),
+  );
 };
 
 export const deleteSamplePrintAPI = async (bodyData: {
@@ -52,6 +75,8 @@ export const deleteSamplePrintAPI = async (bodyData: {
     url: endPoints.deleteSamplePrint,
     bodyData,
   };
+
+  invalidateSamplePrintInFlight();
 
   const res = await doPutApiCall(data);
 

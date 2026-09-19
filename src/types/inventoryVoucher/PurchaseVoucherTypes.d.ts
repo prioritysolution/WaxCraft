@@ -1,6 +1,6 @@
 import { UseFormReturn, SubmitHandler } from "react-hook-form";
 import { PartyFormData } from "../master/PartyTypes";
-import { SetStateAction } from "react";
+import { Dispatch, SetStateAction } from "react";
 
 // Define the types for form data and API response
 export interface PurchaseVoucherFormData {
@@ -57,6 +57,7 @@ export interface PurchaseVoucherProps {
   handleAddPurchase: () => void;
   purchaseTableData: PurchaseTableData[];
   handleDeletePurchaseTableData: (id: number) => void;
+  handleUpdatePurchaseTableRate: (index: number, rate: string) => void;
   handleShowDeleteDialog: (id: number) => void;
   showDeleteDialog: boolean;
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
@@ -81,7 +82,14 @@ export interface PurchaseVoucherProps {
   showRequisitionModal: boolean;
   setShowRequisitionModal: Dispatch<SetStateAction<boolean>>;
   requisitionLoading: boolean;
-  handleAddRequisitionItems: (rows: ItemRequisitionRow[]) => void;
+  handleAddRequisitionItems: (
+    rows: ItemRequisitionRow[],
+  ) => void | Promise<void>;
+  showSuccessDialog: boolean;
+  setShowSuccessDialog: Dispatch<SetStateAction<boolean>>;
+  successMessage: string;
+  successPurchaseNos: string[];
+  handleCloseSuccessDialog: () => void;
 }
 
 export interface PurchaseVoucherFormProps {
@@ -90,6 +98,7 @@ export interface PurchaseVoucherFormProps {
   handleSubmit: SubmitHandler<PurchaseVoucherFormData>;
   purchaseTableData: PurchaseTableData[];
   handleDeletePurchaseTableData: (id: number) => void;
+  handleUpdatePurchaseTableRate: (index: number, rate: string) => void;
   purchaseType: string;
   handleAddPurchase: () => void;
   handleSearchItem: () => void;
@@ -105,7 +114,9 @@ export interface PurchaseVoucherFormProps {
   showRequisitionModal: boolean;
   setShowRequisitionModal: Dispatch<SetStateAction<boolean>>;
   requisitionLoading: boolean;
-  handleAddRequisitionItems: (rows: ItemRequisitionRow[]) => void;
+  handleAddRequisitionItems: (
+    rows: ItemRequisitionRow[],
+  ) => void | Promise<void>;
 }
 
 export interface PurchaseVoucherTableProps {
@@ -163,7 +174,7 @@ export interface RequisitionModalProps {
   isOpen: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
   loading: boolean;
-  onAddItems: (rows: ItemRequisitionRow[]) => void;
+  onAddItems: (rows: ItemRequisitionRow[]) => void | Promise<void>;
 }
 
 export interface PurchaseVoucherTableData {

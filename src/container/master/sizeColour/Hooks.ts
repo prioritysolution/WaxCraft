@@ -27,6 +27,7 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 type ColourOption = {
   Id: string | number;
@@ -86,6 +87,7 @@ const resolveColourId = (
 
 export const useSizeColour = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addSizeColourLoading, setAddSizeColourLoading] = useState(false);
   const [updateSizeColourLoading, setUpdateSizeColourLoading] = useState(false);
@@ -173,8 +175,13 @@ export const useSizeColour = () => {
 
   const handleFilterTableData = (value: string) => {
     setSizeColourTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getSizeColourApiCall(orgId, 1, value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getSizeColourApiCall(orgId, 1, value);
+    });
   };
 
   const addSizeColourApiCall = async (

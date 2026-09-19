@@ -31,6 +31,7 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 interface LedgerData {
   Id: number;
@@ -49,6 +50,7 @@ interface RootState {
 
 export const useItem = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addItemLoading, setAddItemLoading] = useState(false);
   const [updateItemLoading, setUpdateItemLoading] = useState(false);
@@ -238,8 +240,13 @@ export const useItem = () => {
 
   const handleFilterTableData = (value: string) => {
     setItemTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getItemApiCall(orgId, 1, value, "TABLE");
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getItemApiCall(orgId, 1, value, "TABLE");
+    });
   };
 
   const addItemApiCall = async (item: ItemFormData, orgId: number) => {

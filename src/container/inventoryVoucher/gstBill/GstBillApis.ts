@@ -1,7 +1,28 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
 import { GstBillBody } from "@/types/inventoryVoucher/GstBillTypes";
+
+const getGstBillInFlight = createInFlightRequest<ApiResponse>();
+const getGstBillPrintInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetGstBillKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage?: number,
+) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+
+const buildGetGstBillPrintKey = (
+  orgId: string | number,
+  salesId: string | number,
+) => `${orgId}:${salesId}`;
+
+const invalidateGstBillInFlight = () => {
+  getGstBillInFlight.clear();
+  getGstBillPrintInFlight.clear();
+};
 
 export const addGstBillAPI = async (
   bodyData: GstBillBody
@@ -10,6 +31,8 @@ export const addGstBillAPI = async (
     url: endPoints.addGstBill,
     bodyData,
   };
+
+  invalidateGstBillInFlight();
 
   const res = await doPostApiCall(data);
 
@@ -25,6 +48,8 @@ export const deleteGstBillAPI = async (bodyData: {
     bodyData,
   };
 
+  invalidateGstBillInFlight();
+
   const res = await doPutApiCall(data);
 
   return res;
@@ -36,24 +61,24 @@ export const getGstBillAPI = async (
   keyword: string,
   perPage?: number
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getGstBill(orgId, page, keyword, perPage),
-  };
+  const key = buildGetGstBillKey(orgId, page, keyword, perPage);
 
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getGstBillInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getGstBill(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getGstBillPrintAPI = async (
   orgId: string | number,
   salesId: string | number
 ): Promise<ApiResponse> => {
-  const data = {
-    url: endPoints.getGstBillPrint(orgId, salesId),
-  };
+  const key = buildGetGstBillPrintKey(orgId, salesId);
 
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getGstBillPrintInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getGstBillPrint(orgId, salesId),
+    }),
+  );
 };

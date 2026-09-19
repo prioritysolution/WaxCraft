@@ -34,6 +34,24 @@ export const formatTwoDecimals = (
 };
 
 /**
+ * Display helper that avoids forced trailing decimals (e.g. 10.00 → 10, 0.25 → 0.25).
+ */
+export const formatCompactNumber = (
+  value: unknown,
+  empty = "—",
+): string => {
+  if (value == null || value === "") return empty;
+
+  const raw = String(value).trim();
+  if (!raw) return empty;
+
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return raw;
+
+  return String(parseFloat(num.toFixed(6)));
+};
+
+/**
  * Restrict live typing to a valid decimal: digits only, at most one ".",
  * and at most `maxDecimals` digits after the decimal (default 2).
  */

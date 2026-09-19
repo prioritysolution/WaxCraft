@@ -1,6 +1,23 @@
+import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
+
+const getAccountLedgerInFlight = createInFlightRequest<ApiResponse>();
+const getReportLedgerListDataInFlight = createInFlightRequest<ApiResponse>();
+
+const buildGetAccountLedgerKey = (
+  fromDate: string,
+  toDate: string,
+  ledgerId: string,
+  orgId: string | number,
+) => `${fromDate}:${toDate}:${ledgerId}:${orgId}`;
+
+const buildGetReportLedgerListDataKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+) => `${orgId}:${page}:${keyword}`;
 
 export const getAccountLedgerAPI = async (
   fromDate: string,
@@ -8,14 +25,13 @@ export const getAccountLedgerAPI = async (
   ledgerId: string,
   orgId: string | number
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getAccountLedger(fromDate, toDate, ledgerId, orgId),
-  };
+  const key = buildGetAccountLedgerKey(fromDate, toDate, ledgerId, orgId);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getAccountLedgerInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getAccountLedger(fromDate, toDate, ledgerId, orgId),
+    }),
+  );
 };
 
 export const getReportLedgerListDataAPI = async (
@@ -23,12 +39,11 @@ export const getReportLedgerListDataAPI = async (
   page: number,
   keyword: string
 ): Promise<ApiResponse> => {
-  let data = {
-    url: endPoints.getReportLedgerList(orgId, page, keyword),
-  };
+  const key = buildGetReportLedgerListDataKey(orgId, page, keyword);
 
-  // Call the API
-  const res = await doGetApiCall(data);
-
-  return res;
+  return getReportLedgerListDataInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getReportLedgerList(orgId, page, keyword),
+    }),
+  );
 };

@@ -23,17 +23,13 @@ const OrderProcess: FC<OrderProcessProps> = ({
   selectedProcessOrder,
   handleFinalClose,
   processPostType,
-  handleSearchEmployee,
-  handleScrollEmployee,
   currentPage,
   setCurrentPage,
   lastPage,
   perPage,
   onPerPageChange,
-  employeeInput,
-  setEmployeeInput,
-  getEmployeeLoading,
   getWorkProcessLoading,
+  getEmployeeLoading,
 }) => {
   return (
     <PageShell>
@@ -56,12 +52,8 @@ const OrderProcess: FC<OrderProcessProps> = ({
         selectedProcessOrder={selectedProcessOrder}
         handleFinalClose={handleFinalClose}
         processPostType={processPostType}
-        handleSearchEmployee={handleSearchEmployee}
-        handleScrollEmployee={handleScrollEmployee}
-        employeeInput={employeeInput}
-        setEmployeeInput={setEmployeeInput}
-        getEmployeeLoading={getEmployeeLoading}
         getWorkProcessLoading={getWorkProcessLoading}
+        getEmployeeLoading={getEmployeeLoading}
       />
 
       <OrderProcessTable

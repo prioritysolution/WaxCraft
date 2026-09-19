@@ -10,8 +10,8 @@ import {
   FormModalHeader,
 } from "@/components/ui/form-modal";
 import { AddUserFormProps } from "@/types/tools/AddUserTypes";
+import { Eye, EyeOff } from "lucide-react";
 import { FC, useEffect, useState } from "react";
-import { IoEye, IoEyeOff } from "react-icons/io5";
 import { useSelector } from "react-redux";
 
 interface UserRoleData {
@@ -129,10 +129,10 @@ const AddUserForm: FC<AddUserFormProps> = ({
                     type="button"
                     onClick={toggleVisibility}
                   >
-                    {isVisible ? (
-                      <IoEyeOff className="text-2xl text-default-400 pointer-events-none" />
+                      {isVisible ? (
+                      <EyeOff className="text-2xl text-default-400 pointer-events-none" />
                     ) : (
-                      <IoEye className="text-2xl text-default-400 pointer-events-none" />
+                      <Eye className="text-2xl text-default-400 pointer-events-none" />
                     )}
                   </button>
                 }

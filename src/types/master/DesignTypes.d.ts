@@ -8,7 +8,9 @@ export interface DesignFormData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat: string;
   designImage: any;
+  unitId: string;
   categoryId: string;
   itemId: string;
   quantity: string;
@@ -46,6 +48,7 @@ export interface DesignProps {
   setItemInput: Dispatch<SetStateAction<string>>;
   getCategoryLoading: boolean;
   getItemLoading: boolean;
+  getUnitLoading: boolean;
   showDeleteDialog: boolean;
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
   setTempDeleteId: Dispatch<SetStateAction<number | null>>;
@@ -79,6 +82,7 @@ export interface DesignFormProps {
   setItemInput: Dispatch<SetStateAction<string>>;
   getCategoryLoading: boolean;
   getItemLoading: boolean;
+  getUnitLoading: boolean;
 }
 
 export interface DesignTableProps {
@@ -119,6 +123,10 @@ export interface DesignTableData {
   WT: string;
   Wt_Rate: string;
   Polish: string;
+  Ghat?: string;
+  Unit_Id?: number | string;
+  Design_Unit?: number | string | null;
+  Unit_Name?: string;
   image: string;
   File_Name: string;
   childrow: ChildRow[];

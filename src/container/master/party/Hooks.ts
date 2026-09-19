@@ -18,6 +18,7 @@ import {
 } from "./PartyApis";
 import { decimalRegex } from "@/utils/validationRegex";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import {
   getMasterDeleteWarningMessage,
   isMasterDeleteDependencyResponse,
@@ -27,6 +28,7 @@ import { useListPerPage } from "@/lib/useListPerPage";
 
 export const useParty = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addPartyLoading, setAddPartyLoading] = useState(false);
   const [updatePartyLoading, setUpdatePartyLoading] = useState(false);
@@ -126,8 +128,13 @@ export const useParty = () => {
 
   const handleFilterTableData = (value: string) => {
     setPartyTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getPartyApiCall(orgId, 1, value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getPartyApiCall(orgId, 1, value);
+    });
   };
 
   const addPartyApiCall = async (item: PartyFormData, orgId: number) => {

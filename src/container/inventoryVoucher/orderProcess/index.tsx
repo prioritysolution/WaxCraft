@@ -4,8 +4,8 @@ import OrderProcess from "@/components/inventoryVoucher/orderProcess";
 import { useOrderProcess } from "./Hooks";
 import getCookieData from "@/utils/getCookieData";
 import { useEffect, useState } from "react";
-import { useEmployee } from "@/container/master/employee/Hooks";
 import { useWorkProcess } from "@/container/master/workProcess/Hooks";
+import { useEmployee } from "@/container/master/employee/Hooks";
 
 const OrderProcessContainer = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -33,20 +33,11 @@ const OrderProcessContainer = () => {
     lastPage,
     perPage,
     handlePerPageChange,
-    employeeInput,
-    setEmployeeInput,
   } = useOrderProcess();
-
-  const {
-    getEmployeeApiCall,
-    currentPage: currentEmployeePage,
-    setCurrentPage: setCurrentEmployeePage,
-    lastPage: lastEmployeePage,
-    loading: getEmployeeLoading,
-  } = useEmployee();
 
   const { getWorkProcessApiCall, loading: getWorkProcessLoading } =
     useWorkProcess();
+  const { getEmployeeApiCall, loading: getEmployeeLoading } = useEmployee();
 
   useEffect(() => {
     setToken(getCookieData<string | null>("waxCraftClientToken"));
@@ -59,27 +50,10 @@ const OrderProcessContainer = () => {
     }
   }, [token, orgId, currentPage, perPage]);
 
-  const handleSearchEmployee = () => {
-    setCurrentEmployeePage(1);
-    if (orgId) getEmployeeApiCall(orgId, 1, employeeInput, "DROPDOWN");
-  };
-
-  const handleScrollEmployee = () => {
-    setCurrentEmployeePage((prev) => prev + 1);
-  };
-
-  useEffect(() => {
-    if (
-      orgId &&
-      currentEmployeePage > 1 &&
-      currentEmployeePage <= lastEmployeePage
-    )
-      getEmployeeApiCall(orgId, currentEmployeePage, employeeInput, "DROPDOWN");
-  }, [currentEmployeePage, orgId]);
-
   useEffect(() => {
     if (token && orgId) {
       getWorkProcessApiCall(orgId);
+      getEmployeeApiCall(orgId, 1, "", "DROPDOWN");
     }
   }, [token, orgId]);
 
@@ -100,17 +74,13 @@ const OrderProcessContainer = () => {
       selectedProcessOrder={selectedProcessOrder}
       handleFinalClose={handleFinalClose}
       processPostType={processPostType}
-      handleSearchEmployee={handleSearchEmployee}
-      handleScrollEmployee={handleScrollEmployee}
       currentPage={currentPage}
       setCurrentPage={setCurrentPage}
       lastPage={lastPage}
       perPage={perPage}
       onPerPageChange={handlePerPageChange}
-      employeeInput={employeeInput}
-      setEmployeeInput={setEmployeeInput}
-      getEmployeeLoading={getEmployeeLoading}
       getWorkProcessLoading={getWorkProcessLoading}
+      getEmployeeLoading={getEmployeeLoading}
     />
   );
 };

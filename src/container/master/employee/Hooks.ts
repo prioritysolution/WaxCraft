@@ -24,6 +24,7 @@ import {
 } from "@/lib/masterDelete";
 import { resolveListTotalCount } from "@/lib/listTotalCount";
 import { useListPerPage } from "@/lib/useListPerPage";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 interface EmployeeState {
   employeeData: EmployeeTableData[];
@@ -35,6 +36,7 @@ interface RootState {
 
 export const useEmployee = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addEmployeeLoading, setAddEmployeeLoading] = useState(false);
   const [updateEmployeeLoading, setUpdateEmployeeLoading] = useState(false);
@@ -126,8 +128,13 @@ export const useEmployee = () => {
 
   const handleFilterTableData = (value: string) => {
     setEmployeeTableInput(value);
-    setCurrentPage(1);
-    if (orgId) getEmployeeApiCall(orgId, 1, value, "TABLE");
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getEmployeeApiCall(orgId, 1, value, "TABLE");
+    });
   };
 
   const addEmployeeApiCall = async (item: EmployeeFormData, orgId: number) => {

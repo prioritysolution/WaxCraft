@@ -24,8 +24,17 @@ export const getDesignChildQty = (child: ChildRow): number => {
 };
 
 export const getDesignChildItemRate = (child: ChildRow): number => {
-  const rate = pickChildItemRate(child as ChildLoose);
-  return rate ? toNum(rate) : 0;
+  const row = child as ChildLoose;
+  const rate = pickChildItemRate(row);
+  if (rate) return toNum(rate);
+
+  const itemTotal = pickNum(row.Item_Total, row.item_tot, row.Item_Tot);
+  const qty = getDesignChildQty(child);
+  if (itemTotal > 0 && qty > 0) {
+    return itemTotal / qty;
+  }
+
+  return 0;
 };
 
 export const getDesignChildMakingRate = (child: ChildRow): number => {
