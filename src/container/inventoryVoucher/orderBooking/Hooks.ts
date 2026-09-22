@@ -790,6 +790,15 @@ export const useOrderBooking = () => {
               isPartyItem,
             ).toFixed(2);
 
+            const pickAttr = (...keys: (keyof ChildRow)[]) => {
+              for (const key of keys) {
+                const value = child[key];
+                if (value == null || String(value).trim() === "") continue;
+                return String(value);
+              }
+              return "";
+            };
+
             return {
               designId: String(detail.Id),
               itemId: String(child.Item_Id),
@@ -800,6 +809,10 @@ export const useOrderBooking = () => {
               itemRate,
               makingRate,
               itemTotal,
+              catId: pickAttr("Cat_Id", "cat_id"),
+              modelId: pickAttr("Model_Id", "model_id", "item_mod"),
+              sizeId: pickAttr("Size_Id", "size_id", "item_size"),
+              colorId: pickAttr("Color_Id", "color_id", "item_color"),
             };
           }),
         );

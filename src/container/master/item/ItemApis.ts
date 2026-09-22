@@ -6,6 +6,7 @@ import { ItemBody } from "@/types/master/ItemTypes";
 
 const getItemInFlight = createInFlightRequest<ApiResponse>();
 const getItemUnderCategoryInFlight = createInFlightRequest<ApiResponse>();
+const getItemsByAttrsInFlight = createInFlightRequest<ApiResponse>();
 const getPurchaseLedgerInFlight = createInFlightRequest<ApiResponse>();
 const getSalesLedgerInFlight = createInFlightRequest<ApiResponse>();
 
@@ -20,6 +21,13 @@ const buildGetItemUnderCategoryKey = (
   orgId: string | number,
   catId: string,
 ) => `${orgId}:${catId}`;
+
+const buildGetItemsByAttrsKey = (
+  orgId: string | number,
+  catId: string | number,
+  modelId: string | number,
+  sizeId: string | number,
+) => `${orgId}:${catId}:${modelId}:${sizeId}`;
 
 const buildGetPurchaseLedgerKey = (
   orgId: string | number,
@@ -36,6 +44,7 @@ const buildGetSalesLedgerKey = (
 const invalidateGetItemInFlight = () => {
   getItemInFlight.clear();
   getItemUnderCategoryInFlight.clear();
+  getItemsByAttrsInFlight.clear();
   getPurchaseLedgerInFlight.clear();
   getSalesLedgerInFlight.clear();
 };
@@ -94,6 +103,21 @@ export const getItemUnderCategoryAPI = async (
   return getItemUnderCategoryInFlight.run(key, () =>
     doGetApiCall({
       url: endPoints.getItemUnderCategory(orgId, catId),
+    }),
+  );
+};
+
+export const getItemsByAttrsAPI = async (
+  orgId: string | number,
+  catId: string | number,
+  modelId: string | number,
+  sizeId: string | number,
+): Promise<ApiResponse> => {
+  const key = buildGetItemsByAttrsKey(orgId, catId, modelId, sizeId);
+
+  return getItemsByAttrsInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getItemsByAttrs(orgId, catId, modelId, sizeId),
     }),
   );
 };

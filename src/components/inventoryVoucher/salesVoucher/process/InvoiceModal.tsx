@@ -270,8 +270,9 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
 
     return (design.ItemRow || []).map((item) => {
       const itemId = String(item.Item_Id ?? "");
-      const consumed = Number(item.Item_Qnty) || 0;
-      const perSet = consumed / safeOrderQty;
+      const itemQnty = Number(item.Item_Qnty) || 0;
+      // API Item_Qnty is order-total; show/calculate row amounts per pcs only
+      const perSet = orderQty > 0 ? itemQnty / safeOrderQty : itemQnty;
       const fetchedRate = Number(fetchedItemRates[itemId]);
       const rowRate = Number(item.Item_Rate);
       const rate = partyItem
@@ -281,13 +282,13 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
           : Number.isFinite(fetchedRate) && fetchedRate > 0
             ? fetchedRate
             : 0;
-      const total = partyItem ? 0 : consumed * rate;
+      const total = partyItem ? 0 : perSet * rate;
 
       return {
         itemId,
         itemName: item.Item_Name || "—",
         perSet,
-        consumed,
+        consumed: perSet,
         rate,
         total,
       };
@@ -440,10 +441,13 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                   designUnitById,
                 );
                 const markRows = getMarkRows(designInvoice);
-                const grandTotal = markRows.reduce(
+                const orderQty = Number(design.Order_Qnty) || 0;
+                const rowsSubtotal = markRows.reduce(
                   (sum, row) => sum + (Number(row.total) || 0),
                   0,
                 );
+                const grandTotal =
+                  rowsSubtotal * (orderQty > 0 ? orderQty : 1);
 
                 return (
                 <PageShell

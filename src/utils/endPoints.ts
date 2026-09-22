@@ -134,6 +134,13 @@ export const endPoints = {
     ),
   getItemUnderCategory: (orgId: number | string, catId: string) =>
     `${createApi}Org/Master/GetCatItem?org_id=${orgId}&cat_id=${catId}`,
+  getItemsByAttrs: (
+    orgId: number | string,
+    catId: string | number,
+    modelId: string | number,
+    sizeId: string | number,
+  ) =>
+    `${createApi}Org/Master/GetItemByAttrs?org_id=${orgId}&cat_id=${catId}&model_id=${modelId}&size_id=${sizeId}`,
   addItem: `${createApi}Org/Master/AddItem`,
   updateItem: `${createApi}Org/Master/UpdateItem`,
   deleteItem: `${createApi}Org/Master/DeleteItem`,

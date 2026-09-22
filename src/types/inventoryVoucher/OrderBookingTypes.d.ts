@@ -28,6 +28,10 @@ export interface OrderBookingFormData {
     itemRate: string;
     makingRate: string;
     itemTotal: string;
+    catId?: string;
+    modelId?: string;
+    sizeId?: string;
+    colorId?: string;
   }[]; // Add 'item' as an array of objects with 'rate' and 'total'
   totalRate: string;
   orderQuantity: string;
@@ -180,6 +184,12 @@ export interface OrderBookingTableData {
       Item_Rate: string;
       Making_Rate: string;
       Item_Tot: string;
+      Color_Id?: number | string | null;
+      Colour_Id?: number | string | null;
+      color_id?: number | string | null;
+      Color_Name?: string | null;
+      Colour_Name?: string | null;
+      color_name?: string | null;
     }[];
   }[];
 }

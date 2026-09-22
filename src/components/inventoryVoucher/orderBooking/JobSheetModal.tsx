@@ -71,12 +71,189 @@ type JobSheetModalProps = {
   onOpenChange: Dispatch<SetStateAction<boolean>>;
 };
 
+type OrderItemRow =
+  OrderBookingTableData["DesignRow"][number]["ItemRow"][number];
+
 type ParsedStone = {
   key: string;
   size: string;
   particular: string;
   color: string;
   qty: number;
+};
+
+const isSizeLikeToken = (value: string): boolean => {
+  const raw = value.trim();
+  if (!raw) return false;
+  return /^\d+(\.\d+)?$/.test(raw);
+};
+
+const getColourLabel = (item: ItemColourTableData): string =>
+  String(item.Color_Name || item.Colour_Name || "")
+    .trim()
+    .toUpperCase();
+
+const isWhiteColour = (value: string): boolean => {
+  const raw = value.trim().toUpperCase();
+  return raw === "WHITE" || raw === "WHT" || raw.includes("WHITE");
+};
+
+const resolveColourAlias = (value: string): string => {
+  const raw = value.trim().toUpperCase();
+  if (!raw) return "";
+  if (isSizeLikeToken(raw)) return "";
+  if (raw.includes("CHAMP") || raw.includes("SYAMP")) return "SYAMPEN";
+  if (raw.includes("YELLOW") || raw === "YELL") return "YELL";
+  if (raw.includes("WHITE") || raw === "WHT") return DEFAULT_WHITE_COLOR;
+  if (raw.includes("PURPLE") || raw.includes("VIOLET")) return "PURPLE";
+  if (raw.includes("GREEN")) return "GREEN";
+  if (raw.includes("BLUE")) return "BLUE";
+  if (raw.includes("AQUA")) return "AQUA";
+  if (raw.includes("PINK")) return "PINK";
+  if (raw.includes("MINT")) return "MINT";
+  if (raw.includes("RED")) return "RED";
+  return raw;
+};
+
+const normalizeColor = (value: string, availableColors: string[]): string => {
+  const raw = value.trim().toUpperCase();
+  if (!raw || isSizeLikeToken(raw)) return "";
+
+  const exact = availableColors.find((color) => color === raw);
+  if (exact) return exact;
+
+  const alias = resolveColourAlias(raw);
+  if (!alias) return "";
+
+  const byAlias = availableColors.find(
+    (color) =>
+      color === alias ||
+      color.includes(alias) ||
+      alias.includes(color) ||
+      color.startsWith(raw) ||
+      raw.startsWith(color),
+  );
+  if (byAlias) return byAlias;
+
+  // Only keep free-text colors that look like real colour names (not sizes)
+  if (/[A-Z]/.test(alias) && !isSizeLikeToken(alias)) return alias;
+  return "";
+};
+
+const pickItemColorId = (item: OrderItemRow): string => {
+  const raw =
+    item.Color_Id ?? item.Colour_Id ?? item.color_id ?? null;
+  if (raw == null || String(raw).trim() === "") return "";
+  const num = Number(raw);
+  if (Number.isFinite(num) && num === 0) return "";
+  return String(raw).trim();
+};
+
+const pickItemColorName = (item: OrderItemRow): string =>
+  String(
+    item.Color_Name ?? item.Colour_Name ?? item.color_name ?? "",
+  ).trim();
+
+const extractColorFromItemName = (
+  itemName: string,
+  availableColors: string[],
+): string => {
+  const parts = String(itemName || "")
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  // Stone - Model - Size - Color
+  if (parts.length >= 4 && /stone/i.test(parts[0])) {
+    return normalizeColor(parts[3], availableColors);
+  }
+
+  // Stone - Model - Size  (no color segment)
+  if (parts.length === 3 && /stone/i.test(parts[0])) {
+    return "";
+  }
+
+  // Generic: only treat last segment as color when it matches a known colour
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    if (isSizeLikeToken(last)) return "";
+    const matched = normalizeColor(last, availableColors);
+    if (matched && availableColors.some((c) => c === matched || isWhiteColour(matched))) {
+      return matched;
+    }
+    // If alias resolves to a known master color name pattern, keep it
+    if (matched && !isSizeLikeToken(matched) && /[A-Z]/.test(matched)) {
+      const inMaster = availableColors.some(
+        (c) =>
+          c === matched ||
+          c.includes(matched) ||
+          matched.includes(c),
+      );
+      if (inMaster) return matched;
+    }
+  }
+
+  return "";
+};
+
+const parseStoneItem = (
+  item: OrderItemRow,
+  masterColors: string[],
+  colorById: Record<string, string>,
+): ParsedStone => {
+  const name = String(item.Item_Name || "").trim();
+  const parts = name
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  let size = name || "—";
+  let particular = name || "—";
+
+  if (parts.length >= 3 && /stone/i.test(parts[0])) {
+    // Stone - Model - Size [- Color]
+    size = `${parts[1]}-${parts[2]}`;
+    particular = size;
+  } else if (parts.length === 2 && isSizeLikeToken(parts[1])) {
+    size = `${parts[0]}-${parts[1]}`;
+    particular = size;
+  } else if (parts.length >= 2) {
+    const last = parts[parts.length - 1];
+    const maybeColor = normalizeColor(last, masterColors);
+    if (maybeColor) {
+      size = parts.slice(0, -1).join("-") || name;
+      particular = size;
+    }
+  }
+
+  let color = "";
+
+  const colorId = pickItemColorId(item);
+  if (colorId) {
+    color =
+      colorById[colorId] ||
+      normalizeColor(pickItemColorName(item), masterColors);
+  }
+
+  if (!color) {
+    const named = pickItemColorName(item);
+    if (named) color = normalizeColor(named, masterColors);
+  }
+
+  if (!color) {
+    color = extractColorFromItemName(name, masterColors);
+  }
+
+  // Color_Id null / unresolved → WHITE
+  if (!color) color = DEFAULT_WHITE_COLOR;
+
+  return {
+    key: `${item.Item_Id}-${size}-${color}-${item.Item_Qnty}`,
+    size,
+    particular,
+    color,
+    qty: Number(item.Item_Qnty) || 0,
+  };
 };
 
 const resolveDesignUnitLabel = (
@@ -106,90 +283,6 @@ const resolveDesignUnitLabel = (
   }
 
   return "";
-};
-
-const getColourLabel = (item: ItemColourTableData): string =>
-  String(item.Color_Name || item.Colour_Name || "")
-    .trim()
-    .toUpperCase();
-
-const isWhiteColour = (value: string): boolean => {
-  const raw = value.trim().toUpperCase();
-  return raw === "WHITE" || raw === "WHT" || raw.includes("WHITE");
-};
-
-const resolveColourAlias = (value: string): string => {
-  const raw = value.trim().toUpperCase();
-  if (!raw) return "";
-  if (raw.includes("CHAMP") || raw.includes("SYAMP")) return "SYAMPEN";
-  if (raw.includes("YELLOW") || raw === "YELL") return "YELL";
-  if (raw.includes("WHITE") || raw === "WHT") return DEFAULT_WHITE_COLOR;
-  if (raw.includes("PURPLE") || raw.includes("VIOLET")) return "PURPLE";
-  if (raw.includes("GREEN")) return "GREEN";
-  if (raw.includes("BLUE")) return "BLUE";
-  if (raw.includes("AQUA")) return "AQUA";
-  if (raw.includes("PINK")) return "PINK";
-  if (raw.includes("MINT")) return "MINT";
-  if (raw.includes("RED")) return "RED";
-  return raw;
-};
-
-const normalizeColor = (value: string, availableColors: string[]): string => {
-  const raw = value.trim().toUpperCase();
-  if (!raw) return "";
-
-  const exact = availableColors.find((color) => color === raw);
-  if (exact) return exact;
-
-  const alias = resolveColourAlias(raw);
-  const byAlias = availableColors.find(
-    (color) =>
-      color === alias ||
-      color.includes(alias) ||
-      alias.includes(color) ||
-      color.startsWith(raw) ||
-      raw.startsWith(color),
-  );
-  if (byAlias) return byAlias;
-
-  return alias || raw;
-};
-
-const parseStoneItem = (
-  item: OrderBookingTableData["DesignRow"][number]["ItemRow"][number],
-  availableColors: string[],
-): ParsedStone => {
-  const name = String(item.Item_Name || "").trim();
-  const parts = name
-    .split(" - ")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  let size = name || "—";
-  let particular = name || "—";
-  let color = "";
-
-  if (parts.length >= 4 && /stone/i.test(parts[0])) {
-    size = `${parts[1]}-${parts[2]}`;
-    particular = size;
-    color = normalizeColor(parts[3], availableColors);
-  } else if (parts.length >= 3) {
-    size = parts.slice(0, -1).join("-");
-    particular = size;
-    color = normalizeColor(parts[parts.length - 1], availableColors);
-  } else if (parts.length === 2) {
-    size = parts[0];
-    particular = parts[0];
-    color = normalizeColor(parts[1], availableColors);
-  }
-
-  return {
-    key: `${item.Item_Id}-${size}-${color}-${item.Item_Qnty}`,
-    size,
-    particular,
-    color,
-    qty: Number(item.Item_Qnty) || 0,
-  };
 };
 
 const JobSheetModal: FC<JobSheetModalProps> = ({
@@ -287,38 +380,40 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
       }));
   }, [workProcessData]);
 
+  const masterColorLabels = useMemo(
+    () => itemColourData.map(getColourLabel).filter(Boolean),
+    [itemColourData],
+  );
+
+  const colorById = useMemo(() => {
+    const map: Record<string, string> = {};
+    itemColourData.forEach((row) => {
+      const label = getColourLabel(row);
+      if (row?.Id != null && label) map[String(row.Id)] = label;
+    });
+    return map;
+  }, [itemColourData]);
+
   const colorColumns = useMemo(() => {
-    const fromMaster = itemColourData.map(getColourLabel).filter(Boolean);
-
-    const fromItems = (order?.DesignRow || []).flatMap((design) =>
-      (design.ItemRow || []).map((item) => {
-        const name = String(item.Item_Name || "").trim();
-        const parts = name
-          .split(" - ")
-          .map((part) => part.trim())
-          .filter(Boolean);
-
-        if (parts.length >= 4 && /stone/i.test(parts[0])) {
-          return resolveColourAlias(parts[3]);
-        }
-        if (parts.length >= 3) {
-          return resolveColourAlias(parts[parts.length - 1]);
-        }
-        if (parts.length === 2) {
-          return resolveColourAlias(parts[1]);
-        }
-        return "";
-      }),
+    const linkedColors = (order?.DesignRow || []).flatMap((design) =>
+      (design.ItemRow || []).map(
+        (item) => parseStoneItem(item, masterColorLabels, colorById).color,
+      ),
     );
 
     const uniqueColors = Array.from(
-      new Set([...fromMaster, ...fromItems].filter(Boolean)),
+      new Set(
+        linkedColors
+          .map((color) => String(color || "").trim().toUpperCase())
+          .filter((color) => color && !isSizeLikeToken(color)),
+      ),
     );
+
     const whiteFromList = uniqueColors.find(isWhiteColour);
     const otherColors = uniqueColors.filter((color) => !isWhiteColour(color));
 
     return [whiteFromList || DEFAULT_WHITE_COLOR, ...otherColors];
-  }, [itemColourData, order]);
+  }, [order, masterColorLabels, colorById]);
 
   const generatePDF = useReactToPrint({
     contentRef: printRef,
@@ -390,36 +485,17 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
               {designs.length ? (
                 designs.map((design, designIndex) => {
                   const stones = (design.ItemRow || []).map((item) =>
-                    parseStoneItem(item, colorColumns),
+                    parseStoneItem(item, masterColorLabels, colorById),
                   );
-                  const stoneGroups = stones.reduce<
-                    Record<
-                      string,
-                      {
-                        size: string;
-                        particular: string;
-                        qty: number;
-                        colors: Record<string, number>;
-                      }
-                    >
-                  >((acc, stone) => {
-                    const groupKey = stone.size || stone.particular;
-                    if (!acc[groupKey]) {
-                      acc[groupKey] = {
-                        size: stone.size,
-                        particular: stone.particular,
-                        qty: 0,
-                        colors: {},
-                      };
-                    }
-                    acc[groupKey].qty += stone.qty;
-                    if (stone.color) {
-                      acc[groupKey].colors[stone.color] =
-                        (acc[groupKey].colors[stone.color] || 0) + stone.qty;
-                    }
-                    return acc;
-                  }, {});
-                  const stoneRows = Object.values(stoneGroups);
+                  // One row per stone size/item (do not collapse different sizes)
+                  const stoneRows = stones.map((stone) => ({
+                    size: stone.size,
+                    particular: stone.particular,
+                    qty: stone.qty,
+                    colors: {
+                      [stone.color || DEFAULT_WHITE_COLOR]: stone.qty,
+                    },
+                  }));
                   const designCode = design.Design_No || design.Design_Name || "—";
                   const designUnit = resolveDesignUnitLabel(
                     design,

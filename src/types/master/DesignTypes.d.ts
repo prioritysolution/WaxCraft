@@ -114,6 +114,17 @@ export interface ChildRow {
   Item_Rate?: string;
   Item_Total?: string;
   Making_Rate?: string | null;
+  Cat_Id?: number | string | null;
+  cat_id?: number | string | null;
+  Model_Id?: number | string | null;
+  model_id?: number | string | null;
+  item_mod?: number | string | null;
+  Size_Id?: number | string | null;
+  size_id?: number | string | null;
+  item_size?: number | string | null;
+  Color_Id?: number | string | null;
+  color_id?: number | string | null;
+  item_color?: number | string | null;
 }
 
 export interface DesignTableData {
