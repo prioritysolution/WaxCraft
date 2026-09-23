@@ -29,6 +29,7 @@ const cleanSuccessMessage = (
   if (!raw) return fallback;
 
   const cleaned = raw
+    .replace(/invoise/gi, "Invoice")
     .replace(
       /\s*(order|invoice|sales|purchase)\s*(no|nos|number|numbers|id|ids)?\s*(is|are|:)?\s*[\w\-\/, ]+$/i,
       "",

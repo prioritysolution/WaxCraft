@@ -44,14 +44,35 @@ interface RootState {
   salesVoucher: SalesVoucherState;
 }
 
+const isInvoiceNoToken = (value: string) => {
+  const part = String(value || "").trim();
+  if (!part) return false;
+  // API misspelling "Invoise" must never be treated as an invoice no.
+  if (/^invoise$/i.test(part)) return false;
+  if (/^INV[\w.\-\/]*\d[\w.\-\/]*$/i.test(part)) return true;
+  // Allow non-INV formats like 24-25/12, but skip bare words/numbers.
+  if (part.includes("/") && !/^\d+$/.test(part) && /[A-Za-z0-9]/.test(part)) {
+    return !/^[A-Za-z]+$/i.test(part);
+  }
+  return false;
+};
+
 const extractInvoiceNos = (
   details: unknown,
   message?: string,
 ): string[] => {
   const fromMessage = (text?: string) => {
-    const raw = String(text || "");
-    const matches = raw.match(/\bINV[\w.\-\/]+\b/gi);
-    return matches ? Array.from(new Set(matches.map((m) => m.trim()))) : [];
+    const raw = String(text || "").replace(/invoise/gi, " ");
+    const matches = raw.match(/\bINV[\w.\-\/]*\d[\w.\-\/]*\b/gi);
+    return matches
+      ? Array.from(
+          new Set(
+            matches
+              .map((m) => m.trim())
+              .filter((m) => isInvoiceNoToken(m)),
+          ),
+        )
+      : [];
   };
 
   if (details == null || details === "") {
@@ -62,7 +83,7 @@ const extractInvoiceNos = (
     const value = details.trim();
     if (!value) return fromMessage(message);
 
-    if (/^INV[\w.\-\/]+$/i.test(value)) {
+    if (isInvoiceNoToken(value)) {
       return [value];
     }
 
@@ -70,7 +91,7 @@ const extractInvoiceNos = (
       const parts = value
         .split(",")
         .map((part) => part.trim())
-        .filter((part) => /^INV/i.test(part) || part.includes("/"));
+        .filter((part) => isInvoiceNoToken(part));
       if (parts.length) return Array.from(new Set(parts));
     }
 
@@ -78,7 +99,7 @@ const extractInvoiceNos = (
     if (fromMsg.length) return fromMsg;
 
     // Prefer invoice-style values (e.g. INV24-25/9); skip bare numeric sales IDs
-    if (!/^\d+$/.test(value) && value.includes("/")) {
+    if (!/^\d+$/.test(value) && value.includes("/") && isInvoiceNoToken(value)) {
       return [value];
     }
 
@@ -371,7 +392,9 @@ export const useSalesVoucher = () => {
         setTotalOrderAmount(0);
         setParentSelected(false);
         setSuccessMessage(
-          String(res.data.message || "Invoice processed successfully").trim(),
+          String(res.data.message || "Invoice processed successfully")
+            .replace(/invoise/gi, "Invoice")
+            .trim(),
         );
         setSuccessInvoiceNos(invoiceNos);
         setShowSuccessDialog(true);

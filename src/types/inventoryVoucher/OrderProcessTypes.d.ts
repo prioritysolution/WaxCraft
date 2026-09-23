@@ -82,6 +82,12 @@ export interface OrderProcessProps {
   onPerPageChange: (perPage: number) => void;
   getWorkProcessLoading: boolean;
   getEmployeeLoading: boolean;
+  orderProcessEmployeeData: OrderProcessEmployeeOption[];
+}
+
+export interface OrderProcessEmployeeOption {
+  Id: number | string;
+  Emp_Name: string;
 }
 
 export interface OrderProcessFormProps {
@@ -100,6 +106,7 @@ export interface OrderProcessFormProps {
   selectedProcessOrder: OrderProcessTableData | null;
   getWorkProcessLoading: boolean;
   getEmployeeLoading: boolean;
+  orderProcessEmployeeData: OrderProcessEmployeeOption[];
 }
 
 export interface OrderProcessTableProps {

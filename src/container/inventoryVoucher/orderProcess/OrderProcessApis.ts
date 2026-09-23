@@ -8,14 +8,20 @@ import {
 } from "@/types/inventoryVoucher/OrderProcessTypes";
 
 const getWorkStatusInFlight = createInFlightRequest<ApiResponse>();
+const getEmployeeListForOrderProcessInFlight =
+  createInFlightRequest<ApiResponse>();
 
 const buildGetWorkStatusKey = (
   orgId: number | string,
   orderId: number,
 ) => `${orgId}:${orderId}`;
 
+const buildGetEmployeeListForOrderProcessKey = (orgId: number | string) =>
+  String(orgId);
+
 const invalidateOrderProcessInFlight = () => {
   getWorkStatusInFlight.clear();
+  getEmployeeListForOrderProcessInFlight.clear();
 };
 
 export const addOrderProcessAPI = async (
@@ -43,6 +49,18 @@ export const getWorkStatusAPI = async (
   return getWorkStatusInFlight.run(key, () =>
     doGetApiCall({
       url: endPoints.getWorkStatus(orgId, orderId),
+    }),
+  );
+};
+
+export const getEmployeeListForOrderProcessAPI = async (
+  orgId: number | string,
+): Promise<ApiResponse> => {
+  const key = buildGetEmployeeListForOrderProcessKey(orgId);
+
+  return getEmployeeListForOrderProcessInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getEmployeeListForOrderProcess(orgId),
     }),
   );
 };

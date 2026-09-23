@@ -30,6 +30,7 @@ const OrderProcess: FC<OrderProcessProps> = ({
   onPerPageChange,
   getWorkProcessLoading,
   getEmployeeLoading,
+  orderProcessEmployeeData,
 }) => {
   return (
     <PageShell>
@@ -54,6 +55,7 @@ const OrderProcess: FC<OrderProcessProps> = ({
         processPostType={processPostType}
         getWorkProcessLoading={getWorkProcessLoading}
         getEmployeeLoading={getEmployeeLoading}
+        orderProcessEmployeeData={orderProcessEmployeeData}
       />
 
       <OrderProcessTable

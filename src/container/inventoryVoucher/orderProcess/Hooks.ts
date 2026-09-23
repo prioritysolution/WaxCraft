@@ -9,6 +9,7 @@ import getCookieData from "@/utils/getCookieData";
 import { useDispatch } from "react-redux";
 import {
   OrderProcessDesignRow,
+  OrderProcessEmployeeOption,
   OrderProcessFormData,
   OrderProcessTableData,
   ProcessTableData,
@@ -17,6 +18,7 @@ import { ApiResponse } from "@/types/ApiTypes";
 import {
   addOrderFinalCloseAPI,
   addOrderProcessAPI,
+  getEmployeeListForOrderProcessAPI,
   getWorkStatusAPI,
 } from "./OrderProcessApis";
 import { format } from "date-fns";
@@ -91,6 +93,11 @@ export const useOrderProcess = () => {
   const [processPostType, setProcessPostType] = useState<
     "FurtherProcess" | "FinalClose"
   >("FurtherProcess");
+
+  const [orderProcessEmployeeData, setOrderProcessEmployeeData] = useState<
+    OrderProcessEmployeeOption[]
+  >([]);
+  const [getEmployeeLoading, setGetEmployeeLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window !== undefined) {
@@ -528,6 +535,64 @@ export const useOrderProcess = () => {
     }
   };
 
+  const normalizeEmployeeList = (
+    details: unknown,
+  ): OrderProcessEmployeeOption[] => {
+    const rows = Array.isArray(details)
+      ? details
+      : Array.isArray((details as { data?: unknown[] } | null)?.data)
+        ? ((details as { data: unknown[] }).data ?? [])
+        : [];
+
+    return rows
+      .map((row) => {
+        const record = row as Record<string, unknown>;
+        const id =
+          record.Id ??
+          record.id ??
+          record.Emp_Id ??
+          record.emp_id ??
+          record.Employee_Id ??
+          record.employee_id;
+        if (id == null || String(id).trim() === "") return null;
+
+        const name = String(
+          record.Emp_Name ??
+            record.emp_name ??
+            record.Employee_Name ??
+            record.employee_name ??
+            record.Name ??
+            record.name ??
+            "",
+        ).trim();
+
+        return {
+          Id: id as string | number,
+          Emp_Name: name || String(id),
+        };
+      })
+      .filter(Boolean) as OrderProcessEmployeeOption[];
+  };
+
+  const getEmployeeListForOrderProcessApiCall = async (orgId: number) => {
+    setGetEmployeeLoading(true);
+    try {
+      const res: ApiResponse = await getEmployeeListForOrderProcessAPI(orgId);
+      if (res.status === 200 || res.status === 202) {
+        setOrderProcessEmployeeData(
+          normalizeEmployeeList(res.data?.details),
+        );
+      } else {
+        setOrderProcessEmployeeData([]);
+      }
+    } catch {
+      toast.error("Failed to load employees");
+      setOrderProcessEmployeeData([]);
+    } finally {
+      setGetEmployeeLoading(false);
+    }
+  };
+
   const getOrderBookingApiCall = async (
     orgId: number,
     page: number,
@@ -591,6 +656,9 @@ export const useOrderProcess = () => {
     handleFinalClose,
     processPostType,
     getOrderBookingApiCall,
+    getEmployeeListForOrderProcessApiCall,
+    getEmployeeLoading,
+    orderProcessEmployeeData,
     currentPage,
     setCurrentPage,
     lastPage,

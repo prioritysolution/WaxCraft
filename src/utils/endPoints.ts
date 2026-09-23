@@ -240,6 +240,8 @@ export const endPoints = {
   deleteSamplePrint: `${createApi}Org/ProcessInventory/CancelSamplePrint`,
   getWorkStatus: (orgId: number | string, orderId: number) =>
     `${createApi}Org/ProcessInventory/GetWorkStatus?org_id=${orgId}&order_id=${orderId}`,
+  getEmployeeListForOrderProcess: (orgId: number | string) =>
+    `${createApi}Org/ProcessInventory/GetEmployeeListForOrderProcess?org_id=${orgId}`,
   addOrderProcess: `${createApi}Org/ProcessInventory/ProcessOrder`,
   addOrderFinalClose: `${createApi}Org/ProcessInventory/FinalOrderProcess`,
   getSalesVoucher: (

@@ -527,7 +527,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                               P.CODE-
                             </span>{" "}
                             <span className="font-medium">
-                              {design.Design_Id || "—"}
+                              {order?.Party_Name || "—"}
                             </span>
                           </div>
                           <div className="px-3 py-2 text-right tabular-nums">

@@ -5,7 +5,6 @@ import { useOrderProcess } from "./Hooks";
 import getCookieData from "@/utils/getCookieData";
 import { useEffect, useState } from "react";
 import { useWorkProcess } from "@/container/master/workProcess/Hooks";
-import { useEmployee } from "@/container/master/employee/Hooks";
 
 const OrderProcessContainer = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -28,6 +27,9 @@ const OrderProcessContainer = () => {
     handleFinalClose,
     processPostType,
     getOrderBookingApiCall,
+    getEmployeeListForOrderProcessApiCall,
+    getEmployeeLoading,
+    orderProcessEmployeeData,
     currentPage,
     setCurrentPage,
     lastPage,
@@ -37,7 +39,6 @@ const OrderProcessContainer = () => {
 
   const { getWorkProcessApiCall, loading: getWorkProcessLoading } =
     useWorkProcess();
-  const { getEmployeeApiCall, loading: getEmployeeLoading } = useEmployee();
 
   useEffect(() => {
     setToken(getCookieData<string | null>("waxCraftClientToken"));
@@ -53,7 +54,7 @@ const OrderProcessContainer = () => {
   useEffect(() => {
     if (token && orgId) {
       getWorkProcessApiCall(orgId);
-      getEmployeeApiCall(orgId, 1, "", "DROPDOWN");
+      getEmployeeListForOrderProcessApiCall(orgId);
     }
   }, [token, orgId]);
 
@@ -81,6 +82,7 @@ const OrderProcessContainer = () => {
       onPerPageChange={handlePerPageChange}
       getWorkProcessLoading={getWorkProcessLoading}
       getEmployeeLoading={getEmployeeLoading}
+      orderProcessEmployeeData={orderProcessEmployeeData}
     />
   );
 };

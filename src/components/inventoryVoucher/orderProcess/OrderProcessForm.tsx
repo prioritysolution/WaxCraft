@@ -19,7 +19,6 @@ import {
   OrderProcessTableData,
 } from "@/types/inventoryVoucher/OrderProcessTypes";
 import { WorkProcessTableData } from "@/types/master/WorkProcessTypes";
-import { EmployeeTableData } from "@/types/master/EmployeeTypes";
 import {
   getOrderStatusChipProps,
 } from "@/lib/orderStatusChip";
@@ -50,14 +49,9 @@ interface OrderBookingState {
   orderBookingData: OrderProcessTableData[];
 }
 
-interface EmployeeState {
-  employeeData: EmployeeTableData[];
-}
-
 interface RootState {
   workProcess: WorkProcessState;
   orderBooking: OrderBookingState;
-  employee: EmployeeState;
 }
 
 type OrderDetailsView = {
@@ -291,13 +285,10 @@ const OrderProcessForm: FC<OrderProcessFormProps> = ({
   processPostType,
   getWorkProcessLoading,
   getEmployeeLoading,
+  orderProcessEmployeeData,
 }) => {
   const workProcessData: WorkProcessTableData[] = useSelector(
     (state: RootState) => state?.workProcess?.workProcessData
-  );
-
-  const employeeData: EmployeeTableData[] = useSelector(
-    (state: RootState) => state?.employee?.employeeData
   );
 
   const orderBookingData: OrderProcessTableData[] =
@@ -585,7 +576,7 @@ const OrderProcessForm: FC<OrderProcessFormProps> = ({
                               label="Employee"
                               name={`employeeWorkRows.${index}.employeeId`}
                               control={form.control}
-                              options={employeeData || []}
+                              options={orderProcessEmployeeData || []}
                               optionLabelKey="Emp_Name"
                               loading={getEmployeeLoading}
                             />

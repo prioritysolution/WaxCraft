@@ -202,8 +202,11 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
         (design.ItemRow || []).forEach((item) => {
           const itemId = String(item.Item_Id ?? "");
           if (!itemId) return;
-          const existingRate = Number(item.Item_Rate);
-          if (Number.isFinite(existingRate) && existingRate > 0) return;
+          // Respect explicit 0 rates from the order; only fetch when rate is missing.
+          const rawRate = item.Item_Rate;
+          const hasExplicitRate =
+            rawRate != null && String(rawRate).trim() !== "";
+          if (hasExplicitRate && Number.isFinite(Number(rawRate))) return;
           pendingIds.add(itemId);
         });
       });
@@ -274,10 +277,13 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
       // API Item_Qnty is order-total; show/calculate row amounts per pcs only
       const perSet = orderQty > 0 ? itemQnty / safeOrderQty : itemQnty;
       const fetchedRate = Number(fetchedItemRates[itemId]);
-      const rowRate = Number(item.Item_Rate);
+      const rawRate = item.Item_Rate;
+      const hasExplicitRate =
+        rawRate != null && String(rawRate).trim() !== "";
+      const rowRate = Number(rawRate);
       const rate = partyItem
         ? 0
-        : Number.isFinite(rowRate) && rowRate > 0
+        : hasExplicitRate && Number.isFinite(rowRate)
           ? rowRate
           : Number.isFinite(fetchedRate) && fetchedRate > 0
             ? fetchedRate
