@@ -182,7 +182,7 @@ const ItemShortNameSelect: FC<{
 
   return (
     <Autocomplete
-      className="min-w-[160px]"
+      className="min-w-[200px] sm:min-w-[220px]"
       aria-label="Item short name"
       placeholder={itemShName || "Select item"}
       variant="bordered"
@@ -190,6 +190,12 @@ const ItemShortNameSelect: FC<{
       size="md"
       classNames={{ base: fieldInputClassNames.base }}
       inputProps={{ classNames: fieldInputClassNames }}
+      popoverProps={{
+        // HeroUI sets an inline width equal to the input; !important lets long names widen the panel.
+        classNames: {
+          base: "!w-max min-w-[220px] max-w-[min(92vw,420px)]",
+        },
+      }}
       isDisabled={disabled || loading || options.length === 0}
       selectedKey={selectedKey}
       defaultInputValue={itemShName || ""}
@@ -204,6 +210,9 @@ const ItemShortNameSelect: FC<{
         <AutocompleteItem
           key={String(option.Id)}
           textValue={option.Item_Sh_Name || option.Item_Name}
+          classNames={{
+            title: "whitespace-normal break-words leading-snug",
+          }}
         >
           {option.Item_Sh_Name || option.Item_Name}
         </AutocompleteItem>
@@ -393,7 +402,7 @@ const DesignModal: FC<DesignModalProps> = ({
             </div>
 
             <div className="flex flex-col gap-5">
-              <ScrollArea className="mx-auto mt-5 w-full max-w-[400px] sm:max-w-full">
+              <ScrollArea className="mt-5 w-full min-w-0">
                 <Table
                   removeWrapper
                   aria-label="Design items"
@@ -429,7 +438,7 @@ const DesignModal: FC<DesignModalProps> = ({
                                 control={form.control}
                                 name={`item.${index}.itemName`}
                                 disabled
-                                className="min-w-[70px]"
+                                className="min-w-[160px]"
                               />
                             </TableCell>
                             <TableCell>
@@ -458,7 +467,7 @@ const DesignModal: FC<DesignModalProps> = ({
                                   control={form.control}
                                   name={`item.${index}.itemShName`}
                                   disabled
-                                  className="min-w-[70px]"
+                                  className="min-w-[200px]"
                                 />
                               )}
                             </TableCell>

@@ -487,11 +487,14 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                   const stones = (design.ItemRow || []).map((item) =>
                     parseStoneItem(item, masterColorLabels, colorById),
                   );
+                  const orderQty = Number(design.Order_Qnty) || 0;
                   // One row per stone size/item (do not collapse different sizes)
                   const stoneRows = stones.map((stone) => ({
                     size: stone.size,
                     particular: stone.particular,
                     qty: stone.qty,
+                    // API Item_Qnty is order-total; 1 set = total / order qty
+                    setQty: orderQty > 0 ? stone.qty / orderQty : stone.qty,
                     colors: {
                       [stone.color || DEFAULT_WHITE_COLOR]: stone.qty,
                     },
@@ -575,7 +578,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                         {row.size}
                                       </td>
                                       <td className="w-16 px-3 py-1.5 text-right tabular-nums text-black">
-                                        {formatQty(row.qty, "0")}
+                                        {formatQty(row.setQty, "0")}
                                       </td>
                                     </tr>
                                   ))
