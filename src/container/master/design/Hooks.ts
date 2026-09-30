@@ -62,6 +62,9 @@ const DESIGN_IMAGE_ALLOWED_MIME_TYPES = [
   "image/gif",
 ];
 
+const DESIGN_IMAGE_MAX_SIZE_MB = 10;
+const DESIGN_IMAGE_MAX_SIZE_BYTES = DESIGN_IMAGE_MAX_SIZE_MB * 1024 * 1024;
+
 const validateDesignImageFile = (file: File): string | null => {
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isAllowedType =
@@ -70,6 +73,11 @@ const validateDesignImageFile = (file: File): string | null => {
 
   if (!isAllowedType) {
     return "Only PNG, JPG, JPEG, WEBP, and GIF files are allowed";
+  }
+
+  if (file.size > DESIGN_IMAGE_MAX_SIZE_BYTES) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+    return `Image size must be ${DESIGN_IMAGE_MAX_SIZE_MB} MB or less (selected file is ${sizeMb} MB)`;
   }
 
   return null;

@@ -116,6 +116,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
           <TableColumn align="center">Serial No.</TableColumn>
           <TableColumn align="center">Order Date</TableColumn>
           <TableColumn align="center">Order No.</TableColumn>
+          <TableColumn align="center">Design Name - No.</TableColumn>
           <TableColumn align="center">Party Name</TableColumn>
           <TableColumn align="center">Order Amount</TableColumn>
           <TableColumn align="center">Order Status</TableColumn>
@@ -137,6 +138,20 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
           {getPaginatedTableRows(filtered, loading).flatMap((data, index) => {
             const isOpen = expandedOrderId === data.Id;
             const designs = data.DesignRow ?? [];
+            const designLabels = Array.from(
+              new Set(
+                designs
+                  .map((design) =>
+                    [
+                      String(design.Design_Name ?? "").trim(),
+                      String(design.Design_No ?? "").trim(),
+                    ]
+                      .filter(Boolean)
+                      .join(" - "),
+                  )
+                  .filter(Boolean),
+              ),
+            );
             const orderStatusChip = getOrderStatusChipProps(data.Order_Status);
             const rows = [
               <TableRow key={data.Id}>
@@ -169,6 +184,17 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                   {format(data.Order_Date, "dd-MM-yyyy")}
                 </TableCell>
                 <TableCell>{data.Order_No}</TableCell>
+                <TableCell>
+                  {designLabels.length ? (
+                    <div className="mx-auto flex max-w-[220px] flex-col items-center gap-0.5 break-words">
+                      {designLabels.map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
                 <TableCell>
                   <div className="flex justify-center">
                     <TableNameCell name={data.Party_Name} />
@@ -226,7 +252,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
               rows.push(
                 <TableRow key={`${data.Id}-details`}>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="bg-[#F7F5F3]/70 px-5 py-3"
                   >
                     {designs.length ? (

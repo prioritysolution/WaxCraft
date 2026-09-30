@@ -32,6 +32,7 @@ const OrderBookingContainer = () => {
     setShowDesignDialog,
     handleAddDesign,
     orderTableData,
+    itemListData,
     handleDeleteOrderTableData,
     handleShowDeleteDialog,
     showDeleteDialog,
@@ -136,6 +137,7 @@ const OrderBookingContainer = () => {
       setShowDesignDialog={setShowDesignDialog}
       handleAddDesign={handleAddDesign}
       orderTableData={orderTableData}
+      itemListData={itemListData}
       handleDeleteOrderTableData={handleDeleteOrderTableData}
       handleShowDeleteDialog={handleShowDeleteDialog}
       showDeleteDialog={showDeleteDialog}

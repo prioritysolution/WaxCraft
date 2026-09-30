@@ -118,7 +118,7 @@ export const Navbar: FC<NavbarProps> = ({ loading, handleLogout }) => {
       </div>
       <Dropdown
         placement="bottom-end"
-        backdrop="opaque"
+        shouldBlockScroll={false}
         onOpenChange={setIsMenuOpen}
       >
         <DropdownTrigger className="shrink-0 rounded-full border border-black/[0.06] bg-secondary/60 px-1 py-1 pr-2 transition-colors data-[hover=true]:bg-secondary sm:pr-3">

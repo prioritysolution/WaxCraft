@@ -9,6 +9,7 @@ import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
 import {
   OrderBookingFormData,
+  OrderItemListData,
   OrderTableData,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { ApiResponse } from "@/types/ApiTypes";
@@ -146,19 +147,9 @@ export const useOrderBooking = () => {
 
   const [orderTableData, setOrderTableData] = useState<OrderTableData[]>([]);
 
-  const [itemListData, setItemListData] = useState<
-    {
-      designId: string;
-      itemId: string;
-      itemName: string;
-      itemGl: string;
-      itemShName?: string;
-      itemQuantity: string;
-      itemRate: string;
-      makingRate: string;
-      itemTotal: string;
-    }[]
-  >([]);
+  const orderLineSeqRef = useRef(0);
+
+  const [itemListData, setItemListData] = useState<OrderItemListData[]>([]);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -396,9 +387,15 @@ export const useOrderBooking = () => {
             ""
         ).trim();
 
+        // Same design can be added multiple times (e.g. different item colours),
+        // so each order line needs its own key to link its items and quantity.
+        orderLineSeqRef.current += 1;
+        const lineKey = `${orderDesignId}-${orderLineSeqRef.current}`;
+
         setOrderTableData((prev) => [
           ...prev,
           {
+            lineKey,
             designId: orderDesignId,
             designName,
             designNo,
@@ -413,7 +410,10 @@ export const useOrderBooking = () => {
             image,
           },
         ]);
-        setItemListData((prev) => [...prev, ...item]);
+        setItemListData((prev) => [
+          ...prev,
+          ...item.map((row) => ({ ...row, lineKey })),
+        ]);
         form.setValue("orderQuantity", "");
         form.setValue("item", []);
         form.setValue("designId", "");
@@ -433,17 +433,24 @@ export const useOrderBooking = () => {
     }
   };
 
-  const handleDeleteOrderTableData = (Id: number) => {
+  const handleDeleteOrderTableData = (lineKey: string) => {
     const newOrderTableData = orderTableData.filter(
-      (data) => data.designId !== Id
+      (data) => data.lineKey !== lineKey
     );
     setOrderTableData(newOrderTableData);
 
     const newItemListData = itemListData.filter(
-      (data) => data.designId === Id.toString()
+      (data) => data.lineKey !== lineKey
     );
     setItemListData(newItemListData);
   };
+
+  const findOrderLine = (itemData: { lineKey?: string; designId: string }) =>
+    orderTableData.find((data) =>
+      itemData.lineKey
+        ? data.lineKey === itemData.lineKey
+        : data.designId.toString() === itemData.designId.toString()
+    );
 
   const addOrderBookingApiCall = async (
     item: OrderBookingFormData,
@@ -464,27 +471,15 @@ export const useOrderBooking = () => {
       Item_Gl: itemData.itemGl,
       item_qnty:
         Number(itemData.itemQuantity) *
-        Number(
-          orderTableData.find(
-            (data) => data.designId.toString() === itemData.designId.toString()
-          )?.orderQuantity
-        ),
+        Number(findOrderLine(itemData)?.orderQuantity),
       item_rate: itemData.itemRate,
       item_tot:
         Number(itemData.itemQuantity) *
         Number(itemData.itemRate) *
-        Number(
-          orderTableData.find(
-            (data) => data.designId.toString() === itemData.designId.toString()
-          )?.orderQuantity
-        ),
+        Number(findOrderLine(itemData)?.orderQuantity),
       item_grand_tot:
         Number(itemData.itemTotal) *
-        Number(
-          orderTableData.find(
-            (data) => data.designId.toString() === itemData.designId.toString()
-          )?.orderQuantity
-        ),
+        Number(findOrderLine(itemData)?.orderQuantity),
       making_rate: itemData.makingRate,
     }));
 
@@ -907,6 +902,7 @@ export const useOrderBooking = () => {
     setShowDesignDialog,
     handleAddDesign,
     orderTableData,
+    itemListData,
     handleDeleteOrderTableData,
     handleShowDeleteDialog,
     showDeleteDialog,

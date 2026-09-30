@@ -4,7 +4,6 @@ import { DatePickerField } from "@/common/formFields/DatePickerField";
 import InputField from "@/common/formFields/InputField";
 import RadioField from "@/common/formFields/RadioFields";
 import SearchDropdownField from "@/common/formFields/SearchDropdrownField";
-import TextareaField from "@/common/formFields/TextareaField";
 import { Form } from "@/components/ui/form";
 import { FormSubmitButton } from "@/components/ui/form-actions";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -28,7 +27,10 @@ import {
   TableRow,
 } from "@heroui/react";
 import { TableDeleteButton, TableNameCell } from "@/components/ui/table-edit-button";
-import { FC, FormEvent } from "react";
+import { cn } from "@/lib/utils";
+import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { ChevronRight } from "lucide-react";
+import { FC, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FieldErrors } from "react-hook-form";
 import { useSelector } from "react-redux";
@@ -53,6 +55,11 @@ interface RootState {
   orderBooking: OrderBookingState;
 }
 
+const nestedHeadClassName =
+  "px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+const nestedCellClassName =
+  "px-3 py-2.5 text-center text-sm text-foreground";
+
 const OrderBookingForm: FC<OrderBookingFormProps> = ({
   addOrderBookingLoading,
   form,
@@ -60,6 +67,7 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
   handleShowPartyForm,
   isOpen,
   orderTableData,
+  itemListData,
   handleDeleteOrderTableData,
   handleSearchOrderParty,
   handleScrollOrderParty,
@@ -79,6 +87,17 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
   const orderDesignData: OrderDesignData[] = useSelector(
     (state: RootState) => state?.orderBooking?.orderDesignData
   );
+
+  const [expandedLineKey, setExpandedLineKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      expandedLineKey &&
+      !orderTableData.some((data) => data.lineKey === expandedLineKey)
+    ) {
+      setExpandedLineKey(null);
+    }
+  }, [orderTableData, expandedLineKey]);
 
   const handleStopPropagation = (e: FormEvent) => {
     e.stopPropagation();
@@ -139,7 +158,7 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
             hideContent={isOpen}
           />
 
-          <TextareaField
+          <InputField
             control={form.control}
             name="address"
             label="Address"
@@ -183,13 +202,7 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
             label="Design"
             name="designId"
             control={form.control}
-            options={
-              orderDesignData.filter((design) => {
-                return !orderTableData.some(
-                  (tableData) => tableData.designId === design.Id
-                );
-              }) || []
-            }
+            options={orderDesignData || []}
             optionLabelKey="Design_Name"
             handleSearch={handleSearchOrderDesign}
             loadMore={handleScrollOrderDesign}
@@ -206,6 +219,9 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
             classNames={tableClassNames}
           >
             <TableHeader>
+              <TableColumn align="center" className="w-[56px]">
+                {" "}
+              </TableColumn>
               <TableColumn>Serial No.</TableColumn>
               <TableColumn align="center">Design Image</TableColumn>
               <TableColumn align="center">Design Name</TableColumn>
@@ -216,8 +232,43 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
               <TableColumn align="center">Action</TableColumn>
             </TableHeader>
             <TableBody emptyContent={"No data found."}>
-              {orderTableData.map((data, index) => (
-                <TableRow key={`${data.designId}-${index}`}>
+              {orderTableData.flatMap((data, index) => {
+                const rowKey = data.lineKey || `${data.designId}-${index}`;
+                const isExpanded = expandedLineKey === rowKey;
+                const lineItems = itemListData.filter((item) =>
+                  item.lineKey
+                    ? item.lineKey === data.lineKey
+                    : String(item.designId) === String(data.designId),
+                );
+
+                const rows = [
+                <TableRow key={rowKey}>
+                  <TableCell className="w-[56px]">
+                    <Button
+                      type="button"
+                      isIconOnly
+                      size="sm"
+                      radius="md"
+                      variant="light"
+                      aria-expanded={isExpanded}
+                      aria-label={
+                        isExpanded ? "Hide design items" : "Show design items"
+                      }
+                      className="h-8 w-8 min-w-8 text-muted-foreground"
+                      onPress={() =>
+                        setExpandedLineKey((current) =>
+                          current === rowKey ? null : rowKey,
+                        )
+                      }
+                    >
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          isExpanded && "rotate-90",
+                        )}
+                      />
+                    </Button>
+                  </TableCell>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>
                     <div className="flex justify-center">
@@ -245,11 +296,111 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
                   <TableCell>{data.totalRate}</TableCell>
                   <TableCell>
                     <TableDeleteButton
-                      onPress={() => handleDeleteOrderTableData(data.designId)}
+                      onPress={() => handleDeleteOrderTableData(data.lineKey)}
                     />
                   </TableCell>
-                </TableRow>
-              ))}
+                </TableRow>,
+                ];
+
+                if (isExpanded) {
+                  rows.push(
+                    <TableRow key={`${rowKey}-items`}>
+                      <TableCell
+                        colSpan={9}
+                        className="bg-[#F7F5F3]/70 px-5 py-3"
+                      >
+                        <div className="w-full overflow-hidden rounded-xl border border-black/[0.06] bg-white">
+                          <div className="bg-[#F7F5F3] px-4 py-2 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            Item details
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[720px] border-collapse text-center">
+                              <thead>
+                                <tr className="bg-[#F7F5F3]/50">
+                                  <th
+                                    className={cn(
+                                      nestedHeadClassName,
+                                      "w-[30%] text-left",
+                                    )}
+                                  >
+                                    Item Name
+                                  </th>
+                                  <th
+                                    className={cn(
+                                      nestedHeadClassName,
+                                      "w-[25%] text-left",
+                                    )}
+                                  >
+                                    Item Short Name
+                                  </th>
+                                  <th className={nestedHeadClassName}>
+                                    Quantity
+                                  </th>
+                                  <th className={nestedHeadClassName}>Rate</th>
+                                  <th className={nestedHeadClassName}>
+                                    Making Rate
+                                  </th>
+                                  <th className={nestedHeadClassName}>Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {lineItems.length ? (
+                                  lineItems.map((item, itemIndex) => (
+                                    <tr
+                                      key={`${rowKey}-${item.itemId}-${itemIndex}`}
+                                      className="border-b border-black/[0.05] last:border-b-0"
+                                    >
+                                      <td
+                                        className={cn(
+                                          nestedCellClassName,
+                                          "text-left",
+                                        )}
+                                      >
+                                        {item.itemName || "—"}
+                                      </td>
+                                      <td
+                                        className={cn(
+                                          nestedCellClassName,
+                                          "text-left",
+                                        )}
+                                      >
+                                        {item.itemShName || "—"}
+                                      </td>
+                                      <td className={nestedCellClassName}>
+                                        {item.itemQuantity || "—"}
+                                      </td>
+                                      <td className={nestedCellClassName}>
+                                        {formatTwoDecimals(item.itemRate)}
+                                      </td>
+                                      <td className={nestedCellClassName}>
+                                        {formatTwoDecimals(item.makingRate)}
+                                      </td>
+                                      <td className={nestedCellClassName}>
+                                        {formatTwoDecimals(item.itemTotal)}
+                                      </td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td
+                                      colSpan={6}
+                                      className="px-4 py-6 text-center text-sm text-muted-foreground"
+                                    >
+                                      No items found.
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>,
+                  );
+                }
+
+                return rows;
+              })}
             </TableBody>
           </Table>
           <ScrollBar orientation="horizontal" />

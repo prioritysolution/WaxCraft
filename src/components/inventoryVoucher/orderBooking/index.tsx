@@ -34,6 +34,7 @@ const OrderBooking: FC<OrderBookingProps> = ({
   setShowDesignDialog,
   handleAddDesign,
   orderTableData,
+  itemListData,
   handleDeleteOrderTableData,
   handleShowDeleteDialog,
   showDeleteDialog,
@@ -87,6 +88,7 @@ const OrderBooking: FC<OrderBookingProps> = ({
               handleShowPartyForm={handleShowPartyForm}
               isOpen={isOpen}
               orderTableData={orderTableData}
+              itemListData={itemListData}
               handleDeleteOrderTableData={handleDeleteOrderTableData}
               handleSearchOrderParty={handleSearchOrderParty}
               handleScrollOrderParty={handleScrollOrderParty}

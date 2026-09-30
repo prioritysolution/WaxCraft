@@ -62,7 +62,7 @@
     "js-yaml": "^4.3.2",
     "sharp": "^0.35.4",
     "@eslint/eslintrc": {
-      "brace-expansion": "1.1.18"
+      "brace-expansion": "1.1.21"
     }
   },
   "allowScripts": {

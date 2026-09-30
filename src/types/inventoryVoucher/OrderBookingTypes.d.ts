@@ -82,7 +82,8 @@ export interface OrderBookingProps {
   setShowDesignDialog: Dispatch<SetStateAction<boolean>>;
   handleAddDesign: () => void;
   orderTableData: OrderTableData[];
-  handleDeleteOrderTableData: (id: number) => void;
+  itemListData: OrderItemListData[];
+  handleDeleteOrderTableData: (lineKey: string) => void;
   handleShowDeleteDialog: (id: number) => void;
   showDeleteDialog: boolean;
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
@@ -118,7 +119,8 @@ export interface OrderBookingFormProps {
   handleSubmit: SubmitHandler<OrderBookingFormData>;
   handleShowPartyForm: () => void;
   orderTableData: OrderTableData[];
-  handleDeleteOrderTableData: (id: number) => void;
+  itemListData: OrderItemListData[];
+  handleDeleteOrderTableData: (lineKey: string) => void;
   handleSearchOrderParty: () => void;
   handleScrollOrderParty: () => void;
   handleSearchOrderDesign: () => void;
@@ -194,7 +196,21 @@ export interface OrderBookingTableData {
   }[];
 }
 
+export interface OrderItemListData {
+  lineKey?: string;
+  designId: string;
+  itemId: string;
+  itemName: string;
+  itemGl: string;
+  itemShName?: string;
+  itemQuantity: string;
+  itemRate: string;
+  makingRate: string;
+  itemTotal: string;
+}
+
 export interface OrderTableData {
+  lineKey: string;
   designId: number;
   designName: string;
   designNo: string;

@@ -146,6 +146,16 @@ input[type="number"]:focus::after {
   overflow: hidden;
 }
 
+/*
+ * Chromium re-rasterizes backdrop-filter layers when another overlay (select /
+ * dropdown popover) mounts above them, which flashes the whole page. Keeping
+ * blurred layers on their own GPU layer avoids the flash without visual change.
+ */
+[class*="backdrop-blur"] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 input,
 textarea,
 select,

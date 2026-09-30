@@ -8,6 +8,7 @@ import { useModalOpen } from "@/utils/ContextProvider";
 import { cn } from "@/lib/utils";
 import SidebarContainer from "@/container/sidebar";
 import NavbarContainer from "@/container/navbar";
+import BlinkDebug from "@/utils/BlinkDebug";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -48,6 +49,7 @@ const DashboardLayout: FC<DashboardLayoutProps> = ({ children }) => {
 
   return (
     <main className="relative flex h-screen w-full max-w-full overflow-hidden bg-secondary text-foreground">
+      <BlinkDebug />
       {modalOpen && (
         <button
           type="button"

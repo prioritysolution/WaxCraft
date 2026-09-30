@@ -310,6 +310,9 @@ const DesignForm: FC<DesignFormProps> = ({
                         />
                       </FormControl>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, JPEG, WEBP or GIF. Max 10 MB.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

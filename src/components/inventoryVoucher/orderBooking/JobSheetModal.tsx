@@ -256,6 +256,16 @@ const parseStoneItem = (
   };
 };
 
+// Stone size labels are built as `${category}-${size}` (e.g. "MQ-1.0" → "MQ").
+const getStoneCategory = (size: string): string =>
+  String(size || "").split("-")[0].trim() || String(size || "").trim();
+
+const formatTotalStoneQty = (value: number) =>
+  (Number.isInteger(value)
+    ? value
+    : parseFloat(value.toFixed(4))
+  ).toLocaleString("en-IN");
+
 const resolveDesignUnitLabel = (
   design:
     | {
@@ -499,6 +509,18 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                       [stone.color || DEFAULT_WHITE_COLOR]: stone.qty,
                     },
                   }));
+                  const categoryTotals = stones.reduce<
+                    { category: string; qty: number }[]
+                  >((acc, stone) => {
+                    const category = getStoneCategory(stone.size);
+                    if (!category) return acc;
+                    const existing = acc.find(
+                      (entry) => entry.category === category,
+                    );
+                    if (existing) existing.qty += stone.qty;
+                    else acc.push({ category, qty: stone.qty });
+                    return acc;
+                  }, []);
                   const designCode = design.Design_No || design.Design_Name || "—";
                   const designUnit = resolveDesignUnitLabel(
                     design,
@@ -562,7 +584,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                             )}
                           </div>
 
-                          <div>
+                          <div className="flex flex-col">
                             <div className="border-b border-neutral-300 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
                               1 set stone
                             </div>
@@ -591,6 +613,29 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                 )}
                               </tbody>
                             </table>
+
+                            {categoryTotals.length ? (
+                              <div className="mt-auto border-t border-neutral-400 px-3 py-2">
+                                <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
+                                  Total stone
+                                </div>
+                                <div className="space-y-0.5">
+                                  {categoryTotals.map((entry) => (
+                                    <div
+                                      key={`total-${entry.category}`}
+                                      className="flex items-baseline justify-between gap-3"
+                                    >
+                                      <span className="font-medium text-black">
+                                        {entry.category}-
+                                      </span>
+                                      <span className="tabular-nums font-semibold text-black">
+                                        {formatTotalStoneQty(entry.qty)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
 
