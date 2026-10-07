@@ -23,6 +23,7 @@ import {
   getOrderStatusChipProps,
 } from "@/lib/orderStatusChip";
 import { cn } from "@/lib/utils";
+import { getDesignGhat } from "@/utils/designGhat";
 import { formatCompactNumber, toTwoDecimalString } from "@/utils/formatDecimal";
 import {
   Button,
@@ -166,12 +167,19 @@ const DesignCard: FC<{
   design: OrderProcessDesignRow;
 }> = ({ design }) => {
   const items = design.ItemRow ?? [];
+  const ghatInfo = getDesignGhat(design);
   const metrics = [
     { label: "Order Qty", value: design.Order_Qnty },
     { label: "Design Rate", value: design.Design_Rate },
     { label: "WT", value: design.Wt },
     { label: "WT Rate", value: design.Wt_Rate },
     { label: "Total Wt", value: design.Tot_Wt },
+    ...(ghatInfo
+      ? [
+          { label: "Ghat", value: ghatInfo.ghat },
+          { label: "Total Ghat", value: ghatInfo.total },
+        ]
+      : []),
     { label: "Polish", value: design.Polish },
     { label: "Total Polish", value: design.Tot_Polish },
   ];
@@ -203,7 +211,12 @@ const DesignCard: FC<{
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div
+        className={cn(
+          "grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4",
+          ghatInfo ? "xl:grid-cols-9" : "xl:grid-cols-7",
+        )}
+      >
         {metrics.map((metric) => (
           <div key={metric.label} className="min-w-0">
             <p className={detailLabelClassName}>{metric.label}</p>

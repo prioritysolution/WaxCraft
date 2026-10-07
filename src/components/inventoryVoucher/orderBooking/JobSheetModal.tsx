@@ -3,14 +3,16 @@
 import { useWorkProcess } from "@/container/master/workProcess/Hooks";
 import { useItemColour } from "@/container/master/itemColour/Hooks";
 import { useItemUnit } from "@/container/master/itemUnit/Hooks";
-import { getDesignAPI } from "@/container/master/design/DesignApis";
 import { getModalClassNames } from "@/lib/uiStyles";
 import { ModalActionIcon } from "@/lib/modalActionIcons";
-import { ApiResponse } from "@/types/ApiTypes";
 import { OrderBookingTableData } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { ItemColourTableData } from "@/types/master/ItemColourTypes";
 import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
 import { WorkProcessTableData } from "@/types/master/WorkProcessTypes";
+import {
+  loadDesignUnitMap,
+  resolveDesignUnitName,
+} from "@/utils/designUnits";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import getCookieData from "@/utils/getCookieData";
 import {
@@ -266,34 +268,7 @@ const formatTotalStoneQty = (value: number) =>
     : parseFloat(value.toFixed(4))
   ).toLocaleString("en-IN");
 
-const resolveDesignUnitLabel = (
-  design:
-    | {
-        Design_Id?: number | string;
-        Design_Unit?: number | string | null;
-        Unit_Id?: number | string | null;
-        Unit_Name?: string | null;
-      }
-    | null
-    | undefined,
-  units: ItemUnitTableData[],
-  designUnitById: Record<string, string>,
-) => {
-  const unitName = String(design?.Unit_Name ?? "").trim();
-  if (unitName) return unitName;
-
-  const unitId =
-    design?.Design_Unit ??
-    design?.Unit_Id ??
-    designUnitById[String(design?.Design_Id ?? "")];
-
-  if (unitId != null && String(unitId).trim() !== "") {
-    const match = units.find((unit) => String(unit.Id) === String(unitId));
-    if (match?.Unit_Name) return match.Unit_Name;
-  }
-
-  return "";
-};
+const resolveDesignUnitLabel = resolveDesignUnitName;
 
 const JobSheetModal: FC<JobSheetModalProps> = ({
   order,
@@ -342,29 +317,8 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
 
     const loadDesignUnits = async () => {
       try {
-        const res: ApiResponse = await getDesignAPI(orgId, 1, "", 500);
-        if (cancelled || (res.status !== 200 && res.status !== 202)) return;
-
-        const details = res.data.details;
-        const rows = Array.isArray(details)
-          ? details
-          : Array.isArray(details?.data)
-            ? details.data
-            : [];
-
-        const nextMap: Record<string, string> = {};
-        rows.forEach((row: Record<string, unknown>) => {
-          const designId = row?.Id;
-          const designUnit = row?.Design_Unit ?? row?.design_unit;
-          if (
-            designId != null &&
-            designUnit != null &&
-            String(designUnit).trim() !== ""
-          ) {
-            nextMap[String(designId)] = String(designUnit);
-          }
-        });
-        setDesignUnitById(nextMap);
+        const nextMap = await loadDesignUnitMap(orgId);
+        if (!cancelled) setDesignUnitById(nextMap);
       } catch {
         if (!cancelled) setDesignUnitById({});
       }
@@ -498,17 +452,43 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                     parseStoneItem(item, masterColorLabels, colorById),
                   );
                   const orderQty = Number(design.Order_Qnty) || 0;
-                  // One row per stone size/item (do not collapse different sizes)
-                  const stoneRows = stones.map((stone) => ({
-                    size: stone.size,
-                    particular: stone.particular,
-                    qty: stone.qty,
-                    // API Item_Qnty is order-total; 1 set = total / order qty
-                    setQty: orderQty > 0 ? stone.qty / orderQty : stone.qty,
-                    colors: {
-                      [stone.color || DEFAULT_WHITE_COLOR]: stone.qty,
-                    },
-                  }));
+                  // One row per stone size: same size in different colours is
+                  // merged (qty summed, colours spread across the matrix columns).
+                  const stoneRows = stones
+                    .reduce<
+                      {
+                        key: string;
+                        size: string;
+                        particular: string;
+                        qty: number;
+                        colors: Record<string, number>;
+                      }[]
+                    >((acc, stone) => {
+                      const key = `${stone.size}|${stone.particular}`
+                        .trim()
+                        .toLowerCase();
+                      const color = stone.color || DEFAULT_WHITE_COLOR;
+                      const existing = acc.find((row) => row.key === key);
+                      if (existing) {
+                        existing.qty += stone.qty;
+                        existing.colors[color] =
+                          (existing.colors[color] || 0) + stone.qty;
+                      } else {
+                        acc.push({
+                          key,
+                          size: stone.size,
+                          particular: stone.particular,
+                          qty: stone.qty,
+                          colors: { [color]: stone.qty },
+                        });
+                      }
+                      return acc;
+                    }, [])
+                    .map((row) => ({
+                      ...row,
+                      // API Item_Qnty is order-total; 1 set = total / order qty
+                      setQty: orderQty > 0 ? row.qty / orderQty : row.qty,
+                    }));
                   const categoryTotals = stones.reduce<
                     { category: string; qty: number }[]
                   >((acc, stone) => {
@@ -533,12 +513,12 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                       key={`${order?.Id}-${design.Design_Id}-${designIndex}`}
                       className="job-sheet-page mb-4 bg-white p-0 text-[11px] text-black print:mb-0 print:bg-white"
                     >
-                      <div className="overflow-hidden border border-neutral-400">
-                        <div className="border-b border-neutral-300 px-3 py-2.5 text-center text-base font-semibold tracking-[0.12em] text-black">
+                      <div className="overflow-hidden border border-black">
+                        <div className="border-b border-black px-3 py-2.5 text-center text-base font-semibold tracking-[0.12em] text-black">
                           {orgName || "Job Sheet"}
                         </div>
 
-                        <div className="grid grid-cols-3 divide-x divide-neutral-300 border-b border-neutral-300 text-[11px]">
+                        <div className="grid grid-cols-3 divide-x divide-black border-b border-black text-[11px]">
                           <div className="px-3 py-2">
                             <span className="text-black">P.CODE-</span>{" "}
                             <span className="font-medium">
@@ -567,7 +547,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-[1.35fr_1fr] divide-x divide-neutral-300 border-b border-neutral-300">
+                        <div className="grid grid-cols-[1.35fr_1fr] divide-x divide-black border-b border-black">
                           <div className="flex min-h-[168px] items-center justify-center p-3">
                             {design.Image ? (
                               <Image
@@ -585,7 +565,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                           </div>
 
                           <div className="flex flex-col">
-                            <div className="border-b border-neutral-300 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
+                            <div className="border-b border-black px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
                               1 set stone
                             </div>
                             <table className="w-full border-collapse">
@@ -594,7 +574,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                   stoneRows.map((row) => (
                                     <tr
                                       key={`set-${row.size}`}
-                                      className="border-b border-neutral-200 last:border-b-0"
+                                      className="border-b border-black last:border-b-0"
                                     >
                                       <td className="px-3 py-1.5 font-medium text-black">
                                         {row.size}
@@ -615,7 +595,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                             </table>
 
                             {categoryTotals.length ? (
-                              <div className="mt-auto border-t border-neutral-400 px-3 py-2">
+                              <div className="mt-auto border-t border-black px-3 py-2">
                                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
                                   Total stone
                                 </div>
@@ -639,28 +619,28 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="border-b border-neutral-300">
+                        <div className="border-b border-black">
                           <div className="w-full overflow-x-auto">
                             <table className="w-full min-w-full border-collapse table-fixed">
                               <thead>
                                 <tr>
-                                  <th className="w-[9%] border-b border-r border-neutral-300 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
+                                  <th className="w-[9%] border-b border-r border-black px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
                                     WT-D.NO
                                   </th>
-                                  <th className="w-[11%] border-b border-r border-neutral-300 px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
+                                  <th className="w-[11%] border-b border-r border-black px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
                                     ORDER DATE
                                   </th>
                                   {processColumns.length ? (
                                     processColumns.map((column) => (
                                       <th
                                         key={column.id}
-                                        className="border-b border-r border-neutral-300 px-2 py-2 text-center text-[9px] font-semibold uppercase tracking-wide text-black last:border-r-0"
+                                        className="border-b border-r border-black px-2 py-2 text-center text-[9px] font-semibold uppercase tracking-wide text-black last:border-r-0"
                                       >
                                         {column.name}
                                       </th>
                                     ))
                                   ) : (
-                                    <th className="border-b border-neutral-300 px-2 py-2 text-center text-[10px] font-semibold text-black">
+                                    <th className="border-b border-black px-2 py-2 text-center text-[10px] font-semibold text-black">
                                       —
                                     </th>
                                   )}
@@ -669,14 +649,14 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                               <tbody>
                                 <tr>
                                   <td
-                                    rowSpan={3}
-                                    className="border-r border-neutral-300 px-2 py-1.5 align-top font-medium"
+                                    rowSpan={2}
+                                    className="border-r border-black px-2 py-1.5 align-top font-medium"
                                   >
                                     {designCode}
                                   </td>
                                   <td
                                     rowSpan={3}
-                                    className="border-r border-neutral-300 px-2 py-1.5 align-top"
+                                    className="border-r border-black px-2 py-1.5 align-top"
                                   >
                                     {orderDateLabel}
                                   </td>
@@ -684,22 +664,28 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                     processColumns.map((column) => (
                                       <td
                                         key={`${design.Design_Id}-${column.id}`}
-                                        className="h-10 border-b border-r border-neutral-300 px-2 py-1.5 last:border-r-0"
+                                        className="h-10 border-b border-r border-black px-2 py-1.5 last:border-r-0"
                                       />
                                     ))
                                   ) : (
-                                    <td className="h-10 border-b border-neutral-300" />
+                                    <td className="h-10 border-b border-black" />
                                   )}
                                 </tr>
                                 {Array.from({ length: 2 }).map((_, rowIndex) => (
                                   <tr key={`process-blank-${rowIndex}`}>
+                                    {rowIndex === 1 ? (
+                                      <td className="h-10 border-r border-t border-black px-2 py-1.5 align-middle">
+                                        Qty: {formatQty(design.Order_Qnty, "—")}
+                                        {designUnit ? ` ${designUnit}` : ""}
+                                      </td>
+                                    ) : null}
                                     {processColumns.length ? (
                                       processColumns.map((column) => (
                                         <td
                                           key={`${design.Design_Id}-blank-${rowIndex}-${column.id}`}
-                                          className={`h-10 border-r border-neutral-300 px-2 py-1.5 last:border-r-0 ${
+                                          className={`h-10 border-r border-black px-2 py-1.5 last:border-r-0 ${
                                             rowIndex < 1
-                                              ? "border-b border-neutral-300"
+                                              ? "border-b border-black"
                                               : ""
                                           }`}
                                         />
@@ -708,7 +694,7 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                       <td
                                         className={`h-10 ${
                                           rowIndex < 1
-                                            ? "border-b border-neutral-300"
+                                            ? "border-b border-black"
                                             : ""
                                         }`}
                                       />
@@ -720,21 +706,21 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="border-b border-neutral-300">
+                        <div className="border-b border-black">
                           <div className="overflow-x-auto">
                             <table className="w-full min-w-[640px] border-collapse">
                               <thead>
                                 <tr>
-                                  <th className="border-b border-r border-neutral-300 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
+                                  <th className="border-b border-r border-black px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
                                     SIZE
                                   </th>
-                                  <th className="border-b border-r border-neutral-300 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
+                                  <th className="border-b border-r border-black px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-black">
                                     PARTICULAR
                                   </th>
                                   {colorColumns.map((color) => (
                                     <th
                                       key={color}
-                                      className="border-b border-r border-neutral-300 px-1.5 py-1.5 text-center text-[9px] font-semibold uppercase tracking-wide text-black last:border-r-0"
+                                      className="border-b border-r border-black px-1.5 py-1.5 text-center text-[9px] font-semibold uppercase tracking-wide text-black last:border-r-0"
                                     >
                                       {color}
                                     </th>
@@ -753,18 +739,18 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                 ).map((row, index) => (
                                   <tr
                                     key={`matrix-${row.size || index}`}
-                                    className="border-b border-neutral-200 last:border-b-0"
+                                    className="border-b border-black last:border-b-0"
                                   >
-                                    <td className="border-r border-neutral-300 px-2 py-1.5">
+                                    <td className="border-r border-black px-2 py-1.5">
                                       {row.size}
                                     </td>
-                                    <td className="border-r border-neutral-300 px-2 py-1.5">
+                                    <td className="border-r border-black px-2 py-1.5">
                                       {row.particular}
                                     </td>
                                     {colorColumns.map((color) => (
                                       <td
                                         key={`${index}-${color}`}
-                                        className="border-r border-neutral-300 px-1.5 py-1.5 text-center tabular-nums last:border-r-0"
+                                        className="border-r border-black px-1.5 py-1.5 text-center tabular-nums last:border-r-0"
                                       >
                                         {row.colors?.[color]
                                           ? formatQty(row.colors[color], "")
@@ -779,16 +765,12 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                         </div>
 
                         <div className="w-full p-3">
-                          <div className="min-h-[120px] w-full p-0">
+                          <div className="w-full p-0">
                             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-black">
                               Notes / Summary
                             </div>
                             <div className="space-y-1.5 text-[11px] text-black">
                               <div>Order: {order?.Order_No || "—"}</div>
-                              <div>
-                                Qty: {formatQty(design.Order_Qnty, "—")}
-                                {designUnit ? ` ${designUnit}` : ""}
-                              </div>
                               <div>
                                 Design: {design.Design_Name || "—"} /{" "}
                                 {design.Design_No || "—"}

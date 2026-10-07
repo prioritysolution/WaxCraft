@@ -28,7 +28,10 @@ import {
 } from "@heroui/react";
 import { TableDeleteButton, TableNameCell } from "@/components/ui/table-edit-button";
 import { cn } from "@/lib/utils";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import {
+  formatTwoDecimals,
+  formatUpToDecimals,
+} from "@/utils/formatDecimal";
 import { ChevronRight } from "lucide-react";
 import { FC, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -370,10 +373,10 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
                                         {item.itemQuantity || "—"}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(item.itemRate)}
+                                        {formatUpToDecimals(item.itemRate)}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(item.makingRate)}
+                                        {formatUpToDecimals(item.makingRate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(item.itemTotal)}

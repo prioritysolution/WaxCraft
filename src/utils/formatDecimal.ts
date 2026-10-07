@@ -34,6 +34,29 @@ export const formatTwoDecimals = (
 };
 
 /**
+ * Display helper with at least 2 and at most `maxDecimals` decimals
+ * (e.g. 0.5 → 0.50, 0.052 → 0.052, 0.05216 → 0.0522).
+ */
+export const formatUpToDecimals = (
+  value: unknown,
+  maxDecimals = 4,
+  empty = "—",
+): string => {
+  if (value == null || value === "") return empty;
+
+  const raw = String(value).trim();
+  if (!raw) return empty;
+
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return raw;
+
+  const [intPart, decPart = ""] = num
+    .toFixed(Math.max(2, maxDecimals))
+    .split(".");
+  return `${intPart}.${decPart.replace(/0+$/, "").padEnd(2, "0")}`;
+};
+
+/**
  * Display helper that avoids forced trailing decimals (e.g. 10.00 → 10, 0.25 → 0.25).
  */
 export const formatCompactNumber = (

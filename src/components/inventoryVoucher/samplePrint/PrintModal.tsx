@@ -50,6 +50,7 @@ const resolveDesignSections = (
       wt: printData.wt || "",
       wtRate: printData.wtRate || "",
       polish: printData.polish || "",
+      ghat: printData.ghat || "",
       image: printData.image || "",
       totalRate: printData.totalRate || "",
       item: printData.item || [],
@@ -78,7 +79,8 @@ const DesignPrintSection: FC<{
   const hasDesignTitle =
     hasText(design.designName) || hasText(design.designNo);
   const hasWeight = hasText(design.wt);
-  const showDesignPanel = hasDesignTitle || hasImage || hasWeight;
+  const hasGhat = hasText(design.ghat) && Number(design.ghat) !== 0;
+  const showDesignPanel = hasDesignTitle || hasImage || hasWeight || hasGhat;
   const showWtRow = hasText(design.wt) || hasText(design.wtRate);
   const showPolishRow = hasText(design.polish);
   const itemRows = design.item ?? [];
@@ -124,6 +126,22 @@ const DesignPrintSection: FC<{
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">
                 {design.wt} gm
+              </p>
+            </div>
+          )}
+          {hasGhat && (
+            <div
+              className={
+                hasDesignTitle || hasImage || hasWeight
+                  ? "mt-4 text-center"
+                  : "text-center"
+              }
+            >
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Ghat
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {design.ghat}
               </p>
             </div>
           )}

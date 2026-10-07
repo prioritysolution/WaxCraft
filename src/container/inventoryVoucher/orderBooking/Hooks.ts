@@ -200,6 +200,7 @@ export const useOrderBooking = () => {
     wt: yup.string().default(""),
     wtRate: yup.string().default(""),
     polish: yup.string().default(""),
+    ghat: yup.string().default(""),
     image: yup.string().default(""),
     itemType: yup.string().required("Item type is required"),
     // Design-modal rows only; validated in the modal, not on main order submit.
@@ -223,6 +224,7 @@ export const useOrderBooking = () => {
       wt: "",
       wtRate: "",
       polish: "",
+      ghat: "",
       image: "",
       itemType: "1",
       item: [],
@@ -392,24 +394,24 @@ export const useOrderBooking = () => {
         orderLineSeqRef.current += 1;
         const lineKey = `${orderDesignId}-${orderLineSeqRef.current}`;
 
-        setOrderTableData((prev) => [
-          ...prev,
-          {
-            lineKey,
-            designId: orderDesignId,
-            designName,
-            designNo,
-            orderQuantity: orderQty,
-            designRate: ratePerDesign,
-            totalRate: (
-              Number(ratePerDesign) * Number(orderQty)
-            ).toFixed(2),
-            wt: form.getValues("wt"),
-            wtRate: form.getValues("wtRate"),
-            polish: form.getValues("polish"),
-            image,
-          },
-        ]);
+        // Read before the fields are cleared below: state updaters run later,
+        // so calling form.getValues inside them would see the reset values.
+        const newOrderLine: OrderTableData = {
+          lineKey,
+          designId: orderDesignId,
+          designName,
+          designNo,
+          orderQuantity: orderQty,
+          designRate: ratePerDesign,
+          totalRate: (Number(ratePerDesign) * Number(orderQty)).toFixed(2),
+          wt: form.getValues("wt"),
+          wtRate: form.getValues("wtRate"),
+          polish: form.getValues("polish"),
+          ghat: form.getValues("ghat"),
+          image,
+        };
+
+        setOrderTableData((prev) => [...prev, newOrderLine]);
         setItemListData((prev) => [
           ...prev,
           ...item.map((row) => ({ ...row, lineKey })),
@@ -422,6 +424,7 @@ export const useOrderBooking = () => {
         form.setValue("wt", "");
         form.setValue("wtRate", "");
         form.setValue("polish", "");
+        form.setValue("ghat", "");
         form.setValue("image", "");
         form.setValue("totalRate", "");
         setOrderDesignInput("");
@@ -466,6 +469,8 @@ export const useOrderBooking = () => {
       tot_wt: null,
       polish_rate: null,
       tot_polish: null,
+      ghat_rate: null,
+      tot_ghat: null,
       qnty_rate: null,
       item_id: itemData.itemId,
       Item_Gl: itemData.itemGl,
@@ -492,6 +497,10 @@ export const useOrderBooking = () => {
         Number(data.wt) * Number(data.wtRate) * Number(data.orderQuantity),
       polish_rate: data.polish,
       tot_polish: Number(data.polish) * Number(data.orderQuantity),
+      ghat_rate: String(data.ghat ?? "").trim() || null,
+      tot_ghat: String(data.ghat ?? "").trim()
+        ? Number(data.ghat) * Number(data.orderQuantity)
+        : null,
       qnty_rate: data.designRate,
       item_id: null,
       Item_Gl: null,
@@ -528,6 +537,7 @@ export const useOrderBooking = () => {
           wt: "",
           wtRate: "",
           polish: "",
+          ghat: "",
           image: "",
           itemType: "1",
           item: [],
@@ -766,6 +776,10 @@ export const useOrderBooking = () => {
         form.setValue("wt", detail.WT);
         form.setValue("wtRate", detail.Wt_Rate || "");
         form.setValue("polish", detail.Polish);
+        form.setValue(
+          "ghat",
+          detail.Ghat == null ? "" : String(detail.Ghat).trim(),
+        );
         form.setValue("image", image);
         form.setValue(
           "item",

@@ -729,6 +729,7 @@ const mapHistoryRow = (
               Wt: d.wt,
               Wt_Rate: d.wtRate,
               Polish: d.polish,
+              Ghat_Rate: d.ghat || null,
               Image: d.image,
               ItemRow: (d.item || []).map((item) => ({
                 Item_Id: Number(item.itemId) || 0,
@@ -900,6 +901,9 @@ const mapSamplePrintDetailsToPrintData = (
           const rowPolish = toTwoDecimalString(
             pickValue(row.Polish, row.polish_rate, row.polish, "")
           );
+          const rowGhat = String(
+            pickValue(row.Ghat_Rate, row.ghat_rate, row.Ghat, row.ghat, "")
+          ).trim();
           const rowItemsTotal = rowItems.reduce(
             (sum, item) => sum + (Number(item.itemTotal) || 0),
             0
@@ -920,6 +924,7 @@ const mapSamplePrintDetailsToPrintData = (
             wt: rowWt || "",
             wtRate: rowWtRate || "",
             polish: rowPolish || "",
+            ghat: rowGhat,
             image: String(pickValue(row.Image, row.image, "")),
             totalRate: rowTotal ? rowTotal.toFixed(2) : "",
             item: rowItems,
@@ -960,6 +965,16 @@ const mapSamplePrintDetailsToPrintData = (
       ""
     )
   );
+  const ghat = String(
+    pickValue(
+      details.Ghat_Rate,
+      details.ghat_rate,
+      designRow.Ghat_Rate,
+      designRow.ghat_rate,
+      designRow.Ghat,
+      ""
+    )
+  ).trim();
   const itemsTotal = items.reduce(
     (sum, item) => sum + (Number(item.itemTotal) || 0),
     0
@@ -1033,6 +1048,7 @@ const mapSamplePrintDetailsToPrintData = (
     wt: wt || "",
     wtRate: wtRate || "",
     polish: polish || "",
+    ghat,
     image: String(
       pickValue(
         details.Image,
@@ -1080,6 +1096,7 @@ const mapSamplePrintDetailsToPrintData = (
                 wt: wt || "",
                 wtRate: wtRate || "",
                 polish: polish || "",
+                ghat,
                 image: String(
                   pickValue(
                     details.Image,
@@ -1185,6 +1202,7 @@ export const useSamplePrint = () => {
     wt: yup.string().default(""),
     wtRate: yup.string().default(""),
     polish: yup.string().default(""),
+    ghat: yup.string().default(""),
     image: yup.string().default(""),
     itemType: yup.string().required("Item type is required"),
     // Design line items are validated in the modal before Save; form Add uses
@@ -1228,6 +1246,7 @@ export const useSamplePrint = () => {
       wt: "",
       wtRate: "",
       polish: "",
+      ghat: "",
       image: "",
       itemType: "1",
       item: [],
@@ -1307,6 +1326,7 @@ export const useSamplePrint = () => {
       wt: "",
       wtRate: "",
       polish: "",
+      ghat: "",
       image: "",
       itemType: "1",
       item: [],
@@ -1326,6 +1346,7 @@ export const useSamplePrint = () => {
     form.setValue("wt", "");
     form.setValue("wtRate", "");
     form.setValue("polish", "");
+    form.setValue("ghat", "");
     form.setValue("image", "");
     form.setValue("totalRate", "");
     form.clearErrors("item");
@@ -1436,25 +1457,27 @@ export const useSamplePrint = () => {
         toTwoDecimalString(form.getValues("totalRate")) ||
         String(form.getValues("totalRate") || "").trim();
 
-      setDesignTableData((prev) => [
-        ...prev,
-        {
-          designId: selectedDesignId,
-          designName,
-          designNo,
-          wt: toTwoDecimalString(form.getValues("wt")) || form.getValues("wt") || "",
-          wtRate:
-            toTwoDecimalString(form.getValues("wtRate")) ||
-            form.getValues("wtRate") ||
-            "",
-          polish:
-            toTwoDecimalString(form.getValues("polish")) ||
-            form.getValues("polish") ||
-            "",
-          image,
-          totalRate,
-        },
-      ]);
+      // Read before clearDesignSelectionFields(): state updaters run later,
+      // so calling form.getValues inside them would see the reset values.
+      const newDesignRow: SamplePrintDesignTableData = {
+        designId: selectedDesignId,
+        designName,
+        designNo,
+        wt: toTwoDecimalString(form.getValues("wt")) || form.getValues("wt") || "",
+        wtRate:
+          toTwoDecimalString(form.getValues("wtRate")) ||
+          form.getValues("wtRate") ||
+          "",
+        polish:
+          toTwoDecimalString(form.getValues("polish")) ||
+          form.getValues("polish") ||
+          "",
+        ghat: String(form.getValues("ghat") ?? "").trim(),
+        image,
+        totalRate,
+      };
+
+      setDesignTableData((prev) => [...prev, newDesignRow]);
       setItemListData((prev) => [
         ...prev,
         ...item.map((row) => ({
@@ -1505,6 +1528,7 @@ export const useSamplePrint = () => {
           toTwoDecimalString(res.data.details[0].Polish) ||
             String(res.data.details[0].Polish ?? ""),
         );
+        form.setValue("ghat", "");
         form.setValue("image", res.data.details[0].Image);
         const partyItem = form.getValues("itemType") === "0";
         form.setValue(
@@ -1557,6 +1581,8 @@ export const useSamplePrint = () => {
       tot_wt: null,
       polish_rate: null,
       tot_polish: null,
+      ghat_rate: null,
+      tot_ghat: null,
       qnty_rate: null,
       item_id: itemData.itemId,
       Item_Gl: itemData.itemGl,
@@ -1580,6 +1606,11 @@ export const useSamplePrint = () => {
         ) || null,
       polish_rate: toTwoDecimalString(data.polish) || data.polish || null,
       tot_polish: toTwoDecimalString(data.polish) || data.polish || null,
+      // Sample print design lines are always qnty 1, so Tot_Ghat = Ghat_Rate.
+      ghat_rate: String(data.ghat ?? "").trim() || null,
+      tot_ghat: String(data.ghat ?? "").trim()
+        ? Number(data.ghat)
+        : null,
       qnty_rate: toTwoDecimalString(data.totalRate) || data.totalRate || null,
       item_id: null,
       Item_Gl: null,
@@ -1625,6 +1656,7 @@ export const useSamplePrint = () => {
           wt: firstDesign?.wt || "",
           wtRate: firstDesign?.wtRate || "",
           polish: firstDesign?.polish || "",
+          ghat: firstDesign?.ghat || "",
           image: firstDesign?.image || "",
           totalRate: combinedTotal,
           item: itemListData,

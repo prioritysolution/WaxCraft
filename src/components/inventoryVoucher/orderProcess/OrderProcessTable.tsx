@@ -19,6 +19,7 @@ import { tableClassNames } from "@/lib/uiStyles";
 import { cn } from "@/lib/utils";
 import { OrderBookingTableData } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { OrderProcessTableProps } from "@/types/inventoryVoucher/OrderProcessTypes";
+import { getDesignGhat } from "@/utils/designGhat";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
@@ -259,6 +260,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                       <div className="space-y-3">
                         {designs.map((design) => {
                           const items = design.ItemRow ?? [];
+                          const ghatInfo = getDesignGhat(design);
 
                           return (
                             <div
@@ -311,6 +313,16 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                       <th className={nestedHeadClassName}>
                                         Total Wt
                                       </th>
+                                      {ghatInfo ? (
+                                        <>
+                                          <th className={nestedHeadClassName}>
+                                            Ghat
+                                          </th>
+                                          <th className={nestedHeadClassName}>
+                                            Total Ghat
+                                          </th>
+                                        </>
+                                      ) : null}
                                       <th className={nestedHeadClassName}>
                                         Polish
                                       </th>
@@ -336,6 +348,16 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Tot_Wt)}
                                       </td>
+                                      {ghatInfo ? (
+                                        <>
+                                          <td className={nestedCellClassName}>
+                                            {formatTwoDecimals(ghatInfo.ghat)}
+                                          </td>
+                                          <td className={nestedCellClassName}>
+                                            {formatTwoDecimals(ghatInfo.total)}
+                                          </td>
+                                        </>
+                                      ) : null}
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Polish)}
                                       </td>

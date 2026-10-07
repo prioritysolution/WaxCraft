@@ -16,6 +16,7 @@ export interface OrderBookingFormData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat: string;
   image: string;
   itemType: string;
   item: {
@@ -52,6 +53,8 @@ interface OrderBookingBody {
     tot_wt: string | number | null;
     polish_rate: string | null;
     tot_polish: string | number | null;
+    ghat_rate?: string | null;
+    tot_ghat?: string | number | null;
     qnty_rate: string | null;
     item_id: string | null;
     Item_Gl: number | string | null;
@@ -178,6 +181,8 @@ export interface OrderBookingTableData {
     Tot_Wt: string;
     Polish: string;
     Tot_Polish: string;
+    Ghat_Rate?: string | number | null;
+    Tot_Ghat?: string | number | null;
     Image: string;
     ItemRow: {
       Item_Id: number;
@@ -220,5 +225,6 @@ export interface OrderTableData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat: string;
   image: string;
 }

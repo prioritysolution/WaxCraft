@@ -13,6 +13,7 @@ import { useBankAccount } from "@/container/master/bankAccount/Hooks";
 import { SalesVoucherTableData } from "@/types/inventoryVoucher/SalesVoucherTypes";
 import { BankAccountTableData } from "@/types/master/BankAccountTypes";
 import getCookieData from "@/utils/getCookieData";
+import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
 import {
   Input,
   Table,
@@ -142,7 +143,10 @@ const SalesVoucherProcess = () => {
       makingRate: "",
       total: data.DesignRow[0].Tot_Polish,
     },
-    ...data.DesignRow[0].ItemRow.map((item) => ({
+    ...groupStoneItemsBySize(
+      data.DesignRow[0].ItemRow,
+      (item) => item.Item_Name,
+    ).map((item) => ({
       description: item.Item_Name,
       quantity: item.Item_Qnty,
       rate: item.Item_Rate,

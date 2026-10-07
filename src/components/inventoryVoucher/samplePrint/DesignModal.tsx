@@ -278,7 +278,24 @@ const DesignModal: FC<DesignModalProps> = ({
                   }}
                 />
 
-                <div className=" w-full flex justify-center">
+                <InputField
+                  control={form.control}
+                  name="ghat"
+                  label="Ghat"
+                  type="text"
+                  inputMode="decimal"
+                  onInput={(e) => {
+                    const input = e.currentTarget;
+                    const next = sanitizeDecimalInput(input.value);
+                    input.value = next;
+                    form.setValue("ghat", next, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }}
+                />
+
+                <div className=" w-full flex justify-center sm:col-span-2">
                   <Image
                     src={form.getValues("image")}
                     alt="Design Image"

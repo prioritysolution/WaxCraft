@@ -22,7 +22,10 @@ import {
   OrderBookingFormData,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { ApiResponse } from "@/types/ApiTypes";
-import { sanitizeDecimalInput, toTwoDecimalString } from "@/utils/formatDecimal";
+import {
+  formatUpToDecimals,
+  sanitizeDecimalInput,
+} from "@/utils/formatDecimal";
 import getCookieData from "@/utils/getCookieData";
 import {
   Autocomplete,
@@ -163,7 +166,7 @@ const ItemShortNameSelect: FC<{
               ])
             : "";
         if (rate) {
-          const nextRate = toTwoDecimalString(rate) || rate;
+          const nextRate = formatUpToDecimals(rate, 4, "") || rate;
           form.setValue(`item.${index}.itemRate`, nextRate, {
             shouldDirty: true,
             shouldValidate: true,
@@ -386,7 +389,14 @@ const DesignModal: FC<DesignModalProps> = ({
                 type="number"
               />
 
-              <div className="flex w-full justify-center">
+              <InputField
+                control={form.control}
+                name="ghat"
+                label="Ghat"
+                type="number"
+              />
+
+              <div className="flex w-full justify-center sm:col-span-2">
                 {designImage ? (
                   <Image
                     src={designImage}
@@ -492,6 +502,7 @@ const DesignModal: FC<DesignModalProps> = ({
                                   const input = e.currentTarget;
                                   const next = sanitizeDecimalInput(
                                     input.value,
+                                    4,
                                   );
                                   input.value = next;
                                   form.setValue(
@@ -517,6 +528,7 @@ const DesignModal: FC<DesignModalProps> = ({
                                   const input = e.currentTarget;
                                   const next = sanitizeDecimalInput(
                                     input.value,
+                                    4,
                                   );
                                   input.value = next;
                                   form.setValue(

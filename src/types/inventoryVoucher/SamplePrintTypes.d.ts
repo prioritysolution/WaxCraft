@@ -14,6 +14,7 @@ export interface SamplePrintFormData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat: string;
   image: string;
   itemType: string;
   item: {
@@ -39,6 +40,7 @@ export interface SamplePrintDesignPrintData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat?: string;
   image: string;
   totalRate: string;
   item: SamplePrintFormData["item"];
@@ -58,6 +60,8 @@ export interface SamplePrintBody {
     tot_wt: string | number | null;
     polish_rate: string | null;
     tot_polish: string | number | null;
+    ghat_rate?: string | null;
+    tot_ghat?: string | number | null;
     qnty_rate: string | null;
     item_id: string | null;
     Item_Gl: number | string | null;
@@ -96,6 +100,8 @@ export interface SamplePrintTableData {
     Wt: string;
     Wt_Rate: string;
     Polish: string;
+    Ghat_Rate?: string | number | null;
+    Tot_Ghat?: string | number | null;
     Image: string;
     ItemRow?: {
       Item_Id: number;
@@ -117,6 +123,7 @@ export interface SamplePrintDesignTableData {
   wt: string;
   wtRate: string;
   polish: string;
+  ghat?: string;
   image: string;
   totalRate: string;
 }

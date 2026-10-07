@@ -186,6 +186,7 @@ const SamplePrintForm: FC<SamplePrintFormProps> = ({
               <TableColumn align="center">WT</TableColumn>
               <TableColumn align="center">WT Rate</TableColumn>
               <TableColumn align="center">Polish</TableColumn>
+              <TableColumn align="center">Ghat</TableColumn>
               <TableColumn align="center">Total Rate</TableColumn>
               <TableColumn align="center">Action</TableColumn>
             </TableHeader>
@@ -217,6 +218,11 @@ const SamplePrintForm: FC<SamplePrintFormProps> = ({
                   <TableCell>{formatTwoDecimals(data.wt)}</TableCell>
                   <TableCell>{formatTwoDecimals(data.wtRate)}</TableCell>
                   <TableCell>{formatTwoDecimals(data.polish)}</TableCell>
+                  <TableCell>
+                    {String(data.ghat ?? "").trim()
+                      ? formatTwoDecimals(data.ghat)
+                      : "—"}
+                  </TableCell>
                   <TableCell>{formatTwoDecimals(data.totalRate)}</TableCell>
                   <TableCell>
                     <TableDeleteButton

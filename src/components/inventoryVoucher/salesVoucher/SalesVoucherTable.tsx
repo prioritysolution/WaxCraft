@@ -14,6 +14,7 @@ import {
   SalesVoucherTableProps,
 } from "@/types/inventoryVoucher/SalesVoucherTypes";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
 import {
   Button,
   Checkbox,
@@ -181,7 +182,10 @@ const SalesVoucherTable: FC<SalesVoucherTableProps> = ({
                   {designs.length ? (
                     <div className="space-y-3">
                       {designs.map((design) => {
-                        const items = design.ItemRow ?? [];
+                        const items = groupStoneItemsBySize(
+                          design.ItemRow ?? [],
+                          (item) => item.Item_Name,
+                        );
 
                         return (
                           <div

@@ -1,7 +1,6 @@
 "use client";
 
 import { useItemUnit } from "@/container/master/itemUnit/Hooks";
-import { getDesignAPI } from "@/container/master/design/DesignApis";
 import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
 import { getModalClassNames } from "@/lib/uiStyles";
 import { cn } from "@/lib/utils";
@@ -12,7 +11,12 @@ import {
   InvoiceTableData,
 } from "@/types/inventoryVoucher/SalesVoucherTypes";
 import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
+import {
+  loadDesignUnitMap,
+  resolveDesignUnitName,
+} from "@/utils/designUnits";
 import getCookieData from "@/utils/getCookieData";
+import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
 import {
   Button,
   Image,
@@ -60,21 +64,7 @@ function resolveDesignUnitLabel(
   units: ItemUnitTableData[],
   designUnitById: Record<string, string>,
 ) {
-  const unitName = String(design?.Unit_Name ?? "").trim();
-  if (unitName) return unitName;
-
-  const unitId =
-    design?.Design_Unit ??
-    design?.Unit_Id ??
-    design?.design_unit ??
-    designUnitById[String(design?.Design_Id ?? "")];
-
-  if (unitId != null && String(unitId).trim() !== "") {
-    const match = units.find((unit) => String(unit.Id) === String(unitId));
-    if (match?.Unit_Name) return match.Unit_Name;
-  }
-
-  return "SET";
+  return resolveDesignUnitName(design, units, designUnitById) || "SET";
 }
 
 function pickOwnFlag(
@@ -143,29 +133,8 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
 
     const loadDesignUnits = async () => {
       try {
-        const res: ApiResponse = await getDesignAPI(orgId, 1, "", 100);
-        if (cancelled || res.status !== 200) return;
-
-        const details = res.data.details;
-        const rows = Array.isArray(details)
-          ? details
-          : Array.isArray(details?.data)
-            ? details.data
-            : [];
-
-        const nextMap: Record<string, string> = {};
-        rows.forEach((row: Record<string, unknown>) => {
-          const designId = row?.Id;
-          const designUnit = row?.Design_Unit ?? row?.design_unit;
-          if (
-            designId != null &&
-            designUnit != null &&
-            String(designUnit).trim() !== ""
-          ) {
-            nextMap[String(designId)] = String(designUnit);
-          }
-        });
-        setDesignUnitById(nextMap);
+        const nextMap = await loadDesignUnitMap(orgId);
+        if (!cancelled) setDesignUnitById(nextMap);
       } catch {
         if (!cancelled) setDesignUnitById({});
       }
@@ -271,11 +240,14 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     );
     const partyItem = isPartyItemFlag(ownFlag);
 
-    return (design.ItemRow || []).map((item) => {
+    return groupStoneItemsBySize(
+      design.ItemRow || [],
+      (item) => item.Item_Name,
+    ).map((item) => {
       const itemId = String(item.Item_Id ?? "");
       const itemQnty = Number(item.Item_Qnty) || 0;
-      // API Item_Qnty is order-total; show/calculate row amounts per pcs only
-      const perSet = orderQty > 0 ? itemQnty / safeOrderQty : itemQnty;
+      const consumed = orderQty > 0 ? itemQnty / safeOrderQty : itemQnty;
+      const perSet = consumed / safeOrderQty;
       const fetchedRate = Number(fetchedItemRates[itemId]);
       const rawRate = item.Item_Rate;
       const hasExplicitRate =
@@ -288,13 +260,13 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
           : Number.isFinite(fetchedRate) && fetchedRate > 0
             ? fetchedRate
             : 0;
-      const total = partyItem ? 0 : perSet * rate;
+      const total = partyItem ? 0 : consumed * rate;
 
       return {
         itemId,
         itemName: item.Item_Name || "—",
         perSet,
-        consumed: perSet,
+        consumed,
         rate,
         total,
       };
@@ -447,13 +419,10 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                   designUnitById,
                 );
                 const markRows = getMarkRows(designInvoice);
-                const orderQty = Number(design.Order_Qnty) || 0;
-                const rowsSubtotal = markRows.reduce(
+                const grandTotal = markRows.reduce(
                   (sum, row) => sum + (Number(row.total) || 0),
                   0,
                 );
-                const grandTotal =
-                  rowsSubtotal * (orderQty > 0 ? orderQty : 1);
 
                 return (
                 <PageShell

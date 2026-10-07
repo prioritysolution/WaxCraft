@@ -19,7 +19,11 @@ import {
   OrderBookingTableData,
   OrderBookingTableProps,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { getDesignGhat } from "@/utils/designGhat";
+import {
+  formatTwoDecimals,
+  formatUpToDecimals,
+} from "@/utils/formatDecimal";
 import {
   Button,
   Chip,
@@ -51,7 +55,6 @@ const nestedHeadClassName =
   "px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
 const nestedCellClassName =
   "px-3 py-2.5 text-center text-sm text-foreground";
-
 const OrderBookingTable: FC<OrderBookingTableProps> = ({
   loading,
   handleShowDeleteDialog,
@@ -263,6 +266,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                       <div className="space-y-3">
                         {designs.map((design) => {
                           const items = design.ItemRow ?? [];
+                          const ghatInfo = getDesignGhat(design);
 
                           return (
                             <div
@@ -315,6 +319,16 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                       <th className={nestedHeadClassName}>
                                         Total Wt
                                       </th>
+                                      {ghatInfo ? (
+                                        <>
+                                          <th className={nestedHeadClassName}>
+                                            Ghat
+                                          </th>
+                                          <th className={nestedHeadClassName}>
+                                            Total Ghat
+                                          </th>
+                                        </>
+                                      ) : null}
                                       <th className={nestedHeadClassName}>
                                         Polish
                                       </th>
@@ -340,6 +354,16 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Tot_Wt)}
                                       </td>
+                                      {ghatInfo ? (
+                                        <>
+                                          <td className={nestedCellClassName}>
+                                            {formatTwoDecimals(ghatInfo.ghat)}
+                                          </td>
+                                          <td className={nestedCellClassName}>
+                                            {formatTwoDecimals(ghatInfo.total)}
+                                          </td>
+                                        </>
+                                      ) : null}
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Polish)}
                                       </td>
@@ -402,12 +426,12 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
-                                              {formatTwoDecimals(
+                                              {formatUpToDecimals(
                                                 child.Item_Rate,
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
-                                              {formatTwoDecimals(
+                                              {formatUpToDecimals(
                                                 child.Making_Rate,
                                               )}
                                             </td>
