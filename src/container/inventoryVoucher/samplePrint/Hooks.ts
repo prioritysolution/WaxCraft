@@ -26,11 +26,15 @@ import {
 import { getSamplePrintData } from "./SamplePrintReducer";
 import getCookieData from "@/utils/getCookieData";
 import { format } from "date-fns";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { formatUpToDecimals, toTwoDecimalString } from "@/utils/formatDecimal";
 import { computeSamplePrintHistoryTotal } from "@/utils/samplePrintTotal";
 
 /** Design item rates can include up to 3 decimal places (e.g. 0.250). */
-const itemRateRegex = /^\d+(\.\d{1,3})?$/;
+const itemRateRegex = /^\d+(\.\d{1,4})?$/;
+
+/** Item rate / making rate: at least 2, at most 4 decimals. */
+const toRateString = (value: unknown): string =>
+  formatUpToDecimals(value, 4, "");
 
 interface OrderPartyData {
   Id: number;
@@ -854,8 +858,8 @@ const mapSamplePrintDetailsToPrintData = (
 
     return {
       ...item,
-      itemRate: toTwoDecimalString(item.itemRate) || item.itemRate,
-      makingRate: toTwoDecimalString(item.makingRate) || item.makingRate,
+      itemRate: toRateString(item.itemRate) || item.itemRate,
+      makingRate: toRateString(item.makingRate) || item.makingRate,
       itemTotal,
     };
   });
@@ -885,9 +889,8 @@ const mapSamplePrintDetailsToPrintData = (
               return {
                 ...item,
                 designId: String(item.designId || rowDesignId),
-                itemRate: toTwoDecimalString(item.itemRate) || item.itemRate,
-                makingRate:
-                  toTwoDecimalString(item.makingRate) || item.makingRate,
+                itemRate: toRateString(item.itemRate) || item.itemRate,
+                makingRate: toRateString(item.makingRate) || item.makingRate,
                 itemTotal,
               };
             }
@@ -1483,8 +1486,8 @@ export const useSamplePrint = () => {
         ...item.map((row) => ({
           ...row,
           designId: String(row.designId || selectedDesignId),
-          itemRate: toTwoDecimalString(row.itemRate) || row.itemRate,
-          makingRate: toTwoDecimalString(row.makingRate) || row.makingRate,
+          itemRate: toRateString(row.itemRate) || row.itemRate,
+          makingRate: toRateString(row.makingRate) || row.makingRate,
           itemTotal: toTwoDecimalString(row.itemTotal) || row.itemTotal,
         })),
       ]);
@@ -1528,7 +1531,12 @@ export const useSamplePrint = () => {
           toTwoDecimalString(res.data.details[0].Polish) ||
             String(res.data.details[0].Polish ?? ""),
         );
-        form.setValue("ghat", "");
+        form.setValue(
+          "ghat",
+          res.data.details[0].Ghat == null
+            ? ""
+            : String(res.data.details[0].Ghat).trim(),
+        );
         form.setValue("image", res.data.details[0].Image);
         const partyItem = form.getValues("itemType") === "0";
         form.setValue(
@@ -1537,10 +1545,19 @@ export const useSamplePrint = () => {
             const quantity = Number(child.Qnty) || 0;
             const rate = partyItem
               ? "0.00"
-              : toTwoDecimalString(child.Item_Rate) ||
+              : toRateString(child.Item_Rate) ||
                 (child.Item_Rate != null ? String(child.Item_Rate) : "");
             const makingRate = "";
             const itemTotal = calcRowTotal(quantity, rate, makingRate);
+
+            const pickAttr = (...keys: (keyof ChildRow)[]) => {
+              for (const key of keys) {
+                const value = child[key];
+                if (value == null || String(value).trim() === "") continue;
+                return String(value);
+              }
+              return "";
+            };
 
             return {
               designId: res.data.details[0].Id,
@@ -1552,6 +1569,10 @@ export const useSamplePrint = () => {
               itemRate: rate,
               makingRate,
               itemTotal,
+              catId: pickAttr("Cat_Id", "cat_id"),
+              modelId: pickAttr("Model_Id", "model_id", "item_mod"),
+              sizeId: pickAttr("Size_Id", "size_id", "item_size"),
+              colorId: pickAttr("Color_Id", "color_id", "item_color"),
             };
           })
         );
@@ -1591,8 +1612,7 @@ export const useSamplePrint = () => {
       item_tot: toTwoDecimalString(itemData.itemTotal) || itemData.itemTotal,
       item_grand_tot:
         toTwoDecimalString(itemData.itemTotal) || itemData.itemTotal,
-      making_rate:
-        toTwoDecimalString(itemData.makingRate) || itemData.makingRate,
+      making_rate: toRateString(itemData.makingRate) || itemData.makingRate,
     }));
 
     const designDetails = designTableData.map((data) => ({
@@ -1973,6 +1993,7 @@ export const useSamplePrint = () => {
     setShowDesignDialog,
     handleAddDesign,
     designTableData,
+    itemListData,
     handleDeleteDesignTableData,
     showPrintDialog,
     setShowPrintDialog,

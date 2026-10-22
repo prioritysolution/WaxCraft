@@ -39,7 +39,7 @@ export const useTrailorCashbook = () => {
   const form = useForm<TrailorCashbookFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      asOnDate: undefined,
+      asOnDate: new Date(),
       userId: "",
     },
   });

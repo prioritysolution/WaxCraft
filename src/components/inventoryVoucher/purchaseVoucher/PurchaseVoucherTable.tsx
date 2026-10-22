@@ -14,6 +14,7 @@ import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { TablePaginationBar } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { getPurchaseTypeLabel } from "@/utils/purchaseType";
 
 import {
   PurchaseVoucherTableData,
@@ -31,7 +32,10 @@ import {
 } from "@heroui/react";
 import { format } from "date-fns";
 import { FC, useMemo, useState } from "react";
-import { TableDeleteButton } from "@/components/ui/table-edit-button";
+import {
+  TableDeleteButton,
+  TableEditButton,
+} from "@/components/ui/table-edit-button";
 import { useSelector } from "react-redux";
 
 interface PurchaseVoucherState {
@@ -49,27 +53,6 @@ const nestedCellClassName =
 
 const COLUMN_COUNT = 8;
 
-function purchaseTypeLabel(data: PurchaseVoucherTableData) {
-  const raw = String(
-    data.Purchase_Type ?? data.Pur_Type ?? data.Is_Order ?? "",
-  ).trim();
-  if (
-    raw === "O" ||
-    raw === "1" ||
-    raw.toLowerCase().includes("order")
-  ) {
-    return "Ordered Purchase";
-  }
-  if (
-    raw === "R" ||
-    raw === "0" ||
-    raw.toLowerCase().includes("regular")
-  ) {
-    return "Regular Purchase";
-  }
-  return raw || "—";
-}
-
 function itemTotal(quantity: string | number, rate: string | number) {
   const qty = Number(quantity);
   const itemRate = Number(rate);
@@ -79,6 +62,7 @@ function itemTotal(quantity: string | number, rate: string | number) {
 
 const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
   loading,
+  handleEditPurchase,
   handleShowDeleteDialog,
   showDeleteDialog,
   setShowDeleteDialog,
@@ -212,12 +196,18 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
                 </TableCell>
                 <TableCell>{data.Purchase_No}</TableCell>
                 <TableCell>{data.Party_Name}</TableCell>
-                <TableCell>{purchaseTypeLabel(data)}</TableCell>
+                <TableCell>{getPurchaseTypeLabel(data)}</TableCell>
                 <TableCell>{formatTwoDecimals(data.Total_Amount)}</TableCell>
-                <TableCell align="center" className="flex justify-center">
-                  <TableDeleteButton
-                    onPress={() => handleShowDeleteDialog(data.Id)}
-                  />
+                <TableCell align="center" className="w-[100px]">
+                  <div className="inline-flex items-center justify-center gap-2">
+                    <TableEditButton
+                      label="Edit purchase"
+                      onPress={() => handleEditPurchase(data)}
+                    />
+                    <TableDeleteButton
+                      onPress={() => handleShowDeleteDialog(data.Id)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>,
             ];

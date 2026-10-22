@@ -71,7 +71,7 @@ export const useBankDeposit = () => {
   const form = useForm<BankDepositFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      depositDate: undefined,
+      depositDate: new Date(),
       particular: "",
       manualVoucherNo: "",
       bankId: "",

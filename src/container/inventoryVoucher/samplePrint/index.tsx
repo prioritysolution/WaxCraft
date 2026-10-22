@@ -25,6 +25,7 @@ const SamplePrintContainer = () => {
     setShowDesignDialog,
     handleAddDesign,
     designTableData,
+    itemListData,
     handleDeleteDesignTableData,
     showPrintDialog,
     setShowPrintDialog,
@@ -125,6 +126,7 @@ const SamplePrintContainer = () => {
       setShowDesignDialog={setShowDesignDialog}
       handleAddDesign={handleAddDesign}
       designTableData={designTableData}
+      itemListData={itemListData}
       handleDeleteDesignTableData={handleDeleteDesignTableData}
       showPrintDialog={showPrintDialog}
       setShowPrintDialog={setShowPrintDialog}

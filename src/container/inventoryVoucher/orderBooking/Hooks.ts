@@ -8,7 +8,9 @@ import { useResetFormOnModalClose } from "@/lib/useResetFormOnModalClose";
 import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  OrderBookingBody,
   OrderBookingFormData,
+  OrderBookingTableData,
   OrderItemListData,
   OrderTableData,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
@@ -20,6 +22,7 @@ import {
   getOrderBookingAPI,
   getOrderDesignAPI,
   getOrderPartyAPI,
+  updateOrderBookingAPI,
 } from "./OrderBookingApis";
 import {
   getOrderBookingData,
@@ -112,6 +115,10 @@ export const useOrderBooking = () => {
   const dispatch = useDispatch();
 
   const [addOrderBookingLoading, setAddOrderBookingLoading] = useState(false);
+  const [updateOrderBookingLoading, setUpdateOrderBookingLoading] =
+    useState(false);
+  const [editOrderId, setEditOrderId] = useState<number | null>(null);
+  const [editOrderNo, setEditOrderNo] = useState("");
   const [deleteOrderBookingLoading, setDeleteOrderBookingLoading] =
     useState(false);
   const [loading, setLoading] = useState(false);
@@ -308,10 +315,163 @@ export const useOrderBooking = () => {
       return;
     }
     if (orgId) {
-      addOrderBookingApiCall(values, orgId);
+      if (editOrderId != null) {
+        updateOrderBookingApiCall(values, orgId, editOrderId);
+      } else {
+        addOrderBookingApiCall(values, orgId);
+      }
     } else {
       toast.error("Somthing went wrong");
     }
+  };
+
+  const resetOrderForm = () => {
+    form.reset({
+      orderDate: new Date(),
+      partyId: "",
+      address: "",
+      mobileNo: "",
+      gstin: "",
+      designId: "",
+      designName: "",
+      designNo: "",
+      wt: "",
+      wtRate: "",
+      polish: "",
+      ghat: "",
+      image: "",
+      itemType: "1",
+      item: [],
+      totalRate: "",
+      orderQuantity: "",
+    });
+    setOrderPartyInput("");
+    setOrderDesignInput("");
+    setOrderTableData([]);
+    setItemListData([]);
+  };
+
+  const toFormNumber = (value: number) =>
+    Number.isFinite(value) ? String(Number(value.toFixed(4))) : "";
+
+  // GetActiveOrder returns order-total quantities/weights (as posted by
+  // PostOrder); the form works per design unit, so divide by Order_Qnty.
+  const handleEditOrder = async (order: OrderBookingTableData) => {
+    if (!orgId) return;
+    if (order.Order_Status !== "Ordered") {
+      toast.error("Only orders with status Ordered can be edited.");
+      return;
+    }
+
+    resetOrderForm();
+    setEditOrderId(order.Id);
+    setEditOrderNo(String(order.Order_No ?? ""));
+    setSelected("form");
+
+    const designs = order.DesignRow ?? [];
+    const source = order as unknown as Record<string, unknown>;
+    const ownFlag = source.Is_Own ?? source.is_own;
+    const allItemsZeroRate =
+      designs.some((d) => (d.ItemRow ?? []).length > 0) &&
+      designs.every((d) =>
+        (d.ItemRow ?? []).every((child) => toNum(child.Item_Rate) === 0),
+      );
+    const itemType =
+      ownFlag == null || String(ownFlag).trim() === ""
+        ? allItemsZeroRate
+          ? "0"
+          : "1"
+        : ownFlag === false || String(ownFlag).trim() === "0"
+          ? "0"
+          : "1";
+
+    const nextOrderLines: OrderTableData[] = [];
+    const nextItems: OrderItemListData[] = [];
+
+    designs.forEach((design) => {
+      const orderQty = toNum(design.Order_Qnty);
+      const perUnit = (value: unknown) =>
+        orderQty > 0 ? toNum(value) / orderQty : toNum(value);
+
+      orderLineSeqRef.current += 1;
+      const lineKey = `${design.Design_Id}-${orderLineSeqRef.current}`;
+
+      const lineItems: OrderItemListData[] = (design.ItemRow ?? []).map(
+        (child) => {
+          const record = child as unknown as Record<string, unknown>;
+          const itemQuantity = perUnit(child.Item_Qnty);
+          const itemRate = itemType === "0" ? 0 : toNum(child.Item_Rate);
+          const makingRate = toNum(child.Making_Rate);
+          return {
+            lineKey,
+            designId: String(design.Design_Id),
+            itemId: String(child.Item_Id),
+            itemName: child.Item_Name,
+            itemGl: String(
+              record.Item_GL ?? record.Item_Gl ?? record.item_gl ?? "",
+            ),
+            itemShName: String(
+              record.Item_Sh_Name ?? record.item_sh_name ?? child.Item_Name ?? "",
+            ),
+            itemQuantity: toFormNumber(itemQuantity),
+            itemRate: toFormNumber(itemRate),
+            makingRate: toFormNumber(makingRate),
+            itemTotal: (
+              itemQuantity * itemRate +
+              itemQuantity * makingRate
+            ).toFixed(2),
+          };
+        },
+      );
+
+      const wt = perUnit(design.Wt);
+      const wtRate = toNum(design.Wt_Rate);
+      const polish = toNum(design.Polish);
+      const itemsSum = lineItems.reduce(
+        (acc, row) => acc + toNum(row.itemTotal),
+        0,
+      );
+      const designRate =
+        String(design.Design_Rate ?? "").trim() !== ""
+          ? toNum(design.Design_Rate)
+          : itemsSum + wt * wtRate + polish;
+      const ghatRaw = design.Ghat_Rate;
+
+      nextOrderLines.push({
+        lineKey,
+        designId: design.Design_Id,
+        designName: String(design.Design_Name ?? "").trim(),
+        designNo: String(design.Design_No ?? "").trim(),
+        orderQuantity: toFormNumber(orderQty),
+        designRate: designRate.toFixed(2),
+        totalRate: (designRate * orderQty).toFixed(2),
+        wt: toFormNumber(wt),
+        wtRate: toFormNumber(wtRate),
+        polish: toFormNumber(polish),
+        ghat:
+          ghatRaw == null || String(ghatRaw).trim() === ""
+            ? ""
+            : String(ghatRaw).trim(),
+        image: String(design.Image ?? "").trim(),
+      });
+      nextItems.push(...lineItems);
+    });
+
+    // Load the party first so the address/mobile/GSTIN effect can resolve it.
+    await getOrderPartyApiCall(orgId, 1, "", order.Party_Id);
+
+    form.setValue("orderDate", new Date(order.Order_Date));
+    form.setValue("itemType", itemType);
+    form.setValue("partyId", String(order.Party_Id ?? ""));
+    setOrderPartyInput(String(order.Party_Name ?? ""));
+    setOrderTableData(nextOrderLines);
+    setItemListData(nextItems);
+  };
+
+  const handleCancelEditOrder = () => {
+    setEditOrderId(null);
+    setEditOrderNo("");
+    resetOrderForm();
   };
 
   const handleShowDeleteDialog = (id: number) => {
@@ -455,12 +615,10 @@ export const useOrderBooking = () => {
         : data.designId.toString() === itemData.designId.toString()
     );
 
-  const addOrderBookingApiCall = async (
+  const buildOrderBookingBody = (
     item: OrderBookingFormData,
     orgId: number
-  ) => {
-    setAddOrderBookingLoading(true);
-
+  ): OrderBookingBody => {
     const itemDataList = itemListData.map((itemData) => ({
       design_id: itemData.designId,
       qnty: null,
@@ -511,7 +669,7 @@ export const useOrderBooking = () => {
       making_rate: null,
     }));
 
-    const data = {
+    return {
       org_id: orgId,
       ord_date: format(item.orderDate, "yyyy-MM-dd"),
       party_id: item.partyId,
@@ -519,35 +677,22 @@ export const useOrderBooking = () => {
       year_id: finId,
       order_array: [...designDetails, ...itemDataList],
     };
+  };
+
+  const addOrderBookingApiCall = async (
+    item: OrderBookingFormData,
+    orgId: number
+  ) => {
+    setAddOrderBookingLoading(true);
+
+    const data = buildOrderBookingBody(item, orgId);
 
     try {
       const res: ApiResponse = await addOrderBookingAPI(data);
 
       if (res.status === 200) {
         const orderIds = extractOrderIds(res.data.details);
-        form.reset({
-          orderDate: new Date(),
-          partyId: "",
-          address: "",
-          mobileNo: "",
-          gstin: "",
-          designId: "",
-          designName: "",
-          designNo: "",
-          wt: "",
-          wtRate: "",
-          polish: "",
-          ghat: "",
-          image: "",
-          itemType: "1",
-          item: [],
-          totalRate: "",
-          orderQuantity: "",
-        });
-        setOrderPartyInput("");
-        setOrderDesignInput("");
-        setOrderTableData([]);
-        setItemListData([]);
+        resetOrderForm();
         setCurrentPage(1);
         setSelected("table");
         getOrderBookingApiCall(orgId, 1, "", perPage);
@@ -566,6 +711,38 @@ export const useOrderBooking = () => {
     }
   };
 
+  const updateOrderBookingApiCall = async (
+    item: OrderBookingFormData,
+    orgId: number,
+    orderId: number
+  ) => {
+    setUpdateOrderBookingLoading(true);
+
+    const data = { ...buildOrderBookingBody(item, orgId), order_id: orderId };
+
+    try {
+      const res: ApiResponse = await updateOrderBookingAPI(data);
+
+      if (res.status === 200) {
+        toast.success(
+          String(res.data.message || "Order updated successfully").trim(),
+        );
+        setEditOrderId(null);
+        setEditOrderNo("");
+        resetOrderForm();
+        setCurrentPage(1);
+        setSelected("table");
+        getOrderBookingApiCall(orgId, 1, "", perPage);
+      } else {
+        toast.error(res.data.message);
+      }
+    } catch (err) {
+      toast.error("Something went wrong");
+    } finally {
+      setUpdateOrderBookingLoading(false);
+    }
+  };
+
   const deleteOrderApiCall = async (orgIdValue: number, orderId: number) => {
     setDeleteOrderBookingLoading(true);
 
@@ -579,6 +756,7 @@ export const useOrderBooking = () => {
 
       if (res.status === 200) {
         toast.success(res.data.message);
+        if (editOrderId === orderId) handleCancelEditOrder();
         setCurrentPage(1);
         setTempDeleteId(null);
         getOrderBookingApiCall(orgIdValue, 1, "", perPage);
@@ -899,6 +1077,11 @@ export const useOrderBooking = () => {
     getOrderDesignApiCall,
     getDesignDetailsApiCall,
     addOrderBookingLoading,
+    updateOrderBookingLoading,
+    editOrderId,
+    editOrderNo,
+    handleEditOrder,
+    handleCancelEditOrder,
     deleteOrderBookingLoading,
     loading,
     form,

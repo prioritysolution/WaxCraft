@@ -28,19 +28,31 @@ const toUnitList = (units: unknown): ItemUnitTableData[] => {
 const hasValue = (value: unknown) =>
   value != null && String(value).trim() !== "";
 
+export type DesignMasterMaps = {
+  unitById: Record<string, string>;
+  ghatById: Record<string, string>;
+};
+
 // The API may cap per_page below the requested size, so every page is read to
-// make sure recently added designs are included in the Design_Id → unit map.
-export const loadDesignUnitMap = async (
+// make sure recently added designs are included in the Design_Id maps.
+export const loadDesignMasterMaps = async (
   orgId: number | string,
-): Promise<Record<string, string>> => {
-  const map: Record<string, string> = {};
+): Promise<DesignMasterMaps> => {
+  const unitById: Record<string, string> = {};
+  const ghatById: Record<string, string> = {};
+  const maps = { unitById, ghatById };
 
   const collect = (rows: Record<string, unknown>[]) => {
     rows.forEach((row) => {
       const designId = row?.Id ?? row?.Design_Id;
+      if (!hasValue(designId)) return;
       const designUnit = row?.Design_Unit ?? row?.design_unit;
-      if (hasValue(designId) && hasValue(designUnit)) {
-        map[String(designId)] = String(designUnit);
+      if (hasValue(designUnit)) {
+        unitById[String(designId)] = String(designUnit);
+      }
+      const ghat = row?.Ghat ?? row?.ghat;
+      if (hasValue(ghat)) {
+        ghatById[String(designId)] = String(ghat).trim();
       }
     });
   };
@@ -51,7 +63,7 @@ export const loadDesignUnitMap = async (
     "",
     DESIGN_PAGE_SIZE,
   );
-  if (first.status !== 200 && first.status !== 202) return map;
+  if (first.status !== 200 && first.status !== 202) return maps;
 
   const details = first.data?.details;
   collect(extractRows(details));
@@ -76,8 +88,13 @@ export const loadDesignUnitMap = async (
     });
   }
 
-  return map;
+  return maps;
 };
+
+export const loadDesignUnitMap = async (
+  orgId: number | string,
+): Promise<Record<string, string>> =>
+  (await loadDesignMasterMaps(orgId)).unitById;
 
 // Tries every unit id candidate (order row first, then the design master) and
 // returns the first one that exists in the unit list; empty/0 ids are skipped.

@@ -15,6 +15,7 @@ import { BankAccountTableData } from "@/types/master/BankAccountTypes";
 import getCookieData from "@/utils/getCookieData";
 import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
 import {
+  Image,
   Input,
   Table,
   TableBody,
@@ -121,39 +122,41 @@ const SalesVoucherProcess = () => {
     }
   }, [token, orgId]);
 
-  const tempData = salesVoucherProcessData.flatMap((data) => [
-    {
-      description: `${data.DesignRow[0].Design_Name} - ${data.DesignRow[0].Design_No}`,
-      quantity: data.DesignRow[0].Order_Qnty,
-      rate: "",
-      makingRate: "",
-      total: "",
-    },
-    {
-      description: "WT",
-      quantity: data.DesignRow[0].Wt,
-      rate: data.DesignRow[0].Wt_Rate,
-      makingRate: "",
-      total: data.DesignRow[0].Tot_Wt,
-    },
-    {
-      description: "Polish",
-      quantity: data.DesignRow[0].Order_Qnty,
-      rate: data.DesignRow[0].Polish,
-      makingRate: "",
-      total: data.DesignRow[0].Tot_Polish,
-    },
-    ...groupStoneItemsBySize(
-      data.DesignRow[0].ItemRow,
-      (item) => item.Item_Name,
-    ).map((item) => ({
-      description: item.Item_Name,
-      quantity: item.Item_Qnty,
-      rate: item.Item_Rate,
-      makingRate: item.Making_Rate ?? "",
-      total: item.Item_Tot,
+  const designGroups = salesVoucherProcessData.flatMap((data) =>
+    (data.DesignRow ?? []).map((design, designIndex) => ({
+      key: `${data.Id}-${design.Design_Id}-${designIndex}`,
+      orderNo: data.Order_No,
+      design,
+      rows: [
+        {
+          description: "WT",
+          quantity: design.Wt,
+          rate: design.Wt_Rate,
+          makingRate: "",
+          total: design.Tot_Wt,
+        },
+        {
+          description: "Polish",
+          quantity: design.Order_Qnty,
+          rate: design.Polish,
+          makingRate: "",
+          total: design.Tot_Polish,
+        },
+        ...groupStoneItemsBySize(
+          design.ItemRow ?? [],
+          (item) => item.Item_Name,
+        ).map((item) => ({
+          description: item.Item_Name,
+          quantity: item.Item_Qnty,
+          rate: item.Item_Rate,
+          makingRate: item.Making_Rate ?? "",
+          total: item.Item_Tot,
+        })),
+      ],
     })),
-  ]);
+  );
+
+  const tempData = designGroups.flatMap((group) => group.rows);
 
   return (
     <PageShell>
@@ -222,9 +225,83 @@ const SalesVoucherProcess = () => {
             <p className={sectionTitleClassName}>Invoice breakdown</p>
           </div>
           <ScrollArea className="w-full max-w-[400px] px-4 py-3 sm:max-w-full">
+            {designGroups.length > 0 ? (
+              <div className="mb-3 space-y-3">
+                {designGroups.map((group, groupIndex) => (
+                  <div
+                    key={group.key}
+                    className="w-full overflow-hidden rounded-xl border border-black/[0.06] bg-white"
+                  >
+                    <div className="flex flex-wrap items-center gap-4 border-b border-black/[0.05] bg-[#F7F5F3]/60 px-4 py-3">
+                      {group.design.Image ? (
+                        <Image
+                          src={group.design.Image}
+                          alt={group.design.Design_Name || "Design"}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#F7F5F3] text-xs text-muted-foreground">
+                          —
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className={detailLabelClassName}>
+                          Design {groupIndex + 1}
+                        </p>
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {group.design.Design_Name || "—"} -{" "}
+                          {group.design.Design_No || "—"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={detailLabelClassName}>Order No.</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {group.orderNo || "—"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={detailLabelClassName}>Quantity</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {group.design.Order_Qnty || "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <Table
+                      removeWrapper
+                      aria-label={`Invoice breakdown for ${group.design.Design_Name || "design"}`}
+                      classNames={tableClassNames}
+                    >
+                      <TableHeader>
+                        <TableColumn>Serial No.</TableColumn>
+                        <TableColumn align="center">Description</TableColumn>
+                        <TableColumn align="center">Quantity</TableColumn>
+                        <TableColumn align="center">Rate</TableColumn>
+                        <TableColumn align="center">Making Rate</TableColumn>
+                        <TableColumn align="center">Total</TableColumn>
+                      </TableHeader>
+                      <TableBody emptyContent={"No data found."}>
+                        {group.rows.map((data, index) => (
+                          <TableRow key={`${group.key}-${index}`}>
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>{data.description}</TableCell>
+                            <TableCell>{data.quantity}</TableCell>
+                            <TableCell>{data.rate}</TableCell>
+                            <TableCell>{data.makingRate}</TableCell>
+                            <TableCell>{data.total}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <Table
               removeWrapper
-              aria-label="Invoice breakdown table"
+              hideHeader
+              aria-label="Invoice totals"
               classNames={tableClassNames}
             >
               <TableHeader>
@@ -237,18 +314,6 @@ const SalesVoucherProcess = () => {
               </TableHeader>
               <TableBody emptyContent={"No data found."}>
                 {[
-                ...(tempData.length > 0
-                  ? tempData.map((data, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{data.description}</TableCell>
-                        <TableCell>{data.quantity}</TableCell>
-                        <TableCell>{data.rate}</TableCell>
-                        <TableCell>{data.makingRate}</TableCell>
-                        <TableCell>{data.total}</TableCell>
-                      </TableRow>
-                    ))
-                  : []),
                 ...(tempData.length > 0
                   ? [
                       <TableRow key={`${tempData.length}-amount`}>

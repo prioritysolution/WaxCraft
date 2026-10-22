@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   PurchaseVoucherFormData,
   PurchaseTableData,
+  PurchaseVoucherTableData,
   ItemRequisitionRow,
 } from "@/types/inventoryVoucher/PurchaseVoucherTypes";
 import { ApiResponse } from "@/types/ApiTypes";
@@ -19,6 +20,7 @@ import {
   getItemRequisitionAPI,
   getPurchasePartyAPI,
   getPurchaseVoucherAPI,
+  updatePurchaseVoucherAPI,
 } from "./PurchaseVoucherApis";
 import {
   getItemRequisitionData,
@@ -28,6 +30,7 @@ import {
 import { ItemTableData } from "@/types/master/ItemTypes";
 import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { resolvePurchaseOrderType } from "@/utils/purchaseType";
 
 interface PurchasePartyData {
   Id: number;
@@ -46,6 +49,18 @@ interface RootState {
   purchaseVoucher: PurchaseVoucherState;
   item: ItemState;
 }
+
+const ORDER_ID_KEYS = ["Order_Id", "order_id", "Order_ID", "OrderId", "Ord_Id"];
+const ORDER_NO_KEYS = ["Order_No", "order_no", "OrderNo", "Ord_No"];
+
+const pickRecordValue = (source: object, keys: string[]) => {
+  const record = source as Record<string, unknown>;
+  for (const key of keys) {
+    const value = String(record[key] ?? "").trim();
+    if (value) return value;
+  }
+  return "";
+};
 
 export const usePurchaseVoucher = () => {
   const dispatch = useDispatch();
@@ -83,6 +98,7 @@ export const usePurchaseVoucher = () => {
   const lastOrderPurchaseTypeRef = useRef("R");
 
   const [tempDeleteId, setTempDeleteId] = useState<number | null>(null);
+  const [editPurchaseId, setEditPurchaseId] = useState<number | null>(null);
 
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -125,7 +141,7 @@ export const usePurchaseVoucher = () => {
     defaultValues: {
       purchaseType: "N",
       orderPurchaseType: "R",
-      purchaseDate: undefined,
+      purchaseDate: new Date(),
       partyId: "",
       purchaseNo: "",
       itemId: "",
@@ -147,6 +163,8 @@ export const usePurchaseVoucher = () => {
     rate,
     itemGl,
     values,
+    orderId = "",
+    orderNo = "",
   }: {
     itemId: string;
     itemName: string;
@@ -154,6 +172,8 @@ export const usePurchaseVoucher = () => {
     rate: string;
     itemGl: string | number;
     values: PurchaseVoucherFormData;
+    orderId?: string;
+    orderNo?: string;
   }): PurchaseTableData => {
     const masterItem = itemData.find((item) => item.Id.toString() === itemId);
     const taxableTotal = Number(quantity) * Number(rate);
@@ -184,6 +204,8 @@ export const usePurchaseVoucher = () => {
       grandTotal: taxableTotal + gstTotal,
       itemGl: itemGl || masterItem?.Purchase_Gl || "",
       orderPurchaseType: values.orderPurchaseType || "R",
+      orderId,
+      orderNo,
     };
   };
 
@@ -302,6 +324,19 @@ export const usePurchaseVoucher = () => {
     });
   };
 
+  /** Only party orders not yet invoiced (Is_Party = 1, Is_Invoise = 0); missing flags are trusted to the API. */
+  const isPendingPartyOrder = (row: ItemRequisitionRow) => {
+    const isParty = row.Is_Party;
+    const isInvoise = row.Is_Invoise;
+    const partyOk =
+      isParty == null || String(isParty).trim() === "" ||
+      isParty === true || String(isParty).trim() === "1";
+    const invoiseOk =
+      isInvoise == null || String(isInvoise).trim() === "" ||
+      isInvoise === false || String(isInvoise).trim() === "0";
+    return partyOk && invoiseOk;
+  };
+
   const normalizeRequisitionRows = (details: unknown): ItemRequisitionRow[] => {
     const source = details as
       | ItemRequisitionRow[]
@@ -315,7 +350,7 @@ export const usePurchaseVoucher = () => {
 
     const rows: ItemRequisitionRow[] = [];
 
-    raw.forEach((row, rowIndex) => {
+    raw.filter(isPendingPartyOrder).forEach((row, rowIndex) => {
       if (Array.isArray(row.ItemRow) && row.ItemRow.length > 0) {
         row.ItemRow.forEach((item, itemIndex) => {
           const itemRecord = item as unknown as Record<string, unknown>;
@@ -330,7 +365,10 @@ export const usePurchaseVoucher = () => {
             Req_No: item.Req_No ?? row.Req_No,
             Party_Name: item.Party_Name ?? row.Party_Name,
             Req_Id: item.Req_Id ?? row.Req_Id ?? row.Id,
+            Order_Id: item.Order_Id ?? row.Order_Id ?? row.Id,
             Purchase_Gl: item.Purchase_Gl,
+            Is_Party: item.Is_Party ?? row.Is_Party,
+            Is_Invoise: item.Is_Invoise ?? row.Is_Invoise,
             Row_Key: `req-${row.Id ?? row.Req_Id ?? rowIndex}-${item.Item_Id ?? item.Id ?? itemIndex}-${itemIndex}`,
           });
         });
@@ -348,11 +386,12 @@ export const usePurchaseVoucher = () => {
         Order_No: row.Order_No ?? row.Req_No,
         Party_Name: row.Party_Name,
         Req_Id: row.Req_Id ?? row.Id,
+        Order_Id: row.Order_Id ?? row.Req_Id,
         Row_Key: `req-${row.Id ?? row.Req_Id ?? row.Item_Id ?? rowIndex}-${rowIndex}`,
       });
     });
 
-    return rows;
+    return rows.filter(isPendingPartyOrder);
   };
 
   const getItemRequisitionApiCall = async (orgId: number) => {
@@ -388,7 +427,7 @@ export const usePurchaseVoucher = () => {
       form.reset({
         purchaseType: "N",
         orderPurchaseType: value,
-        purchaseDate: undefined,
+        purchaseDate: new Date(),
         partyId: "",
         purchaseNo: "",
         itemId: "",
@@ -426,10 +465,15 @@ export const usePurchaseVoucher = () => {
     }
 
     const values = form.getValues();
-    const existingIds = new Set(purchaseTableData.map((item) => item.itemId));
+    const lineKey = (itemId: string, orderId: string) => `${itemId}:${orderId}`;
+    const rowOrderId = (row: ItemRequisitionRow) =>
+      String(row.Order_Id ?? "").trim();
+    const existingKeys = new Set(
+      purchaseTableData.map((item) => lineKey(item.itemId, item.orderId ?? "")),
+    );
     const filtered = rows.filter((row) => {
       const itemId = String(row.Item_Id ?? row.Id ?? "");
-      return itemId && !existingIds.has(itemId);
+      return itemId && !existingKeys.has(lineKey(itemId, rowOrderId(row)));
     });
 
     if (!filtered.length) {
@@ -437,8 +481,26 @@ export const usePurchaseVoucher = () => {
       return;
     }
 
+    const mergedByLine = new Map<string, ItemRequisitionRow>();
+    filtered.forEach((row) => {
+      const itemId = String(row.Item_Id ?? row.Id ?? "");
+      const key = lineKey(itemId, rowOrderId(row));
+      const quantity = Number(row.Item_Qnty ?? row.Qnty ?? row.Quantity ?? 0) || 0;
+      const existing = mergedByLine.get(key);
+      if (existing) {
+        existing.Item_Qnty = toTwoDecimalString(
+          (Number(existing.Item_Qnty) || 0) + quantity,
+        );
+        return;
+      }
+      mergedByLine.set(key, {
+        ...row,
+        Item_Qnty: toTwoDecimalString(quantity),
+      });
+    });
+
     const nextRows = await Promise.all(
-      filtered.map(async (row) => {
+      Array.from(mergedByLine.values()).map(async (row) => {
         const itemId = String(row.Item_Id ?? row.Id ?? "");
         const rate = await fetchItemPurchaseRate(
           orgId,
@@ -456,12 +518,123 @@ export const usePurchaseVoucher = () => {
             ...values,
             orderPurchaseType: "O",
           },
+          orderId: rowOrderId(row),
+          orderNo: String(row.Order_No || row.Req_No || ""),
         });
       }),
     );
 
     setPurchaseTableData((prev) => [...prev, ...nextRows]);
     setShowRequisitionModal(false);
+  };
+
+  const resetPurchaseForm = () => {
+    form.reset({
+      purchaseType: "N",
+      orderPurchaseType: "R",
+      purchaseDate: new Date(),
+      partyId: "",
+      purchaseNo: "",
+      itemId: "",
+      quantity: "",
+      rate: "",
+      roundOff: "",
+      discount: "",
+      transMode: "C",
+      bankId: "",
+    });
+    form.clearErrors();
+    lastOrderPurchaseTypeRef.current = "R";
+    setPurchasePartyInput("");
+    setItemInput("");
+    setPurchaseTableData([]);
+  };
+
+  const handleEditPurchase = (data: PurchaseVoucherTableData) => {
+    const items = data.ItemRow ?? [];
+    const orderPurchaseType =
+      resolvePurchaseOrderType(data) ??
+      (items.some((item) => pickRecordValue(item, ORDER_ID_KEYS)) ? "O" : "R");
+    const withGst = items.some(
+      (item) => Number(item.Item_CGST) > 0 || Number(item.Item_SGST) > 0,
+    );
+    const isCredit = String(data.Is_Credit ?? "").trim() === "1";
+    const bankId = String(data.Bank_Id ?? "").trim();
+    const transMode = isCredit ? "Cr" : bankId ? "B" : "C";
+    const purchaseDate = data.Purchase_Date
+      ? new Date(data.Purchase_Date)
+      : new Date();
+    const partyId = String(data.Party_Id ?? "");
+    const purchaseNo = String(data.Purchase_No ?? "");
+
+    lastOrderPurchaseTypeRef.current = orderPurchaseType;
+    form.reset({
+      purchaseType: withGst ? "Y" : "N",
+      orderPurchaseType,
+      purchaseDate,
+      partyId,
+      purchaseNo,
+      itemId: "",
+      quantity: "",
+      rate: "",
+      roundOff: "",
+      discount:
+        data.Tot_Discount == null || Number(data.Tot_Discount) === 0
+          ? ""
+          : String(data.Tot_Discount),
+      transMode,
+      bankId: transMode === "B" ? bankId : "",
+    });
+    form.clearErrors();
+    setPurchasePartyInput(String(data.Party_Name ?? ""));
+    setItemInput("");
+    setPurchaseTableData(
+      items.map((item) => {
+        const itemId = String(item.Item_Id ?? "");
+        const masterItem = itemData.find(
+          (master) => master.Id.toString() === itemId,
+        );
+        const quantity = String(item.Item_Qnty ?? "");
+        const rate = String(item.Item_Rate ?? "");
+        const taxableTotal = (Number(quantity) || 0) * (Number(rate) || 0);
+        const cgst = withGst ? Number(item.Item_CGST) || 0 : "";
+        const sgst = withGst ? Number(item.Item_SGST) || 0 : "";
+
+        return {
+          purchaseDate,
+          partyId,
+          partyName: String(data.Party_Name ?? ""),
+          purchaseNo,
+          itemId,
+          itemName: item.Item_Name || masterItem?.Item_Name || "",
+          quantity,
+          rate,
+          taxableTotal,
+          cgst,
+          sgst,
+          grandTotal: taxableTotal + (Number(cgst) || 0) + (Number(sgst) || 0),
+          itemGl: item.Item_Gl ?? masterItem?.Purchase_Gl ?? "",
+          orderPurchaseType,
+          orderId:
+            orderPurchaseType === "O"
+              ? pickRecordValue(item, ORDER_ID_KEYS) ||
+                pickRecordValue(data, ORDER_ID_KEYS)
+              : "",
+          orderNo:
+            pickRecordValue(item, ORDER_NO_KEYS) ||
+            pickRecordValue(data, ORDER_NO_KEYS),
+        };
+      }),
+    );
+    setShowRequisitionModal(false);
+    setEditPurchaseId(data.Id);
+    setSelected("form");
+  };
+
+  const handleCancelEditPurchase = () => {
+    setEditPurchaseId(null);
+    resetPurchaseForm();
+    setSelected("table");
   };
 
   const handleShowDeleteDialog = (id: number) => {
@@ -568,7 +741,19 @@ export const usePurchaseVoucher = () => {
     const roundOff = form.getValues("roundOff");
     const discount = form.getValues("discount");
 
+    const isOrderPurchase = form.getValues("orderPurchaseType") === "O";
+    const orderIds = isOrderPurchase
+      ? Array.from(
+          new Set(
+            purchaseTableData
+              .map((item) => String(item.orderId ?? "").trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
+
     const invoicePostData = purchaseTableData.map((item) => ({
+      order_id: isOrderPurchase && item.orderId ? item.orderId : null,
       item_id: item.itemId,
       item_gl: item.itemGl,
       item_qnty: item.quantity,
@@ -601,21 +786,33 @@ export const usePurchaseVoucher = () => {
       tot_discount: discount === "" || discount == null ? 0 : discount,
       year_id: finId,
       is_credit: form.getValues("transMode") === "Cr" ? 1 : null,
-      is_order: form.getValues("orderPurchaseType") === "O" ? 1 : 0,
+      is_order: isOrderPurchase ? 1 : 0,
+      order_id: orderIds.length ? orderIds.join(",") : null,
       invoise_data: invoicePostData,
       bank_id:
         form.getValues("transMode") === "B" ? form.getValues("bankId") : null,
     };
 
-    try {
-      const res: ApiResponse = await addPurchaseVoucherAPI(data);
+    const isEditing = editPurchaseId != null;
 
-      if (res.status === 200) {
+    try {
+      const res: ApiResponse = isEditing
+        ? await updatePurchaseVoucherAPI({ ...data, pur_id: editPurchaseId })
+        : await addPurchaseVoucherAPI(data);
+
+      if (res.status === 200 && isEditing) {
+        setEditPurchaseId(null);
+        resetPurchaseForm();
+        setCurrentPage(1);
+        setSelected("table");
+        getPurchaseVoucherApiCall(orgId, 1, "");
+        toast.success(res.data.message || "Purchase updated successfully");
+      } else if (res.status === 200) {
         const savedPurchaseNo = String(purchaseNo || "").trim();
         form.reset({
           purchaseType: "N",
           orderPurchaseType: "R",
-          purchaseDate: undefined,
+          purchaseDate: new Date(),
           partyId: "",
           purchaseNo: "",
           itemId: "",
@@ -638,7 +835,10 @@ export const usePurchaseVoucher = () => {
         setSuccessPurchaseNos(savedPurchaseNo ? [savedPurchaseNo] : []);
         setShowSuccessDialog(true);
       } else {
-        toast.error(res.data.message || "Unable to add purchase");
+        toast.error(
+          res.data.message ||
+            (isEditing ? "Unable to update purchase" : "Unable to add purchase"),
+        );
       }
     } catch (err) {
       toast.error("Something went wrong");
@@ -660,6 +860,10 @@ export const usePurchaseVoucher = () => {
 
       if (res.status === 200) {
         toast.success(res.data.message);
+        if (editPurchaseId === purchaseId) {
+          setEditPurchaseId(null);
+          resetPurchaseForm();
+        }
         setCurrentPage(1);
         getPurchaseVoucherApiCall(orgId, 1, "");
         setShowDeleteDialog(false);
@@ -789,6 +993,9 @@ export const usePurchaseVoucher = () => {
     successMessage,
     successPurchaseNos,
     handleCloseSuccessDialog,
+    editPurchaseId,
+    handleEditPurchase,
+    handleCancelEditPurchase,
     currentPurchasePartyPage,
     setCurrentPurchasePartyPage,
     lastPurchasePartyPage,

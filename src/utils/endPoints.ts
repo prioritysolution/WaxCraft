@@ -223,6 +223,7 @@ export const endPoints = {
     return `${base}&per_page=${perPage}&limit=${perPage}`;
   },
   addOrderBooking: `${createApi}Org/ProcessInventory/PostOrder`,
+  updateOrderBooking: `${createApi}Org/ProcessInventory/UpdateOrder`,
   deleteOrderBooking: `${createApi}Org/ProcessInventory/CancelOrder`,
   addSamplePrint: `${createApi}Org/ProcessInventory/PostSamplePrint`,
   getSamplePrint: (
@@ -278,6 +279,7 @@ export const endPoints = {
       perPage
     ),
   addPurchaseVoucher: `${createApi}Org/ProcessInventory/PostPurchase`,
+  updatePurchaseVoucher: `${createApi}Org/ProcessInventory/UpdatePurchase`,
   deletePurchaseVoucher: `${createApi}Org/ProcessInventory/CancelPurchase`,
   getItemRequisition: (orgId: number | string, page: number, keyword: string) =>
     `${createApi}Org/ProcessInventory/GetItemRequisition?org_id=${orgId}&page=${page}&keyword=${keyword}`,

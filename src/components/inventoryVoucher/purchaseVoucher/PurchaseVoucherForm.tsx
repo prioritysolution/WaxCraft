@@ -14,9 +14,15 @@ import {
   formGridClassName,
   formTitleClassName,
   pageFormClassName,
+  secondaryButtonClassName,
   tableClassNames,
 } from "@/lib/uiStyles";
-import { PurchaseVoucherFormProps } from "@/types/inventoryVoucher/PurchaseVoucherTypes";
+import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
+import {
+  PurchaseTableData,
+  PurchaseVoucherFormProps,
+} from "@/types/inventoryVoucher/PurchaseVoucherTypes";
 import { BankAccountTableData } from "@/types/master/BankAccountTypes";
 import { ItemTableData } from "@/types/master/ItemTypes";
 import {
@@ -61,6 +67,9 @@ interface RootState {
 
 const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
   addPurchaseVoucherLoading,
+  editPurchaseId,
+  handleCancelEditPurchase,
+  purchaseType,
   form,
   handleSubmit,
   purchaseTableData,
@@ -87,6 +96,89 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
     number | null
   >(null);
 
+  const isEditing = editPurchaseId != null;
+  const withGst = purchaseType === "Y";
+
+  const tableColumns = [
+    { key: "serial", label: "Serial No." },
+    { key: "purchaseType", label: "Purchase Type" },
+    { key: "itemName", label: "Item Name" },
+    { key: "quantity", label: "Quantity" },
+    { key: "rate", label: "Rate" },
+    { key: "taxableTotal", label: "Taxable Amount" },
+    ...(withGst
+      ? [
+          { key: "cgst", label: "CGST" },
+          { key: "sgst", label: "SGST" },
+        ]
+      : []),
+    { key: "grandTotal", label: "Grand Total" },
+    { key: "action", label: "Action" },
+  ];
+
+  const renderPurchaseCell = (
+    data: PurchaseTableData,
+    index: number,
+    columnKey: string,
+  ) => {
+    switch (columnKey) {
+      case "serial":
+        return index + 1;
+      case "purchaseType":
+        return data.orderPurchaseType === "O"
+          ? "Ordered Purchase"
+          : "Regular Purchase";
+      case "itemName":
+        return (
+          <div className="flex flex-col items-center">
+            <span>{data?.itemName}</span>
+            {data?.orderNo ? (
+              <span className="text-xs text-muted-foreground">
+                {data.orderNo}
+              </span>
+            ) : null}
+          </div>
+        );
+      case "quantity":
+        return data?.quantity;
+      case "rate":
+        return data.orderPurchaseType === "O" ? (
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={String(data?.rate ?? "")}
+            aria-label={`Edit rate for ${data?.itemName || "item"}`}
+            className="mx-auto h-9 w-[96px] rounded-lg border border-black/15 bg-[#F7F5F3] px-2 text-center text-sm tabular-nums shadow-none focus-visible:border-black/25 focus-visible:outline-none focus-visible:ring-0"
+            onChange={(e) => {
+              const next = sanitizeDecimalInput(e.target.value);
+              handleUpdatePurchaseTableRate(index, next);
+            }}
+          />
+        ) : (
+          data?.rate
+        );
+      case "taxableTotal":
+        return data?.taxableTotal;
+      case "cgst":
+        return data?.cgst;
+      case "sgst":
+        return data?.sgst;
+      case "grandTotal":
+        return data?.grandTotal;
+      case "action":
+        return (
+          <TableDeleteButton
+            onPress={() => {
+              setPendingDeleteRowIndex(index);
+              setShowRowDeleteConfirm(true);
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   const purchasePartyData: PurchasePartyData[] = useSelector(
     (state: RootState) => state?.purchaseVoucher?.purchasePartyData
   );
@@ -107,7 +199,9 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
         onSubmit={form.handleSubmit(handleSubmit)}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <h3 className={formTitleClassName}>Add New Purchase</h3>
+          <h3 className={formTitleClassName}>
+            {isEditing ? "Edit Purchase" : "Add New Purchase"}
+          </h3>
           <div className="w-full sm:w-auto">
             <RadioField
               control={form.control}
@@ -125,6 +219,7 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
                 },
               ]}
               onValueChange={handleOrderPurchaseTypeChange}
+              isDisabled={isEditing}
             />
           </div>
         </div>
@@ -229,70 +324,24 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
             aria-label="Example static collection table"
             classNames={tableClassNames}
           >
-            <TableHeader>
-              <TableColumn>Serial No.</TableColumn>
-              <TableColumn align="center">Purchase Type</TableColumn>
-              <TableColumn align="center">Item Name</TableColumn>
-              <TableColumn align="center">Quantity</TableColumn>
-              <TableColumn align="center">Rate</TableColumn>
-              {/* {purchaseType === "Y" ? (
-                <> */}
-              <TableColumn align="center">Taxable Amount</TableColumn>
-              <TableColumn align="center">CGST</TableColumn>
-              <TableColumn align="center">SGST</TableColumn>
-              {/* </>
-              ) : (
-                <></>
-              )} */}
-              <TableColumn align="center">Grand Total</TableColumn>
-              <TableColumn align="center">Action</TableColumn>
+            <TableHeader columns={tableColumns}>
+              {(column) => (
+                <TableColumn
+                  key={column.key}
+                  align={column.key === "serial" ? "start" : "center"}
+                >
+                  {column.label}
+                </TableColumn>
+              )}
             </TableHeader>
             <TableBody emptyContent={"No data found."}>
               {purchaseTableData.map((data, index) => (
                 <TableRow key={index}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>
-                    {data.orderPurchaseType === "O"
-                      ? "Ordered Purchase"
-                      : "Regular Purchase"}
-                  </TableCell>
-                  <TableCell>{data?.itemName}</TableCell>
-                  <TableCell>{data?.quantity}</TableCell>
-                  <TableCell>
-                    {data.orderPurchaseType === "O" ? (
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={String(data?.rate ?? "")}
-                        aria-label={`Edit rate for ${data?.itemName || "item"}`}
-                        className="mx-auto h-9 w-[96px] rounded-lg border border-black/15 bg-[#F7F5F3] px-2 text-center text-sm tabular-nums shadow-none focus-visible:border-black/25 focus-visible:outline-none focus-visible:ring-0"
-                        onChange={(e) => {
-                          const next = sanitizeDecimalInput(e.target.value);
-                          handleUpdatePurchaseTableRate(index, next);
-                        }}
-                      />
-                    ) : (
-                      data?.rate
-                    )}
-                  </TableCell>
-                  {/* {purchaseType === "Y" ? (
-                    <> */}
-                  <TableCell>{data?.taxableTotal}</TableCell>
-                  <TableCell>{data?.cgst}</TableCell>
-                  <TableCell>{data?.sgst}</TableCell>
-                  {/* </>
-                  ) : (
-                    <></>
-                  )} */}
-                  <TableCell>{data?.grandTotal}</TableCell>
-                  <TableCell>
-                    <TableDeleteButton
-                      onPress={() => {
-                        setPendingDeleteRowIndex(index);
-                        setShowRowDeleteConfirm(true);
-                      }}
-                    />
-                  </TableCell>
+                  {(columnKey) => (
+                    <TableCell>
+                      {renderPurchaseCell(data, index, String(columnKey))}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -351,13 +400,27 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
         </div>
 
         <div className={formActionsClassName}>
+          {isEditing ? (
+            <Button
+              type="button"
+              variant="bordered"
+              size="lg"
+              radius="sm"
+              isDisabled={addPurchaseVoucherLoading}
+              startContent={<X className="h-4 w-4" />}
+              className={cn(secondaryButtonClassName, "w-auto")}
+              onPress={handleCancelEditPurchase}
+            >
+              Cancel Edit
+            </Button>
+          ) : null}
           <FormSubmitButton
             type="button"
             isLoading={addPurchaseVoucherLoading}
             isDisabled={addPurchaseVoucherLoading}
             onPress={handleAddPurchase}
           >
-            Add
+            {isEditing ? "Update" : "Add"}
           </FormSubmitButton>
         </div>
 

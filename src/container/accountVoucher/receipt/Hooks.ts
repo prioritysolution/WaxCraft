@@ -118,7 +118,7 @@ export const useReceipt = () => {
   const form = useForm<ReceiptFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      receiptDate: undefined,
+      receiptDate: new Date(),
       particular: "",
       manualVoucherNo: "",
       ledgerId: "",

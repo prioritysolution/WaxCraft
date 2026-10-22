@@ -54,6 +54,9 @@ const PurchaseVoucherContainer = () => {
     successMessage,
     successPurchaseNos,
     handleCloseSuccessDialog,
+    editPurchaseId,
+    handleEditPurchase,
+    handleCancelEditPurchase,
   } = usePurchaseVoucher();
 
   const {
@@ -155,6 +158,9 @@ const PurchaseVoucherContainer = () => {
       successMessage={successMessage}
       successPurchaseNos={successPurchaseNos}
       handleCloseSuccessDialog={handleCloseSuccessDialog}
+      editPurchaseId={editPurchaseId}
+      handleEditPurchase={handleEditPurchase}
+      handleCancelEditPurchase={handleCancelEditPurchase}
     />
   );
 };

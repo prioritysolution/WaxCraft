@@ -89,7 +89,7 @@ export const useBankWithdrawn = () => {
   const form = useForm<BankWithdrawnFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      withdrawnDate: undefined,
+      withdrawnDate: new Date(),
       particular: "",
       manualVoucherNo: "",
       bankId: "",

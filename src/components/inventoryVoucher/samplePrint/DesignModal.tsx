@@ -3,6 +3,10 @@
 import { tableClassNames } from "@/lib/uiStyles";
 
 import InputField from "@/common/formFields/InputField";
+import {
+  ItemShortNameCell,
+  useItemVariants,
+} from "@/components/inventoryVoucher/common/ItemShortNameSelect";
 import { Form } from "@/components/ui/form";
 import {
   FormModal,
@@ -16,7 +20,10 @@ import {
   SamplePrintFormData,
 } from "@/types/inventoryVoucher/SamplePrintTypes";
 import { DesignTableData } from "@/types/master/DesignTypes";
-import { sanitizeDecimalInput } from "@/utils/formatDecimal";
+import {
+  formatUpToDecimals,
+  sanitizeDecimalInput,
+} from "@/utils/formatDecimal";
 import {
   Image,
   Table,
@@ -26,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { FC, useEffect } from "react";
+import { FC, useEffect, useMemo } from "react";
 import { Path, UseFormReturn, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 
@@ -37,6 +44,8 @@ interface OrderBookingState {
 interface RootState {
   orderBooking: OrderBookingState;
 }
+
+const formatSampleItemRate = (rate: string) => formatUpToDecimals(rate, 4, "");
 
 const calcRowTotal = (
   quantity: unknown,
@@ -183,6 +192,18 @@ const DesignModal: FC<DesignModalProps> = ({
   const itemType = useWatch({ control: form.control, name: "itemType" });
   const isPartyItem = itemType === "0";
 
+  // Snapshot on open so the field stays visible while the user edits/clears it.
+  const showGhat = useMemo(
+    () =>
+      showDesignDialog && String(form.getValues("ghat") ?? "").trim() !== "",
+    [showDesignDialog, form],
+  );
+
+  const { variantsByAttrs, variantsLoading } = useItemVariants(
+    showDesignDialog,
+    items,
+  );
+
   useEffect(() => {
     if (!isPartyItem || !showDesignDialog) return;
     (items ?? []).forEach((row, index) => {
@@ -278,22 +299,24 @@ const DesignModal: FC<DesignModalProps> = ({
                   }}
                 />
 
-                <InputField
-                  control={form.control}
-                  name="ghat"
-                  label="Ghat"
-                  type="text"
-                  inputMode="decimal"
-                  onInput={(e) => {
-                    const input = e.currentTarget;
-                    const next = sanitizeDecimalInput(input.value);
-                    input.value = next;
-                    form.setValue("ghat", next, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  }}
-                />
+                {showGhat && (
+                  <InputField
+                    control={form.control}
+                    name="ghat"
+                    label="Ghat"
+                    type="text"
+                    inputMode="decimal"
+                    onInput={(e) => {
+                      const input = e.currentTarget;
+                      const next = sanitizeDecimalInput(input.value);
+                      input.value = next;
+                      form.setValue("ghat", next, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }}
+                  />
+                )}
 
                 <div className=" w-full flex justify-center sm:col-span-2">
                   <Image
@@ -334,11 +357,16 @@ const DesignModal: FC<DesignModalProps> = ({
                             />
                           </TableCell>
                           <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.itemShName`}
-                              disabled
-                              className="min-w-[70px]"
+                            <ItemShortNameCell
+                              form={form}
+                              index={index}
+                              row={items?.[index]}
+                              variantsByAttrs={variantsByAttrs}
+                              variantsLoading={variantsLoading}
+                              isPartyItem={isPartyItem}
+                              partyRate="0.00"
+                              formatRate={formatSampleItemRate}
+                              fallbackClassName="min-w-[70px]"
                             />
                           </TableCell>
                           <TableCell>
@@ -360,7 +388,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               disabled={isPartyItem}
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(input.value);
+                                const next = sanitizeDecimalInput(input.value, 4);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.itemRate` as Path<SamplePrintFormData>,
@@ -380,7 +408,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               className="min-w-[70px]"
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(input.value);
+                                const next = sanitizeDecimalInput(input.value, 4);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.makingRate` as Path<SamplePrintFormData>,

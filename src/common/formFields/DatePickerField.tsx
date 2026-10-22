@@ -26,6 +26,7 @@ import {
   FormLabel,
 } from "@/components/ui/form";
 import { fieldTriggerClassName } from "@/lib/uiStyles";
+import { isFieldRequired } from "@/lib/formRequired";
 import { Control, FieldValues, Path } from "react-hook-form";
 
 interface DatePickerProps<T extends FieldValues> {
@@ -191,9 +192,16 @@ export function DatePickerField<T extends FieldValues>({
                 <Calendar
                   mode="single"
                   selected={field.value}
-                  onSelect={(selectedDate) =>
-                    field.onChange(handleSelect(selectedDate))
-                  }
+                  onSelect={(selectedDate) => {
+                    // Re-clicking the selected day makes react-day-picker emit
+                    // undefined; RHF then shows the stale default while the
+                    // real value is empty, so required dates must not clear.
+                    if (!selectedDate && isFieldRequired(control, name)) {
+                      setOpen(false);
+                      return;
+                    }
+                    field.onChange(handleSelect(selectedDate));
+                  }}
                   month={field.value || new Date()}
                   onMonthChange={(date) => field.onChange(date)}
                   disabled={(date) => {

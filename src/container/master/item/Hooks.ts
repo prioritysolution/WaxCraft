@@ -23,8 +23,8 @@ import {
   getSalesLedgerAPI,
   updateItemAPI,
 } from "./ItemApis";
-import { uptoThreeDigitDecimalRegex } from "@/utils/validationRegex";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { threeDecimalRegex } from "@/utils/validationRegex";
+import { toUpToThreeDecimalString } from "@/utils/formatDecimal";
 import {
   getMasterDeleteWarningMessage,
   isMasterDeleteDependencyResponse,
@@ -128,49 +128,49 @@ export const useItem = () => {
       .required("CGST is required")
       .test("is-valid-number", "Invalid CGST", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     sgst: yup
       .string()
       .required("SGST is required")
       .test("is-valid-number", "Invalid SGST", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     igst: yup
       .string()
       .required("IGST is required")
       .test("is-valid-number", "Invalid IGST", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     purchaseRate: yup
       .string()
       .required("Purchase rate is required")
       .test("is-valid-number", "Invalid purchase rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     salesRate: yup
       .string()
       .required("Sales rate is required")
       .test("is-valid-number", "Invalid sales rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     openingQuantity: yup
       .string()
       .required("Opening quantity is required")
       .test("is-valid-number", "Invalid opening quantity", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     openingRate: yup
       .string()
       .required("Opening rate is required")
       .test("is-valid-number", "Invalid opening rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return uptoThreeDigitDecimalRegex.test(value); // Validate against the regex
+        return threeDecimalRegex.test(value); // Validate against the regex
       }),
     total: yup.string().default(""),
   });
@@ -261,13 +261,13 @@ export const useItem = () => {
       item_unit: item.unitId,
       pur_ledg: item.purchaseLedgerId,
       sales_ledg: item.salesLedgerId,
-      cgst: toTwoDecimalString(item.cgst),
-      sgst: toTwoDecimalString(item.sgst),
-      igst: toTwoDecimalString(item.igst),
-      pur_rate: toTwoDecimalString(item.purchaseRate),
-      sales_rate: toTwoDecimalString(item.salesRate),
-      open_qnty: toTwoDecimalString(item.openingQuantity),
-      item_rate: toTwoDecimalString(item.openingRate),
+      cgst: toUpToThreeDecimalString(item.cgst),
+      sgst: toUpToThreeDecimalString(item.sgst),
+      igst: toUpToThreeDecimalString(item.igst),
+      pur_rate: toUpToThreeDecimalString(item.purchaseRate),
+      sales_rate: toUpToThreeDecimalString(item.salesRate),
+      open_qnty: toUpToThreeDecimalString(item.openingQuantity),
+      item_rate: toUpToThreeDecimalString(item.openingRate),
       item_mod: item.modelId || "",
       item_size: item.sizeId || "",
       item_color: item.colourId || "",
@@ -311,13 +311,13 @@ export const useItem = () => {
       item_unit: item.unitId,
       pur_ledg: item.purchaseLedgerId,
       sales_ledg: item.salesLedgerId,
-      cgst: toTwoDecimalString(item.cgst),
-      sgst: toTwoDecimalString(item.sgst),
-      igst: toTwoDecimalString(item.igst),
-      pur_rate: toTwoDecimalString(item.purchaseRate),
-      sales_rate: toTwoDecimalString(item.salesRate),
-      open_qnty: toTwoDecimalString(item.openingQuantity),
-      item_rate: toTwoDecimalString(item.openingRate),
+      cgst: toUpToThreeDecimalString(item.cgst),
+      sgst: toUpToThreeDecimalString(item.sgst),
+      igst: toUpToThreeDecimalString(item.igst),
+      pur_rate: toUpToThreeDecimalString(item.purchaseRate),
+      sales_rate: toUpToThreeDecimalString(item.salesRate),
+      open_qnty: toUpToThreeDecimalString(item.openingQuantity),
+      item_rate: toUpToThreeDecimalString(item.openingRate),
       item_mod: item.modelId || "",
       item_size: item.sizeId || "",
       item_color: item.colourId || "",
@@ -508,13 +508,13 @@ export const useItem = () => {
         unitId: editData.Unit_Id.toString() || "",
         purchaseLedgerId: editData.Purchase_Gl.toString() || "",
         salesLedgerId: editData.Sales_Gl.toString() || "",
-        cgst: toTwoDecimalString(editData.CGST),
-        sgst: toTwoDecimalString(editData.SGST),
-        igst: toTwoDecimalString(editData.IGST),
-        purchaseRate: toTwoDecimalString(editData.Pur_Rate),
-        salesRate: toTwoDecimalString(editData.Sale_Rate),
-        openingQuantity: toTwoDecimalString(editData.Open_Qnty),
-        openingRate: toTwoDecimalString(editData.Item_Rate),
+        cgst: toUpToThreeDecimalString(editData.CGST),
+        sgst: toUpToThreeDecimalString(editData.SGST),
+        igst: toUpToThreeDecimalString(editData.IGST),
+        purchaseRate: toUpToThreeDecimalString(editData.Pur_Rate),
+        salesRate: toUpToThreeDecimalString(editData.Sale_Rate),
+        openingQuantity: toUpToThreeDecimalString(editData.Open_Qnty),
+        openingRate: toUpToThreeDecimalString(editData.Item_Rate),
       });
       setCategoryInput(editData.Cat_Name || "");
     } else {
@@ -556,7 +556,7 @@ export const useItem = () => {
   useEffect(() => {
     const newTotal =
       openingQuantity && openingRate
-        ? toTwoDecimalString(Number(openingQuantity) * Number(openingRate))
+        ? toUpToThreeDecimalString(Number(openingQuantity) * Number(openingRate))
         : "";
 
     form.setValue("total", newTotal.toString());

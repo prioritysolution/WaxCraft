@@ -49,6 +49,22 @@ export const addPurchaseVoucherAPI = async (
   return res;
 };
 
+export const updatePurchaseVoucherAPI = async (
+  bodyData: PurchaseVoucherBody
+): Promise<ApiResponse> => {
+  let data = {
+    url: endPoints.updatePurchaseVoucher,
+    bodyData,
+  };
+
+  invalidatePurchaseVoucherInFlight();
+
+  // Call the API
+  const res = await doPostApiCall(data);
+
+  return res;
+};
+
 export const deletePurchaseVoucherAPI = async (bodyData: {
   org_id: number;
   pur_id: number;

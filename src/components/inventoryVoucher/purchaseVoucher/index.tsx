@@ -56,6 +56,9 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
   successMessage,
   successPurchaseNos,
   handleCloseSuccessDialog,
+  editPurchaseId,
+  handleEditPurchase,
+  handleCancelEditPurchase,
 }) => {
   return (
     <PageShell>
@@ -73,10 +76,15 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
         radius="lg"
         classNames={tabsClassNames}
       >
-        <Tab key="form" title="New Purchase">
+        <Tab
+          key="form"
+          title={editPurchaseId != null ? "Edit Purchase" : "New Purchase"}
+        >
           <FormCard>
             <PurchaseVoucherForm
               addPurchaseVoucherLoading={addPurchaseVoucherLoading}
+              editPurchaseId={editPurchaseId}
+              handleCancelEditPurchase={handleCancelEditPurchase}
               form={form}
               handleSubmit={handleSubmit}
               purchaseTableData={purchaseTableData}
@@ -105,6 +113,7 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
         <Tab key="table" title="Active Purchase List">
           <PurchaseVoucherTable
             loading={loading}
+            handleEditPurchase={handleEditPurchase}
             handleShowDeleteDialog={handleShowDeleteDialog}
             showDeleteDialog={showDeleteDialog}
             setShowDeleteDialog={setShowDeleteDialog}

@@ -27,6 +27,10 @@ export interface SamplePrintFormData {
     itemRate: string;
     makingRate: string;
     itemTotal: string;
+    catId?: string;
+    modelId?: string;
+    sizeId?: string;
+    colorId?: string;
   }[];
   totalRate: string;
   /** Multi-design print sections (used by print popup). */
@@ -140,6 +144,7 @@ export interface SamplePrintProps {
   setShowDesignDialog: Dispatch<SetStateAction<boolean>>;
   handleAddDesign: () => void;
   designTableData: SamplePrintDesignTableData[];
+  itemListData: SamplePrintFormData["item"];
   handleDeleteDesignTableData: (designId: string) => void;
   showPrintDialog: boolean;
   setShowPrintDialog: Dispatch<SetStateAction<boolean>>;
@@ -179,6 +184,7 @@ export interface SamplePrintFormProps {
   orderDesignInput: string;
   setOrderDesignInput: Dispatch<SetStateAction<string>>;
   designTableData: SamplePrintDesignTableData[];
+  itemListData: SamplePrintFormData["item"];
   handleDeleteDesignTableData: (designId: string) => void;
 }
 

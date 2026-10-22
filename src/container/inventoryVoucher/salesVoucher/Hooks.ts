@@ -30,6 +30,7 @@ import {
 } from "./SalesVoucherApis";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { applyPartyPurchaseRates } from "@/utils/partyPurchaseRate";
 
 interface SalesVoucherState {
   salesVoucherProcessData: SalesVoucherTableData[];
@@ -242,7 +243,7 @@ export const useSalesVoucher = () => {
     resolver: yupResolver(formSchema),
     defaultValues: {
       partyName: "",
-      invoiceDate: undefined,
+      invoiceDate: new Date(),
       partyId: "",
       gstChoice: "N",
       gstAmount: "",
@@ -263,7 +264,7 @@ export const useSalesVoucher = () => {
       dispatch(getPartyId(form.getValues("partyId")));
       dispatch(getDate(format(form.getValues("invoiceDate"), "yyyy-MM-dd")));
       dispatch(getGstChoice(form.getValues("gstChoice")));
-      dispatch(getSalesVoucherProcessData(selected));
+      dispatch(getSalesVoucherProcessData(applyPartyPurchaseRates(selected)));
       router.push(`/inventoryVoucher/salesVoucher/process`);
     } else {
       toast.error("Please select a order and date first");
@@ -299,41 +300,41 @@ export const useSalesVoucher = () => {
   const addOrderBookingApiCall = async () => {
     setAddSalesVoucherLoading(true);
 
-    const invoiceData = salesVoucherProcessData.flatMap((itemData) => [
-      {
-        order_id: itemData.Id,
-        design_id: itemData.DesignRow[0].Design_Id,
-        qnty: itemData.DesignRow[0].Order_Qnty,
+    const invoiceData = salesVoucherProcessData.flatMap((itemData) =>
+      (itemData.DesignRow ?? []).flatMap((design) => [
+        {
+          order_id: itemData.Id,
+          design_id: design.Design_Id,
+          qnty: design.Order_Qnty,
 
-        wt: itemData.DesignRow[0].Wt,
-        wt_rate: itemData.DesignRow[0].Wt_Rate,
-        tot_wt: itemData.DesignRow[0].Tot_Wt,
-        polish_rate: itemData.DesignRow[0].Polish,
-        tot_polish: itemData.DesignRow[0].Tot_Polish,
-        item_id: null,
-        item_qnty: null,
-        item_rate: null,
-        item_tot: null,
-        making_rate: null,
-      },
-      ...itemData.DesignRow[0].ItemRow.map((item) => ({
-        order_id: itemData.Id,
-        design_id: itemData.DesignRow[0].Design_Id,
-        qnty: null,
-        wt: null,
-        wt_rate: null,
-        tot_wt: null,
-        polish_rate: null,
-        tot_polish: null,
-        item_id: item.Item_Id,
-        item_qnty:
-          Number(item.Item_Qnty) * Number(itemData.DesignRow[0].Order_Qnty),
-        item_rate: item.Item_Rate,
-        item_tot:
-          Number(item.Item_Tot) * Number(itemData.DesignRow[0].Order_Qnty),
-        making_rate: item.Making_Rate,
-      })),
-    ]);
+          wt: design.Wt,
+          wt_rate: design.Wt_Rate,
+          tot_wt: design.Tot_Wt,
+          polish_rate: design.Polish,
+          tot_polish: design.Tot_Polish,
+          item_id: null,
+          item_qnty: null,
+          item_rate: null,
+          item_tot: null,
+          making_rate: null,
+        },
+        ...(design.ItemRow ?? []).map((item) => ({
+          order_id: itemData.Id,
+          design_id: design.Design_Id,
+          qnty: null,
+          wt: null,
+          wt_rate: null,
+          tot_wt: null,
+          polish_rate: null,
+          tot_polish: null,
+          item_id: item.Item_Id,
+          item_qnty: Number(item.Item_Qnty) * Number(design.Order_Qnty),
+          item_rate: item.Item_Rate,
+          item_tot: Number(item.Item_Tot) * Number(design.Order_Qnty),
+          making_rate: item.Making_Rate,
+        })),
+      ]),
+    );
 
     const data = {
       org_id: orgId,

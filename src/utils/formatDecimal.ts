@@ -57,6 +57,13 @@ export const formatUpToDecimals = (
 };
 
 /**
+ * Form/payload helper keeping at least 2 and at most 3 decimals
+ * (e.g. 10 → 10.00, 0.5 → 0.50, 0.095 → 0.095). Empty → "".
+ */
+export const toUpToThreeDecimalString = (value: unknown): string =>
+  formatUpToDecimals(value, 3, "");
+
+/**
  * Display helper that avoids forced trailing decimals (e.g. 10.00 → 10, 0.25 → 0.25).
  */
 export const formatCompactNumber = (

@@ -18,6 +18,11 @@ import { OrderBookingSuccessModal } from "./OrderBookingSuccessModal";
 
 const OrderBooking: FC<OrderBookingProps> = ({
   addOrderBookingLoading,
+  updateOrderBookingLoading,
+  editOrderId,
+  editOrderNo,
+  handleEditOrder,
+  handleCancelEditOrder,
   deleteOrderBookingLoading,
   loading,
   form,
@@ -79,10 +84,14 @@ const OrderBooking: FC<OrderBookingProps> = ({
         radius="lg"
         classNames={tabsClassNames}
       >
-        <Tab key="form" title="New Order">
+        <Tab key="form" title={editOrderId != null ? "Edit Order" : "New Order"}>
           <FormCard>
             <OrderBookingForm
               addOrderBookingLoading={addOrderBookingLoading}
+              updateOrderBookingLoading={updateOrderBookingLoading}
+              editOrderId={editOrderId}
+              editOrderNo={editOrderNo}
+              handleCancelEditOrder={handleCancelEditOrder}
               form={form}
               handleSubmit={handleSubmit}
               handleShowPartyForm={handleShowPartyForm}
@@ -107,6 +116,7 @@ const OrderBooking: FC<OrderBookingProps> = ({
         <Tab key="table" title="Active Order List">
           <OrderBookingTable
               loading={loading}
+              handleEditOrder={handleEditOrder}
               handleShowDeleteDialog={handleShowDeleteDialog}
               showDeleteDialog={showDeleteDialog}
               setShowDeleteDialog={setShowDeleteDialog}

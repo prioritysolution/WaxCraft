@@ -73,6 +73,22 @@ export const addOrderBookingAPI = async (
   return res;
 };
 
+export const updateOrderBookingAPI = async (
+  bodyData: OrderBookingBody
+): Promise<ApiResponse> => {
+  let data = {
+    url: endPoints.updateOrderBooking,
+    bodyData,
+  };
+
+  invalidateOrderBookingInFlight();
+
+  // Call the API
+  const res = await doPostApiCall(data);
+
+  return res;
+};
+
 export const deleteOrderBookingAPI = async (bodyData: {
   org_id: number;
   order_id: number;

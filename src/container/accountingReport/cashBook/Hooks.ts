@@ -37,7 +37,7 @@ export const useCashBook = () => {
   const form = useForm<CashBookFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      asOnDate: undefined,
+      asOnDate: new Date(),
     },
   });
 

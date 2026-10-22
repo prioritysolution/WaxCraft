@@ -132,6 +132,8 @@ export interface SalesVoucherTableData {
   Party_Id: number;
   Total_Order: string;
   Order_Status: string;
+  Is_Party?: string | number | boolean | null;
+  Is_Own?: string | number | boolean | null;
   DesignRow: {
     Design_Id: number;
     Design_Name: string;
@@ -154,6 +156,7 @@ export interface SalesVoucherTableData {
       Item_Rate: string;
       Making_Rate: string;
       Item_Tot: string;
+      Pur_Rate?: string | number | null;
     }[];
   }[];
 }
@@ -190,6 +193,8 @@ export interface InvoiceTableData {
     Tot_Wt: string;
     Polish: string;
     Tot_Polish: string;
+    Ghat_Rate?: string | number | null;
+    Tot_Ghat?: string | number | null;
     Image: string;
     Design_Unit?: number | string | null;
     Unit_Id?: number | string | null;

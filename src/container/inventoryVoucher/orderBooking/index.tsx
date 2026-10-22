@@ -15,6 +15,11 @@ const OrderBookingContainer = () => {
     getOrderDesignApiCall,
     getDesignDetailsApiCall,
     addOrderBookingLoading,
+    updateOrderBookingLoading,
+    editOrderId,
+    editOrderNo,
+    handleEditOrder,
+    handleCancelEditOrder,
     deleteOrderBookingLoading,
     loading,
     form,
@@ -121,6 +126,11 @@ const OrderBookingContainer = () => {
   return (
     <OrderBooking
       addOrderBookingLoading={addOrderBookingLoading}
+      updateOrderBookingLoading={updateOrderBookingLoading}
+      editOrderId={editOrderId}
+      editOrderNo={editOrderNo}
+      handleEditOrder={handleEditOrder}
+      handleCancelEditOrder={handleCancelEditOrder}
       deleteOrderBookingLoading={deleteOrderBookingLoading}
       loading={loading}
       form={form}

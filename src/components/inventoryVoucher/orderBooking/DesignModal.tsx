@@ -1,9 +1,13 @@
 "use client";
 
-import { tableClassNames, fieldInputClassNames } from "@/lib/uiStyles";
+import { tableClassNames } from "@/lib/uiStyles";
 import { cn } from "@/lib/utils";
 
 import InputField from "@/common/formFields/InputField";
+import {
+  ItemShortNameCell,
+  useItemVariants,
+} from "@/components/inventoryVoucher/common/ItemShortNameSelect";
 import { Form } from "@/components/ui/form";
 import {
   FormModal,
@@ -13,25 +17,15 @@ import {
 } from "@/components/ui/form-modal";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  getItemUnderCategoryAPI,
-  getItemsByAttrsAPI,
-} from "@/container/master/item/ItemApis";
-import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
-import {
   DesignModalProps,
   OrderBookingFormData,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
-import { ApiResponse } from "@/types/ApiTypes";
 import {
   formatUpToDecimals,
   sanitizeDecimalInput,
 } from "@/utils/formatDecimal";
-import getCookieData from "@/utils/getCookieData";
 import {
-  Autocomplete,
-  AutocompleteItem,
   Image,
-  Spinner,
   Table,
   TableBody,
   TableCell,
@@ -39,190 +33,10 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { FC, useEffect, useMemo, useState } from "react";
-import { Path, UseFormReturn } from "react-hook-form";
+import { FC, useMemo } from "react";
+import { Path } from "react-hook-form";
 
-type ItemVariantOption = {
-  Id: string | number;
-  Item_Name: string;
-  Item_Sh_Name: string;
-  Color_Id?: string | number | null;
-  Item_GL?: string | null;
-  Cat_Id?: string;
-  Model_Id?: string;
-  Size_Id?: string;
-};
-
-const attrsKey = (catId: string, modelId: string, sizeId: string) =>
-  `${catId}|${modelId}|${sizeId}`;
-
-const pickNum = (row: Record<string, unknown>, keys: string[]) => {
-  for (const key of keys) {
-    const value = row[key];
-    if (value == null || String(value).trim() === "") continue;
-    return String(value);
-  }
-  return "";
-};
-
-const normalizeVariantRows = (details: unknown): ItemVariantOption[] => {
-  const rows = Array.isArray(details)
-    ? details
-    : Array.isArray((details as { data?: unknown[] } | null)?.data)
-      ? ((details as { data: unknown[] }).data ?? [])
-      : [];
-
-  return rows
-    .map((row) => {
-      const record = row as Record<string, unknown>;
-      const id = record.Id ?? record.id ?? record.Item_Id ?? record.item_id;
-      if (id == null || String(id).trim() === "") return null;
-      return {
-        Id: id as string | number,
-        Item_Name: String(record.Item_Name ?? record.item_name ?? ""),
-        Item_Sh_Name: String(
-          record.Item_Sh_Name ?? record.item_sh_name ?? record.Item_Name ?? "",
-        ),
-        Color_Id:
-          (record.Color_Id as string | number | null | undefined) ??
-          (record.color_id as string | number | null | undefined) ??
-          (record.item_color as string | number | null | undefined) ??
-          null,
-        Item_GL:
-          (record.Item_GL as string | null | undefined) ??
-          (record.item_gl as string | null | undefined) ??
-          null,
-        Cat_Id: pickNum(record, ["Cat_Id", "cat_id"]),
-        Model_Id: pickNum(record, ["Model_Id", "model_id", "item_mod"]),
-        Size_Id: pickNum(record, ["Size_Id", "size_id", "item_size"]),
-      };
-    })
-    .filter(Boolean) as ItemVariantOption[];
-};
-
-const ItemShortNameSelect: FC<{
-  form: UseFormReturn<OrderBookingFormData>;
-  index: number;
-  options: ItemVariantOption[];
-  loading?: boolean;
-  disabled?: boolean;
-  isPartyItem: boolean;
-}> = ({ form, index, options, loading, disabled, isPartyItem }) => {
-  const itemId = form.watch(`item.${index}.itemId`);
-  const itemShName = form.watch(`item.${index}.itemShName`);
-
-  const handleSelect = async (key: string) => {
-    const selected = options.find((opt) => String(opt.Id) === String(key));
-    if (!selected) return;
-
-    form.setValue(`item.${index}.itemId`, String(selected.Id), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    form.setValue(`item.${index}.itemName`, selected.Item_Name || "", {
-      shouldDirty: true,
-    });
-    form.setValue(
-      `item.${index}.itemShName`,
-      selected.Item_Sh_Name || selected.Item_Name || "",
-      { shouldDirty: true },
-    );
-    form.setValue(
-      `item.${index}.colorId`,
-      selected.Color_Id != null ? String(selected.Color_Id) : "",
-      { shouldDirty: true },
-    );
-    if (selected.Item_GL != null && String(selected.Item_GL).trim() !== "") {
-      form.setValue(`item.${index}.itemGl`, String(selected.Item_GL), {
-        shouldDirty: true,
-      });
-    }
-
-    if (isPartyItem) {
-      form.setValue(`item.${index}.itemRate`, "0", { shouldDirty: true });
-      return;
-    }
-
-    const orgId = getCookieData<number | null>("waxCraftClientOrgId");
-    if (!orgId) return;
-
-    try {
-      const res: ApiResponse = await getItemRateAPI(
-        orgId,
-        String(selected.Id),
-      );
-      if (res.status === 200 || res.status === 202) {
-        const details = res.data?.details;
-        const rateRow = Array.isArray(details) ? details[0] : details;
-        const rate =
-          rateRow && typeof rateRow === "object"
-            ? pickNum(rateRow as Record<string, unknown>, [
-                "Item_Rate",
-                "item_rate",
-                "Sales_Rate",
-                "sales_rate",
-                "Rate",
-                "rate",
-              ])
-            : "";
-        if (rate) {
-          const nextRate = formatUpToDecimals(rate, 4, "") || rate;
-          form.setValue(`item.${index}.itemRate`, nextRate, {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-        }
-      }
-    } catch {
-      // Keep existing rate if rate lookup fails.
-    }
-  };
-
-  const selectedKey =
-    itemId && options.some((opt) => String(opt.Id) === String(itemId))
-      ? String(itemId)
-      : null;
-
-  return (
-    <Autocomplete
-      className="min-w-[200px] sm:min-w-[220px]"
-      aria-label="Item short name"
-      placeholder={itemShName || "Select item"}
-      variant="bordered"
-      radius="lg"
-      size="md"
-      classNames={{ base: fieldInputClassNames.base }}
-      inputProps={{ classNames: fieldInputClassNames }}
-      popoverProps={{
-        // HeroUI sets an inline width equal to the input; !important lets long names widen the panel.
-        classNames: {
-          base: "!w-max min-w-[220px] max-w-[min(92vw,420px)]",
-        },
-      }}
-      isDisabled={disabled || loading || options.length === 0}
-      selectedKey={selectedKey}
-      defaultInputValue={itemShName || ""}
-      onSelectionChange={(key) => {
-        if (key == null) return;
-        void handleSelect(String(key));
-      }}
-      endContent={loading ? <Spinner size="sm" color="primary" /> : null}
-      listboxProps={{ emptyContent: "No matching items found" }}
-    >
-      {options.map((option) => (
-        <AutocompleteItem
-          key={String(option.Id)}
-          textValue={option.Item_Sh_Name || option.Item_Name}
-          classNames={{
-            title: "whitespace-normal break-words leading-snug",
-          }}
-        >
-          {option.Item_Sh_Name || option.Item_Name}
-        </AutocompleteItem>
-      ))}
-    </Autocomplete>
-  );
-};
+const formatOrderItemRate = (rate: string) => formatUpToDecimals(rate, 4, "");
 
 const DesignModal: FC<DesignModalProps> = ({
   showDesignDialog,
@@ -236,101 +50,22 @@ const DesignModal: FC<DesignModalProps> = ({
   const designImage = form.watch("image");
   const isPartyItem = itemType === "0";
 
-  const [variantsByAttrs, setVariantsByAttrs] = useState<
-    Record<string, ItemVariantOption[]>
-  >({});
-  const [variantsLoading, setVariantsLoading] = useState(false);
+  // Snapshot on open so the field stays visible while the user edits/clears it.
+  const showGhat = useMemo(
+    () =>
+      showDesignDialog && String(form.getValues("ghat") ?? "").trim() !== "",
+    [showDesignDialog, form],
+  );
+
+  const { variantsByAttrs, variantsLoading } = useItemVariants(
+    showDesignDialog,
+    items,
+  );
 
   const itemGrandTotal = (items ?? []).reduce((acc, item) => {
     const rate = item?.itemTotal ? parseFloat(item.itemTotal) : 0;
     return acc + (Number.isFinite(rate) ? rate : 0);
   }, 0);
-
-  const attrKeys = useMemo(() => {
-    const keys = new Set<string>();
-    (items ?? []).forEach((item) => {
-      const catId = String(item?.catId || "").trim();
-      const modelId = String(item?.modelId || "").trim();
-      const sizeId = String(item?.sizeId || "").trim();
-      if (catId && modelId && sizeId) {
-        keys.add(attrsKey(catId, modelId, sizeId));
-      }
-    });
-    return Array.from(keys);
-  }, [items]);
-
-  useEffect(() => {
-    if (!showDesignDialog) {
-      setVariantsByAttrs({});
-      return;
-    }
-
-    const orgId = getCookieData<number | null>("waxCraftClientOrgId");
-    if (!orgId || !attrKeys.length) return;
-
-    let cancelled = false;
-
-    const loadVariants = async () => {
-      setVariantsLoading(true);
-      const next: Record<string, ItemVariantOption[]> = {};
-
-      await Promise.all(
-        attrKeys.map(async (key) => {
-          const [catId, modelId, sizeId] = key.split("|");
-          try {
-            let rows: ItemVariantOption[] = [];
-
-            try {
-              const res = await getItemsByAttrsAPI(
-                orgId,
-                catId,
-                modelId,
-                sizeId,
-              );
-              if (res.status === 200 || res.status === 202) {
-                rows = normalizeVariantRows(res.data?.details);
-              }
-            } catch {
-              rows = [];
-            }
-
-            // Fallback: category items filtered client-side by model + size
-            if (!rows.length) {
-              const res = await getItemUnderCategoryAPI(orgId, catId);
-              if (res.status === 200 || res.status === 202) {
-                rows = normalizeVariantRows(res.data?.details).filter(
-                  (row) =>
-                    String(row.Model_Id || "") === String(modelId) &&
-                    String(row.Size_Id || "") === String(sizeId),
-                );
-              }
-            }
-
-            next[key] = rows.map((row) => ({
-              Id: row.Id,
-              Item_Name: row.Item_Name,
-              Item_Sh_Name: row.Item_Sh_Name,
-              Color_Id: row.Color_Id,
-              Item_GL: row.Item_GL,
-            }));
-          } catch {
-            next[key] = [];
-          }
-        }),
-      );
-
-      if (!cancelled) {
-        setVariantsByAttrs(next);
-        setVariantsLoading(false);
-      }
-    };
-
-    void loadVariants();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showDesignDialog, attrKeys.join(",")]);
 
   const rows = items ?? [];
 
@@ -389,12 +124,14 @@ const DesignModal: FC<DesignModalProps> = ({
                 type="number"
               />
 
-              <InputField
-                control={form.control}
-                name="ghat"
-                label="Ghat"
-                type="number"
-              />
+              {showGhat && (
+                <InputField
+                  control={form.control}
+                  name="ghat"
+                  label="Ghat"
+                  type="number"
+                />
+              )}
 
               <div className="flex w-full justify-center sm:col-span-2">
                 {designImage ? (
@@ -429,130 +166,100 @@ const DesignModal: FC<DesignModalProps> = ({
                   </TableHeader>
                   <TableBody emptyContent={"No data found."}>
                     {[
-                      ...rows.map((row, index) => {
-                        const key = attrsKey(
-                          String(row?.catId || ""),
-                          String(row?.modelId || ""),
-                          String(row?.sizeId || ""),
-                        );
-                        const options = variantsByAttrs[key] || [];
-                        const hasAttrs = Boolean(
-                          row?.catId && row?.modelId && row?.sizeId,
-                        );
-
-                        return (
-                          <TableRow key={`design-item-${index}-${row?.itemId}`}>
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell>
-                              <InputField
-                                control={form.control}
-                                name={`item.${index}.itemName`}
-                                disabled
-                                className="min-w-[160px]"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {hasAttrs ? (
-                                <ItemShortNameSelect
-                                  form={form}
-                                  index={index}
-                                  options={
-                                    options.length
-                                      ? options
-                                      : [
-                                          {
-                                            Id: row.itemId,
-                                            Item_Name: row.itemName,
-                                            Item_Sh_Name: row.itemShName,
-                                            Color_Id: row.colorId,
-                                            Item_GL: row.itemGl,
-                                          },
-                                        ]
-                                  }
-                                  loading={variantsLoading}
-                                  isPartyItem={isPartyItem}
-                                />
-                              ) : (
-                                <InputField
-                                  control={form.control}
-                                  name={`item.${index}.itemShName`}
-                                  disabled
-                                  className="min-w-[200px]"
-                                />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <InputField
-                                control={form.control}
-                                name={`item.${index}.itemQuantity`}
-                                disabled
-                                className="min-w-[70px]"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <InputField
-                                control={form.control}
-                                name={`item.${index}.itemRate`}
-                                type="text"
-                                inputMode="decimal"
-                                variant="bordered"
-                                className="min-w-[70px]"
-                                disabled={isPartyItem}
-                                onInput={(e) => {
-                                  const input = e.currentTarget;
-                                  const next = sanitizeDecimalInput(
-                                    input.value,
-                                    4,
-                                  );
-                                  input.value = next;
-                                  form.setValue(
-                                    `item.${index}.itemRate` as Path<OrderBookingFormData>,
-                                    next,
-                                    {
-                                      shouldValidate: true,
-                                      shouldDirty: true,
-                                    },
-                                  );
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <InputField
-                                control={form.control}
-                                name={`item.${index}.makingRate`}
-                                type="text"
-                                inputMode="decimal"
-                                variant="bordered"
-                                className="min-w-[70px]"
-                                onInput={(e) => {
-                                  const input = e.currentTarget;
-                                  const next = sanitizeDecimalInput(
-                                    input.value,
-                                    4,
-                                  );
-                                  input.value = next;
-                                  form.setValue(
-                                    `item.${index}.makingRate` as Path<OrderBookingFormData>,
-                                    next,
-                                    {
-                                      shouldValidate: true,
-                                      shouldDirty: true,
-                                    },
-                                  );
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <InputField
-                                control={form.control}
-                                name={`item.${index}.itemTotal`}
-                                disabled
-                                className="min-w-[70px]"
-                              />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }),
+                      ...rows.map((row, index) => (
+                        <TableRow key={`design-item-${index}`}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>
+                            <InputField
+                              control={form.control}
+                              name={`item.${index}.itemName`}
+                              disabled
+                              className="min-w-[160px]"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <ItemShortNameCell
+                              form={form}
+                              index={index}
+                              row={row}
+                              variantsByAttrs={variantsByAttrs}
+                              variantsLoading={variantsLoading}
+                              isPartyItem={isPartyItem}
+                              partyRate="0"
+                              formatRate={formatOrderItemRate}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <InputField
+                              control={form.control}
+                              name={`item.${index}.itemQuantity`}
+                              disabled
+                              className="min-w-[70px]"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <InputField
+                              control={form.control}
+                              name={`item.${index}.itemRate`}
+                              type="text"
+                              inputMode="decimal"
+                              variant="bordered"
+                              className="min-w-[70px]"
+                              disabled={isPartyItem}
+                              onInput={(e) => {
+                                const input = e.currentTarget;
+                                const next = sanitizeDecimalInput(
+                                  input.value,
+                                  4,
+                                );
+                                input.value = next;
+                                form.setValue(
+                                  `item.${index}.itemRate` as Path<OrderBookingFormData>,
+                                  next,
+                                  {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  },
+                                );
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <InputField
+                              control={form.control}
+                              name={`item.${index}.makingRate`}
+                              type="text"
+                              inputMode="decimal"
+                              variant="bordered"
+                              className="min-w-[70px]"
+                              onInput={(e) => {
+                                const input = e.currentTarget;
+                                const next = sanitizeDecimalInput(
+                                  input.value,
+                                  4,
+                                );
+                                input.value = next;
+                                form.setValue(
+                                  `item.${index}.makingRate` as Path<OrderBookingFormData>,
+                                  next,
+                                  {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  },
+                                );
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <InputField
+                              control={form.control}
+                              name={`item.${index}.itemTotal`}
+                              disabled
+                              className="min-w-[70px]"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )),
                       ...(rows.length > 0
                         ? [
                             <TableRow

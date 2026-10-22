@@ -123,7 +123,7 @@ export const useGstBill = () => {
   const form = useForm<GstBillFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      date: undefined,
+      date: new Date(),
       partyId: "",
       address: "",
       mobileNo: "",
@@ -352,7 +352,7 @@ export const useGstBill = () => {
 
       if (res.status === 200) {
         form.reset({
-          date: undefined,
+          date: new Date(),
           partyId: "",
           billNo: "",
           gstRate: "",

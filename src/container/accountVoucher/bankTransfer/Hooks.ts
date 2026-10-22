@@ -90,7 +90,7 @@ export const useBankTransfer = () => {
   const form = useForm<BankTransferFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      transferDate: undefined,
+      transferDate: new Date(),
       particular: "",
       manualVoucherNo: "",
       sendersBankId: "",

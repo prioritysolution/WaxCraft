@@ -69,6 +69,11 @@ interface OrderBookingBody {
 
 export interface OrderBookingProps {
   addOrderBookingLoading: boolean;
+  updateOrderBookingLoading: boolean;
+  editOrderId: number | null;
+  editOrderNo: string;
+  handleEditOrder: (order: OrderBookingTableData) => void;
+  handleCancelEditOrder: () => void;
   deleteOrderBookingLoading: boolean;
   loading: boolean;
   form: UseFormReturn<OrderBookingFormData>;
@@ -117,6 +122,10 @@ export interface OrderBookingProps {
 
 export interface OrderBookingFormProps {
   addOrderBookingLoading: boolean;
+  updateOrderBookingLoading: boolean;
+  editOrderId: number | null;
+  editOrderNo: string;
+  handleCancelEditOrder: () => void;
   isOpen: boolean;
   form: UseFormReturn<OrderBookingFormData>;
   handleSubmit: SubmitHandler<OrderBookingFormData>;
@@ -138,6 +147,7 @@ export interface OrderBookingFormProps {
 
 export interface OrderBookingTableProps {
   loading: boolean;
+  handleEditOrder: (order: OrderBookingTableData) => void;
   handleShowDeleteDialog: (id: number) => void;
   showDeleteDialog: boolean;
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
@@ -167,6 +177,8 @@ export interface OrderBookingTableData {
   Party_Id: number;
   Total_Order: string;
   Order_Status: string;
+  Is_Party?: number | string | boolean | null;
+  Is_Own?: number | string | boolean | null;
   DesignRow: {
     Design_Id: number;
     Design_Name: string;

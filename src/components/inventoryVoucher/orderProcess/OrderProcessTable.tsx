@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { OrderBookingTableData } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { OrderProcessTableProps } from "@/types/inventoryVoucher/OrderProcessTypes";
 import { getDesignGhat } from "@/utils/designGhat";
+import { getOrderItemType } from "@/utils/orderItemType";
 import { formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
@@ -81,7 +82,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
   useEffect(() => {
     setExpandedOrderId(null);
   }, [currentPage, search, perPage]);
-
   return (
     <div className="w-full">
       <Table
@@ -120,6 +120,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
           <TableColumn align="center">Design Name - No.</TableColumn>
           <TableColumn align="center">Party Name</TableColumn>
           <TableColumn align="center">Order Amount</TableColumn>
+          <TableColumn align="center">Item Type</TableColumn>
           <TableColumn align="center">Order Status</TableColumn>
           <TableColumn align="center" className="w-[120px]">
             Actions
@@ -202,6 +203,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>{data.Total_Order}</TableCell>
+                <TableCell>{getOrderItemType(data)}</TableCell>
                 <TableCell>
                   <div className="flex justify-center">
                     <Chip
@@ -253,7 +255,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
               rows.push(
                 <TableRow key={`${data.Id}-details`}>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="bg-[#F7F5F3]/70 px-5 py-3"
                   >
                     {designs.length ? (
@@ -302,9 +304,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                         Order Qty
                                       </th>
                                       <th className={nestedHeadClassName}>
-                                        Design Rate
-                                      </th>
-                                      <th className={nestedHeadClassName}>
                                         WT
                                       </th>
                                       <th className={nestedHeadClassName}>
@@ -335,9 +334,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                     <tr>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Order_Qnty)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Design_Rate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Wt)}

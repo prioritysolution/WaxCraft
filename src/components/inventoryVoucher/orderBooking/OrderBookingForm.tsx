@@ -12,6 +12,7 @@ import {
   formGridClassName,
   formTitleClassName,
   pageFormClassName,
+  secondaryButtonClassName,
   tableClassNames,
 } from "@/lib/uiStyles";
 import { OrderBookingFormProps } from "@/types/inventoryVoucher/OrderBookingTypes";
@@ -32,7 +33,7 @@ import {
   formatTwoDecimals,
   formatUpToDecimals,
 } from "@/utils/formatDecimal";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { FC, FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FieldErrors } from "react-hook-form";
@@ -65,6 +66,10 @@ const nestedCellClassName =
 
 const OrderBookingForm: FC<OrderBookingFormProps> = ({
   addOrderBookingLoading,
+  updateOrderBookingLoading,
+  editOrderId,
+  editOrderNo,
+  handleCancelEditOrder,
   form,
   handleSubmit,
   handleShowPartyForm,
@@ -90,6 +95,9 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
   const orderDesignData: OrderDesignData[] = useSelector(
     (state: RootState) => state?.orderBooking?.orderDesignData
   );
+
+  const isEditing = editOrderId != null;
+  const isSubmitting = addOrderBookingLoading || updateOrderBookingLoading;
 
   const [expandedLineKey, setExpandedLineKey] = useState<string | null>(null);
 
@@ -122,7 +130,11 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
         autoComplete="off"
         onSubmit={form.handleSubmit(handleSubmit, handleInvalidSubmit)}
       >
-        <h3 className={formTitleClassName}>Add New Order Booking</h3>
+        <h3 className={formTitleClassName}>
+          {isEditing
+            ? `Edit Order Booking${editOrderNo ? ` - ${editOrderNo}` : ""}`
+            : "Add New Order Booking"}
+        </h3>
         <Divider />
         <div className={formGridClassName}>
           <div onFocus={handleStopPropagation}>
@@ -409,11 +421,25 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
         <div className={formActionsClassName}>
+          {isEditing ? (
+            <Button
+              type="button"
+              variant="bordered"
+              size="lg"
+              radius="sm"
+              isDisabled={isSubmitting}
+              startContent={<X className="h-4 w-4" />}
+              className={cn(secondaryButtonClassName, "w-auto")}
+              onPress={handleCancelEditOrder}
+            >
+              Cancel Edit
+            </Button>
+          ) : null}
           <FormSubmitButton
-            isLoading={addOrderBookingLoading}
-            isDisabled={addOrderBookingLoading}
+            isLoading={isSubmitting}
+            isDisabled={isSubmitting}
           >
-            Add Order
+            {isEditing ? "Update Order" : "Add Order"}
           </FormSubmitButton>
         </div>
       </form>

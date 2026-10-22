@@ -27,6 +27,7 @@ const SamplePrint: FC<SamplePrintProps> = ({
   setShowDesignDialog,
   handleAddDesign,
   designTableData,
+  itemListData,
   handleDeleteDesignTableData,
   showPrintDialog,
   setShowPrintDialog,
@@ -83,6 +84,7 @@ const SamplePrint: FC<SamplePrintProps> = ({
               orderDesignInput={orderDesignInput}
               setOrderDesignInput={setOrderDesignInput}
               designTableData={designTableData}
+              itemListData={itemListData}
               handleDeleteDesignTableData={handleDeleteDesignTableData}
             />
           </FormCard>

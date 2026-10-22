@@ -37,7 +37,7 @@ export const useDayBook = () => {
   const form = useForm<DayBookFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      asOnDate: undefined,
+      asOnDate: new Date(),
     },
   });
 

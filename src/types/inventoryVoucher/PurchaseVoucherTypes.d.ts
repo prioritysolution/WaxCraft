@@ -21,6 +21,7 @@ export interface PurchaseVoucherFormData {
 // Define the structure of the body you expect for the PurchaseVoucher API (adjust based on your API's requirements)
 export interface PurchaseVoucherBody {
   org_id: number | null;
+  pur_id?: number;
   pur_date: string;
   pur_no: string;
   party_id: string;
@@ -33,7 +34,9 @@ export interface PurchaseVoucherBody {
   year_id: number | null;
   is_credit: number | null;
   is_order: number;
+  order_id: string | null;
   invoise_data: {
+    order_id: string | number | null;
     item_id: string | number | null;
     item_gl: string | number | null;
     item_qnty: string | null;
@@ -90,10 +93,15 @@ export interface PurchaseVoucherProps {
   successMessage: string;
   successPurchaseNos: string[];
   handleCloseSuccessDialog: () => void;
+  editPurchaseId: number | null;
+  handleEditPurchase: (data: PurchaseVoucherTableData) => void;
+  handleCancelEditPurchase: () => void;
 }
 
 export interface PurchaseVoucherFormProps {
   addPurchaseVoucherLoading: boolean;
+  editPurchaseId: number | null;
+  handleCancelEditPurchase: () => void;
   form: UseFormReturn<PurchaseVoucherFormData>;
   handleSubmit: SubmitHandler<PurchaseVoucherFormData>;
   purchaseTableData: PurchaseTableData[];
@@ -121,6 +129,7 @@ export interface PurchaseVoucherFormProps {
 
 export interface PurchaseVoucherTableProps {
   loading: boolean;
+  handleEditPurchase: (data: PurchaseVoucherTableData) => void;
   handleShowDeleteDialog: (id: number) => void;
   showDeleteDialog: boolean;
   setShowDeleteDialog: Dispatch<SetStateAction<boolean>>;
@@ -149,10 +158,13 @@ export interface PurchaseTableData {
   grandTotal: number;
   itemGl: string | number;
   orderPurchaseType: string;
+  orderId?: string;
+  orderNo?: string;
 }
 
 export interface ItemRequisitionRow {
   Id: number | string;
+  Order_Id?: number | string;
   Item_Id?: number | string;
   Item_Name?: string;
   Item_Qnty?: string | number;
@@ -167,6 +179,8 @@ export interface ItemRequisitionRow {
   Req_Id?: number | string;
   Purchase_Gl?: string | number;
   Row_Key?: string;
+  Is_Party?: string | number | boolean | null;
+  Is_Invoise?: string | number | boolean | null;
   ItemRow?: ItemRequisitionRow[];
 }
 
@@ -187,7 +201,14 @@ export interface PurchaseVoucherTableData {
   Purchase_Type?: string | number;
   Pur_Type?: string | number;
   Is_Order?: string | number;
+  Tot_Round?: string | number | null;
+  Tot_Discount?: string | number | null;
+  Is_Credit?: string | number | null;
+  Bank_Id?: string | number | null;
+  Order_Id?: string | number | null;
   ItemRow: {
+    Order_Id?: string | number | null;
+    Order_No?: string | null;
     Item_Id: number;
     Item_Name: string;
     Item_Qnty: string;
@@ -195,5 +216,6 @@ export interface PurchaseVoucherTableData {
     Item_CGST: string;
     Item_SGST: string;
     Item_IGST: string | null;
+    Item_Gl?: string | number | null;
   }[];
 }

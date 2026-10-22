@@ -4,6 +4,7 @@ import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import {
   TableCancelButton,
+  TableEditButton,
   TableNameCell,
   formatTableSerial,
   getPaginatedTableRows,
@@ -20,6 +21,7 @@ import {
   OrderBookingTableProps,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { getDesignGhat } from "@/utils/designGhat";
+import { getOrderItemType } from "@/utils/orderItemType";
 import {
   formatTwoDecimals,
   formatUpToDecimals,
@@ -55,8 +57,10 @@ const nestedHeadClassName =
   "px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
 const nestedCellClassName =
   "px-3 py-2.5 text-center text-sm text-foreground";
+
 const OrderBookingTable: FC<OrderBookingTableProps> = ({
   loading,
+  handleEditOrder,
   handleShowDeleteDialog,
   showDeleteDialog,
   setShowDeleteDialog,
@@ -135,6 +139,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
           <TableColumn align="center">Design Name - No.</TableColumn>
           <TableColumn align="center">Party Name</TableColumn>
           <TableColumn align="center">Order Amount</TableColumn>
+          <TableColumn align="center">Item Type</TableColumn>
           <TableColumn align="center">Order Status</TableColumn>
           <TableColumn align="center" className="w-[120px]">
             Actions
@@ -216,6 +221,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>{data.Total_Order}</TableCell>
+                <TableCell>{getOrderItemType(data)}</TableCell>
                 <TableCell>
                   <Chip
                     className="capitalize"
@@ -245,6 +251,11 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                         </Button>
                       </span>
                     </Tooltip>
+                    <TableEditButton
+                      label="Edit order"
+                      onPress={() => handleEditOrder(data)}
+                      isDisabled={data.Order_Status !== "Ordered"}
+                    />
                     <TableCancelButton
                       label="Cancel order"
                       onPress={() => handleShowDeleteDialog(data.Id)}
@@ -259,7 +270,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
               rows.push(
                 <TableRow key={`${data.Id}-details`}>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="bg-[#F7F5F3]/70 px-5 py-3"
                   >
                     {designs.length ? (
@@ -308,9 +319,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                         Order Qty
                                       </th>
                                       <th className={nestedHeadClassName}>
-                                        Design Rate
-                                      </th>
-                                      <th className={nestedHeadClassName}>
                                         WT
                                       </th>
                                       <th className={nestedHeadClassName}>
@@ -341,9 +349,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                     <tr>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Order_Qnty)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Design_Rate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Wt)}

@@ -43,6 +43,7 @@ export const useTrailorTransaction = () => {
   const form = useForm<TrailorTransactionFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
+      date: new Date(),
       userId: "",
       balance: "",
       transType: "R",

@@ -122,7 +122,7 @@ export const usePayment = () => {
   const form = useForm<PaymentFormData>({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      paymentDate: undefined,
+      paymentDate: new Date(),
       particular: "",
       manualVoucherNo: "",
       ledgerId: "",

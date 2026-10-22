@@ -6,3 +6,6 @@ export const decimalRegex = /^\d+(\.\d{1,2})?$/;
  * Previously allowed 3 decimals; now matches `decimalRegex`.
  */
 export const uptoThreeDigitDecimalRegex = decimalRegex;
+
+/** Up to 3 decimal places (e.g. 15, 0.5, 0.095). */
+export const threeDecimalRegex = /^\d+(\.\d{1,3})?$/;
