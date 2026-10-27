@@ -217,7 +217,7 @@ export const endPoints = {
     keyword: string,
     perPage?: number
   ) => {
-    const base = `${createApi}Org/ProcessInventory/GetActiveOrder?org_id=${orgId}&page=${page}&keyword=${keyword}`;
+    const base = `${createApi}Org/ProcessInventory/GetActiveOrder?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
     if (perPage == null || perPage <= 0) return base;
     // Send both common param names so backend page-size is applied reliably.
     return `${base}&per_page=${perPage}&limit=${perPage}`;

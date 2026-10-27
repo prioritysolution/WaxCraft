@@ -230,8 +230,8 @@ const DesignModal: FC<DesignModalProps> = ({
       <Form {...form}>
         <form className="flex w-full flex-col" autoComplete="off">
           <FormModalHeader
-            title="Add Design"
-            description="Review design details and add it to the print."
+            title="Design Rate Details"
+            description="Enter WT rate, polish, item rate and making rate for this sample print."
             onClose={() => {
               setShowDesignDialog(false);
               form.setValue("designId", "");
@@ -253,7 +253,6 @@ const DesignModal: FC<DesignModalProps> = ({
                   control={form.control}
                   name="designNo"
                   label="Design No."
-                  type="number"
                   disabled
                 />
 

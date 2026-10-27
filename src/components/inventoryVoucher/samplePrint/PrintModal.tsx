@@ -270,29 +270,12 @@ const PrintModal: FC<PrintModalProps> = ({
     [printData]
   );
 
-  const grandTotal = designSections.reduce((sum, design) => {
-    const wtTotal = (Number(design.wt) || 0) * (Number(design.wtRate) || 0);
-    const itemsTotal =
-      design.item?.reduce((itemSum, item) => {
-        return (
-          itemSum +
-          (Number(item?.itemQuantity) || 0) *
-            ((Number(item?.itemRate) || 0) + (Number(item?.makingRate) || 0))
-        );
-      }, 0) ?? 0;
-    const polishTotal = Number(design.polish) || 0;
-    return sum + wtTotal + itemsTotal + polishTotal;
-  }, 0);
+  const pageSections: (SamplePrintDesignPrintData | null)[] =
+    printData && designSections.length > 0 ? designSections : [null];
+  const totalPages = pageSections.length;
 
-  return (
-    <PrintPreviewModal
-      isOpen={showPrintDialog}
-      onOpenChange={setShowPrintDialog}
-      printRef={printRef}
-      documentTitle="Sample Print"
-      onPrint={() => generatePDF()}
-    >
-      <div className="print-report-page relative mx-auto mb-4 flex min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white print:mb-0">
+  const printHeader = (
+    <>
         <div className="px-8 pt-7 pb-5">
           <div className="flex items-center gap-4">
             <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F7F5F3]">
@@ -343,44 +326,54 @@ const PrintModal: FC<PrintModalProps> = ({
             )}
           </div>
         </div>
+    </>
+  );
 
-        {printData && (
-          <div className="flex flex-col gap-8 px-8 py-6">
-            {designSections.map((design, index) => {
-              const key = `${design.designId || "design"}-${index}`;
-              return (
-                <div
-                  key={key}
-                  className={
-                    index > 0
-                      ? "border-t border-black/10 pt-8 print:break-before-page"
-                      : undefined
-                  }
-                >
-                  <DesignPrintSection
-                    design={design}
-                    imageError={Boolean(imageErrors[key])}
-                    onImageError={() =>
-                      setImageErrors((prev) => ({ ...prev, [key]: true }))
-                    }
-                  />
-                </div>
-              );
-            })}
+  return (
+    <PrintPreviewModal
+      isOpen={showPrintDialog}
+      onOpenChange={setShowPrintDialog}
+      printRef={printRef}
+      documentTitle="Sample Print"
+      onPrint={() => generatePDF()}
+    >
+      {pageSections.map((design, index) => {
+        const key = `${design?.designId || "design"}-${index}`;
+        return (
+          <div
+            key={key}
+            className="print-report-page relative mx-auto mb-4 flex min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white print:mb-0 print:overflow-visible"
+          >
+            {/* thead repeats the company header if a design spills onto another sheet */}
+            <table className="w-full border-collapse">
+              <thead className="table-header-group">
+                <tr>
+                  <td className="p-0">{printHeader}</td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-0 align-top">
+                    {design && (
+                      <div className="px-8 py-6">
+                        <DesignPrintSection
+                          design={design}
+                          imageError={Boolean(imageErrors[key])}
+                          onImageError={() =>
+                            setImageErrors((prev) => ({ ...prev, [key]: true }))
+                          }
+                        />
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-            {designSections.length > 1 && (
-              <div className="rounded-2xl bg-[#F7F5F3] px-5 py-4 text-sm font-semibold">
-                <div className="flex items-center justify-between gap-4">
-                  <span>Grand Total</span>
-                  <span>{formatAmount(grandTotal)}</span>
-                </div>
-              </div>
-            )}
+            <PrintFooter pageNo={index + 1} totalPages={totalPages} />
           </div>
-        )}
-
-        <PrintFooter pageNo={1} totalPages={1} />
-      </div>
+        );
+      })}
     </PrintPreviewModal>
   );
 };

@@ -41,7 +41,12 @@ export const computeSamplePrintDesignSectionTotal = (
     toNum(pickValue(design.Wt, design.WT, design.wt)) *
     toNum(pickValue(design.Wt_Rate, design.wt_rate, design.WtRate));
   const polishTotal = toNum(
-    pickValue(design.Polish, design.polish, design.polish_rate),
+    pickValue(
+      design.Polish,
+      design.Polish_Rate,
+      design.polish,
+      design.polish_rate,
+    ),
   );
 
   const items = firstNonEmptyArray(
@@ -159,8 +164,10 @@ export const computeSamplePrintHistoryTotal = (
       toNum(
         pickValue(
           header.Polish,
+          header.Polish_Rate,
           header.polish,
           row.Polish,
+          row.Polish_Rate,
           row.polish,
         ),
       )

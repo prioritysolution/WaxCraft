@@ -78,7 +78,7 @@ const DesignModal: FC<DesignModalProps> = ({
       <Form {...form}>
         <form className="flex w-full flex-col" autoComplete="off">
           <FormModalHeader
-            title="Add New Design"
+            title="Design Details"
             description="Review design details and add it to the order."
             onClose={() => {
               setShowDesignDialog(false);
@@ -193,8 +193,26 @@ const DesignModal: FC<DesignModalProps> = ({
                             <InputField
                               control={form.control}
                               name={`item.${index}.itemQuantity`}
-                              disabled
+                              type="text"
+                              inputMode="decimal"
+                              variant="bordered"
                               className="min-w-[70px]"
+                              onInput={(e) => {
+                                const input = e.currentTarget;
+                                const next = sanitizeDecimalInput(
+                                  input.value,
+                                  4,
+                                );
+                                input.value = next;
+                                form.setValue(
+                                  `item.${index}.itemQuantity` as Path<OrderBookingFormData>,
+                                  next,
+                                  {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  },
+                                );
+                              }}
                             />
                           </TableCell>
                           <TableCell>

@@ -37,15 +37,15 @@ const Login: FC<LoginProps> = ({
 
       <div className="relative z-10 w-full max-w-[440px]">
         <div className="mb-6 flex flex-col items-center text-center text-white">
-          <div className="mb-4 overflow-hidden rounded-2xl border border-white/15 bg-black shadow-lg">
+          <div className="mb-4 overflow-hidden rounded-2xl border border-white/15 bg-white px-5 py-3 shadow-lg">
             <img
-              src="/wax_craft_logo.jpeg"
-              alt="WaxCraft"
-              className="h-[108px] w-[108px] object-contain sm:h-[120px] sm:w-[120px]"
+              src="/jewellix_logo.png"
+              alt="Jewellix"
+              className="h-auto w-[240px] object-contain sm:w-[280px]"
             />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Welcome to WaxCraft
+            Welcome to Jewellix
           </h1>
           <p className="mt-1 text-sm text-white/70">
             Sign in to continue to your workspace

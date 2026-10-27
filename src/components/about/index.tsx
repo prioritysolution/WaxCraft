@@ -40,7 +40,7 @@ const About = () => {
     <PageShell>
       <PageHeader
         icon={Info}
-        title="About WaxCraft"
+        title="About Jewellix"
         description="A modern workspace for wax manufacturing and distribution."
       />
 
@@ -57,7 +57,7 @@ const About = () => {
           <SectionCard className="p-5 sm:p-6">
             <h2 className="text-lg font-semibold text-foreground">Who we are</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              WaxCraft is built for manufacturers and distributors who need a
+              Jewellix is built for manufacturers and distributors who need a
               clean, reliable way to manage production, inventory, and sales.
               Whether you run a small workshop or a larger operation, the
               platform is designed to keep everyday work simple.
@@ -107,7 +107,7 @@ const About = () => {
                   Get started today
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Use WaxCraft to handle production, inventory, orders, and
+                  Use Jewellix to handle production, inventory, orders, and
                   reports from one place — with a layout that works on desktop,
                   tablet, and mobile.
                 </p>

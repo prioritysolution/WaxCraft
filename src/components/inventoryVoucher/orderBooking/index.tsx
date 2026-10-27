@@ -55,6 +55,8 @@ const OrderBooking: FC<OrderBookingProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  orderTableInput,
+  handleFilterOrderTable,
   orderPartyInput,
   setOrderPartyInput,
   orderDesignInput,
@@ -128,6 +130,8 @@ const OrderBooking: FC<OrderBookingProps> = ({
               lastPage={lastPage}
               perPage={perPage}
               onPerPageChange={onPerPageChange}
+              orderTableInput={orderTableInput}
+              handleFilterOrderTable={handleFilterOrderTable}
             />
         </Tab>
       </Tabs>

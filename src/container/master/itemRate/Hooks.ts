@@ -7,7 +7,6 @@ import getCookieData from "@/utils/getCookieData";
 import { ItemRateFormData } from "@/types/master/ItemRateTypes";
 import { ApiResponse } from "@/types/ApiTypes";
 import { addItemRateAPI, getItemRateAPI } from "./ItemRateApis";
-import { uptoThreeDigitDecimalRegex } from "@/utils/validationRegex";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
 
 export const useItemRate = () => {
@@ -32,8 +31,8 @@ export const useItemRate = () => {
       .string()
       .required("Rate is required")
       .test("is-valid-number", "Invalid rate", (value) => {
-        if (!value) return false;
-        return uptoThreeDigitDecimalRegex.test(value);
+        if (!value || !value.trim()) return false;
+        return Number.isFinite(Number(value));
       }),
   });
 

@@ -36,6 +36,7 @@ import { addPartyAPI } from "@/container/master/party/PartyApis";
 import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
 import { format } from "date-fns";
 import { resolveListLastPage } from "@/lib/listTotalCount";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 
 interface OrderPartyData {
   Id: number;
@@ -113,6 +114,7 @@ const extractOrderIds = (details: unknown): string[] => {
 
 export const useOrderBooking = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addOrderBookingLoading, setAddOrderBookingLoading] = useState(false);
   const [updateOrderBookingLoading, setUpdateOrderBookingLoading] =
@@ -145,6 +147,7 @@ export const useOrderBooking = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [orderTableInput, setOrderTableInput] = useState("");
 
   const [selected, setSelected] = useState("form");
 
@@ -517,6 +520,15 @@ export const useOrderBooking = () => {
 
       const item = form.getValues("item");
 
+      if (item.length && !item.some((i) => toNum(i.itemQuantity) > 0)) {
+        toast.error(
+          item.length === 1
+            ? "Item quantity must be greater than 0."
+            : "At least one item quantity must be greater than 0.",
+        );
+        return;
+      }
+
       const allHaveMakingRate = item.every(
         (i) => i.makingRate && i.makingRate.trim() !== ""
       );
@@ -619,7 +631,9 @@ export const useOrderBooking = () => {
     item: OrderBookingFormData,
     orgId: number
   ): OrderBookingBody => {
-    const itemDataList = itemListData.map((itemData) => ({
+    const itemDataList = itemListData
+      .filter((itemData) => toNum(itemData.itemQuantity) > 0)
+      .map((itemData) => ({
       design_id: itemData.designId,
       qnty: null,
       wt: null,
@@ -695,6 +709,7 @@ export const useOrderBooking = () => {
         resetOrderForm();
         setCurrentPage(1);
         setSelected("table");
+        setOrderTableInput("");
         getOrderBookingApiCall(orgId, 1, "", perPage);
         setSuccessMessage(
           String(res.data.message || "Order booked successfully").trim(),
@@ -732,6 +747,7 @@ export const useOrderBooking = () => {
         resetOrderForm();
         setCurrentPage(1);
         setSelected("table");
+        setOrderTableInput("");
         getOrderBookingApiCall(orgId, 1, "", perPage);
       } else {
         toast.error(res.data.message);
@@ -759,6 +775,7 @@ export const useOrderBooking = () => {
         if (editOrderId === orderId) handleCancelEditOrder();
         setCurrentPage(1);
         setTempDeleteId(null);
+        setOrderTableInput("");
         getOrderBookingApiCall(orgIdValue, 1, "", perPage);
         setShowDeleteDialog(false);
       } else {
@@ -812,6 +829,17 @@ export const useOrderBooking = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterOrderTable = (value: string) => {
+    setOrderTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getOrderBookingApiCall(orgId, 1, value.trim(), perPage);
+    });
   };
 
   const getOrderPartyApiCall = async (
@@ -1122,6 +1150,8 @@ export const useOrderBooking = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    orderTableInput,
+    handleFilterOrderTable,
     orderPartyInput,
     setOrderPartyInput,
     orderDesignInput,

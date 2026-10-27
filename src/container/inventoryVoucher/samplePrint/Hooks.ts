@@ -715,7 +715,9 @@ const mapHistoryRow = (
     Polish: String(
       pickValue(
         row.Polish,
+        row.Polish_Rate,
         designRow.Polish,
+        designRow.Polish_Rate,
         designRow.polish_rate,
         designRow.polish,
         fallback?.polish,
@@ -902,7 +904,13 @@ const mapSamplePrintDetailsToPrintData = (
             pickValue(row.Wt_Rate, row.wt_rate, "")
           );
           const rowPolish = toTwoDecimalString(
-            pickValue(row.Polish, row.polish_rate, row.polish, "")
+            pickValue(
+              row.Polish,
+              row.Polish_Rate,
+              row.polish_rate,
+              row.polish,
+              ""
+            )
           );
           const rowGhat = String(
             pickValue(row.Ghat_Rate, row.ghat_rate, row.Ghat, row.ghat, "")
@@ -962,7 +970,9 @@ const mapSamplePrintDetailsToPrintData = (
   const polish = toTwoDecimalString(
     pickValue(
       details.Polish,
+      details.Polish_Rate,
       designRow.Polish,
+      designRow.Polish_Rate,
       designRow.polish_rate,
       fallbackRow?.Polish,
       ""
@@ -1823,9 +1833,7 @@ export const useSamplePrint = () => {
               .filter(
                 (row: SamplePrintTableData) =>
                   row.Design_Id &&
-                  (!row.Design_Name ||
-                    !row.Design_No ||
-                    !(Number(row.Wt) || Number(row.Polish)))
+                  (!row.Design_Name || !row.Design_No || !row.Image)
               )
               .map((row: SamplePrintTableData) => String(row.Design_Id))
           )
@@ -1863,15 +1871,11 @@ export const useSamplePrint = () => {
                 : null;
               if (!detail) return row;
 
-              const wt = String(
-                pickValue(row.Wt, detail.WT, detail.Wt, "")
-              );
-              const wtRate = String(
-                pickValue(row.Wt_Rate, detail.Wt_Rate, "")
-              );
-              const polish = String(
-                pickValue(row.Polish, detail.Polish, "")
-              );
+              // WT / WT Rate / Polish are user input saved on the sample print;
+              // never substitute design-master values for them.
+              const wt = String(pickValue(row.Wt, ""));
+              const wtRate = String(pickValue(row.Wt_Rate, ""));
+              const polish = String(pickValue(row.Polish, ""));
               const enrichedRow = {
                 ...row,
                 Design_Name:

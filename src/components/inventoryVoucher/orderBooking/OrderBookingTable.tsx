@@ -9,7 +9,7 @@ import {
   formatTableSerial,
   getPaginatedTableRows,
 } from "@/components/ui/table-edit-button";
-import { useClientTableSearch } from "@/lib/useClientTableSearch";
+import { filterBySearch } from "@/lib/useClientTableSearch";
 import { ChevronRight, ClipboardCheck, Printer } from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
@@ -72,6 +72,8 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  orderTableInput,
+  handleFilterOrderTable,
 }) => {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [jobSheetOrder, setJobSheetOrder] =
@@ -95,7 +97,8 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
     ? orderBookingData
     : [];
 
-  const { search, setSearch, filtered } = useClientTableSearch(safeOrderBookingData);
+  const search = orderTableInput;
+  const filtered = filterBySearch(safeOrderBookingData, search);
 
   useEffect(() => {
     setExpandedOrderId(null);
@@ -123,7 +126,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
             title="Active orders"
             description="Search, review, and manage existing orders."
             value={search}
-            onValueChange={setSearch}
+            onValueChange={handleFilterOrderTable}
             placeholder="Search order"
           />
         }

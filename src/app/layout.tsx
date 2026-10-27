@@ -14,12 +14,12 @@ const style = Noto_Sans({
 });
 
 export const metadata = {
-  title: "Waxcraft Client",
-  description: "User panel created with Next JS",
+  title: "Jewellix",
+  description: "Jewellix — Software for wax setting manufacturing",
   icons: {
-    icon: [{ url: "/wax_craft_logo.jpeg", type: "image/jpeg" }],
-    shortcut: "/wax_craft_logo.jpeg",
-    apple: "/wax_craft_logo.jpeg",
+    icon: [{ url: "/jewellix_icon.png", type: "image/png" }],
+    shortcut: "/jewellix_icon.png",
+    apple: "/jewellix_icon.png",
   },
 };
 

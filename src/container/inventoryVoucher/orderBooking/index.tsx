@@ -55,6 +55,8 @@ const OrderBookingContainer = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    orderTableInput,
+    handleFilterOrderTable,
     orderPartyInput,
     setOrderPartyInput,
     orderDesignInput,
@@ -111,7 +113,7 @@ const OrderBookingContainer = () => {
 
   useEffect(() => {
     if (token && orgId && selected === "table") {
-      getOrderBookingApiCall(orgId, currentPage, "", perPage);
+      getOrderBookingApiCall(orgId, currentPage, orderTableInput.trim(), perPage);
     }
   }, [token, orgId, selected, currentPage, perPage]);
 
@@ -163,6 +165,8 @@ const OrderBookingContainer = () => {
       lastPage={lastPage}
       perPage={perPage}
       onPerPageChange={handlePerPageChange}
+      orderTableInput={orderTableInput}
+      handleFilterOrderTable={handleFilterOrderTable}
       orderPartyInput={orderPartyInput}
       setOrderPartyInput={setOrderPartyInput}
       orderDesignInput={orderDesignInput}

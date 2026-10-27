@@ -45,7 +45,7 @@ const Profile: FC<ProfileProps> = ({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-semibold text-foreground">
-                  {name || "WaxCraft User"}
+                  {name || "Jewellix User"}
                 </p>
                 <p className="truncate text-sm text-muted-foreground">
                   {email || "Your account details"}

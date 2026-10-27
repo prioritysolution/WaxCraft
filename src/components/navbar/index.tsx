@@ -86,7 +86,7 @@ export const Navbar: FC<NavbarProps> = ({ loading, handleLogout }) => {
     if (currentTitle) break;
   }
 
-  const displayName = orgName || "WaxCraft User";
+  const displayName = orgName || "Jewellix User";
   const initials = displayName
     .split(" ")
     .filter(Boolean)

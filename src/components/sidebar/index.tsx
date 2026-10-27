@@ -61,19 +61,19 @@ const Sidebar = ({ loading = false }: { loading: boolean }) => {
     >
       <div className="mb-4 flex h-16 items-center justify-between border-b border-white/10 px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 shadow-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
             <Image
-              src="/wax_craft_logo.jpeg"
-              alt="WaxCraft logo"
+              src="/jewellix_icon.png"
+              alt="Jewellix logo"
               width={36}
               height={36}
-              className="h-9 w-9 object-cover"
+              className="h-9 w-9 object-contain"
               priority
             />
           </div>
           <div className="min-w-0">
             <p className="truncate text-lg font-semibold tracking-tight text-white">
-              WaxCraft
+              Jewellix
             </p>
             <p className="text-[11px] uppercase tracking-[0.16em] text-white/50">
               v1.0.1

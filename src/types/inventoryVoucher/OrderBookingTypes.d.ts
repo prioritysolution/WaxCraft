@@ -106,6 +106,8 @@ export interface OrderBookingProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  orderTableInput: string;
+  handleFilterOrderTable: (value: string) => void;
   orderPartyInput: string;
   setOrderPartyInput: Dispatch<SetStateAction<string>>;
   orderDesignInput: string;
@@ -159,6 +161,8 @@ export interface OrderBookingTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  orderTableInput: string;
+  handleFilterOrderTable: (value: string) => void;
 }
 
 export interface DesignModalProps {

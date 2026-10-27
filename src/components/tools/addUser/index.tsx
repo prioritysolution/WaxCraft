@@ -32,7 +32,7 @@ const AddUser: FC<AddUserProps> = ({
       <PageHeader
         icon={UserPlus}
         title="Users"
-        description="Create users and assign roles for the WaxCraft workspace."
+        description="Create users and assign roles for the Jewellix workspace."
         action={
           <PageActionButton onPress={handleOpenAdd}>
             Add New User
