@@ -63,3 +63,10 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Ignore ZIP files
+*.zip
+
+# Ignore backup files
+*.rar
+*.7z
