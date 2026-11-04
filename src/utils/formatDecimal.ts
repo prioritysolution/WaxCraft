@@ -103,3 +103,34 @@ export const sanitizeDecimalInput = (
 
   return cleaned;
 };
+
+/**
+ * Rate values are kept as entered — no rounding, padding or truncation.
+ * Only zero-padding added by the DB is dropped (0.550 → 0.55, 6.00 → 6).
+ * Empty / nullish → "". Non-numeric strings are returned unchanged.
+ */
+export const toRateString = (value: unknown): string => {
+  if (value == null || value === "") return "";
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if ("wt_rate" in record) return toRateString(record.wt_rate);
+    if ("Wt_Rate" in record) return toRateString(record.Wt_Rate);
+
+    const firstValue = Object.values(record)[0];
+    return toRateString(firstValue);
+  }
+
+  const raw = String(value).trim();
+  if (!/^-?\d+\.\d+$/.test(raw)) return raw;
+  return raw.replace(/0+$/, "").replace(/\.$/, "");
+};
+
+/** Display helper for rates — shows the value as-is; empty values show `empty`. */
+export const formatRate = (value: unknown, empty = "—"): string =>
+  toRateString(value) || empty;
+
+/** Live-typing sanitizer for rates: valid decimal with no limit on decimals. */
+export const sanitizeRateInput = (value: string): string =>
+  sanitizeDecimalInput(value, Number.POSITIVE_INFINITY);

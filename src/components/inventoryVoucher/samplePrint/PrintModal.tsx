@@ -9,6 +9,7 @@ import {
   SamplePrintDesignPrintData,
   SamplePrintFormData,
 } from "@/types/inventoryVoucher/SamplePrintTypes";
+import { toRateString } from "@/utils/formatDecimal";
 import getCookieData from "@/utils/getCookieData";
 import { Image } from "@heroui/react";
 import { format } from "date-fns";
@@ -95,16 +96,16 @@ const DesignPrintSection: FC<{
       }
     >
       {showDesignPanel && (
-        <div className="flex flex-col items-center self-start rounded-2xl bg-[#F7F5F3] px-4 py-5">
+        <div className="flex flex-col items-center self-start border border-black bg-white px-4 py-5">
           {hasDesignTitle && (
-            <p className="text-center text-sm font-semibold text-foreground">
+            <p className="text-center text-sm font-semibold text-black">
               {[design.designName, design.designNo]
                 .filter((value) => hasText(value))
                 .join(" — ")}
             </p>
           )}
           {hasImage && (
-            <div className="mt-4 flex h-[168px] w-[168px] items-center justify-center overflow-hidden rounded-xl bg-white">
+            <div className="mt-4 flex h-[168px] w-[168px] items-center justify-center overflow-hidden bg-white">
               <img
                 src={design.image}
                 alt=""
@@ -121,10 +122,10 @@ const DesignPrintSection: FC<{
                 hasDesignTitle || hasImage ? "mt-4 text-center" : "text-center"
               }
             >
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
                 Weight
               </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
+              <p className="mt-1 text-sm font-semibold text-black">
                 {design.wt} gm
               </p>
             </div>
@@ -137,10 +138,10 @@ const DesignPrintSection: FC<{
                   : "text-center"
               }
             >
-              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
                 Ghat
               </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
+              <p className="mt-1 text-sm font-semibold text-black">
                 {design.ghat}
               </p>
             </div>
@@ -148,47 +149,47 @@ const DesignPrintSection: FC<{
         </div>
       )}
 
-      <div className="min-w-0">
+      <div className="min-w-0 overflow-hidden border border-black">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-[#F7F5F3] text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              <th className="rounded-l-xl px-3 py-2.5 text-left">Sl No.</th>
-              <th className="px-3 py-2.5 text-left">Description</th>
-              <th className="px-3 py-2.5 text-right">Quantity</th>
-              <th className="px-3 py-2.5 text-right">Item Rate</th>
-              <th className="px-3 py-2.5 text-right">Making Rate</th>
-              <th className="rounded-r-xl px-3 py-2.5 text-right">Total</th>
+            <tr className="border-b border-black bg-white text-[10px] font-medium uppercase tracking-[0.14em] text-black">
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-left">Sl No.</th>
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-left">Description</th>
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">Quantity</th>
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">Item Rate</th>
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">Making Rate</th>
+              <th className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">Total</th>
             </tr>
           </thead>
           <tbody>
             {showWtRow && (
-              <tr className="text-sm">
-                <td className="px-3 py-2.5 text-muted-foreground">{wtSerial}</td>
-                <td className="px-3 py-2.5 font-medium">WT</td>
-                <td className="px-3 py-2.5 text-right">{design.wt || ""}</td>
-                <td className="px-3 py-2.5 text-right">{design.wtRate || ""}</td>
-                <td className="px-3 py-2.5 text-right"></td>
-                <td className="px-3 py-2.5 text-right font-semibold">
+              <tr className="border-t border-black text-sm">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-black">{wtSerial}</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 font-medium">WT</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">{design.wt || ""}</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">{toRateString(design.wtRate)}</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right"></td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right font-semibold">
                   {formatAmount(wtTotal)}
                 </td>
               </tr>
             )}
             {itemRows.map((item, i) => (
-              <tr key={`${item.itemId}-${i}`} className="text-sm">
-                <td className="px-3 py-2.5 text-muted-foreground">
+              <tr key={`${item.itemId}-${i}`} className="border-t border-black text-sm">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-black">
                   {wtSerial + i + 1}
                 </td>
-                <td className="px-3 py-2.5 font-medium">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 font-medium">
                   {item.itemName || ""}
                 </td>
-                <td className="px-3 py-2.5 text-right">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">
                   {item.itemQuantity || ""}
                 </td>
-                <td className="px-3 py-2.5 text-right">{item.itemRate || ""}</td>
-                <td className="px-3 py-2.5 text-right">
-                  {item.makingRate || ""}
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">{toRateString(item.itemRate)}</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">
+                  {toRateString(item.makingRate)}
                 </td>
-                <td className="px-3 py-2.5 text-right font-semibold">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right font-semibold">
                   {formatAmount(
                     (Number(item.itemQuantity) || 0) *
                       ((Number(item.itemRate) || 0) +
@@ -198,24 +199,24 @@ const DesignPrintSection: FC<{
               </tr>
             ))}
             {showPolishRow && (
-              <tr className="text-sm">
-                <td className="px-3 py-2.5 text-muted-foreground">
+              <tr className="border-t border-black text-sm">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-black">
                   {wtSerial + itemRows.length + 1}
                 </td>
-                <td className="px-3 py-2.5 font-medium">Polish</td>
-                <td className="px-3 py-2.5 text-right">1</td>
-                <td className="px-3 py-2.5 text-right">{design.polish || ""}</td>
-                <td className="px-3 py-2.5 text-right"></td>
-                <td className="px-3 py-2.5 text-right font-semibold">
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 font-medium">Polish</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">1</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right">{design.polish || ""}</td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right"></td>
+                <td className="border-l border-black first:border-l-0 px-3 py-2.5 text-right font-semibold">
                   {formatAmount(polishTotal)}
                 </td>
               </tr>
             )}
-            <tr className="bg-[#F7F5F3] text-sm font-semibold">
-              <td className="rounded-l-xl px-3 py-3" colSpan={5}>
+            <tr className="border-t border-black bg-white text-sm font-semibold">
+              <td className="border-l border-black first:border-l-0 px-3 py-3" colSpan={5}>
                 Design Total
               </td>
-              <td className="rounded-r-xl px-3 py-3 text-right">
+              <td className="border-l border-black first:border-l-0 px-3 py-3 text-right">
                 {formatAmount(sectionTotal)}
               </td>
             </tr>
@@ -278,7 +279,7 @@ const PrintModal: FC<PrintModalProps> = ({
     <>
         <div className="px-8 pt-7 pb-5">
           <div className="flex items-center gap-4">
-            <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F7F5F3]">
+            <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden bg-white">
               <Image
                 alt="Org Image"
                 src="/orgImg.png"
@@ -286,41 +287,41 @@ const PrintModal: FC<PrintModalProps> = ({
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xl font-semibold uppercase tracking-tight text-foreground">
+              <p className="truncate text-xl font-semibold uppercase tracking-tight text-black">
                 {orgName}
               </p>
-              <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <p className="mt-0.5 text-xs uppercase tracking-wide text-black">
                 {orgAddress}
               </p>
             </div>
-            <div className="shrink-0 rounded-full bg-[#F7F5F3] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="shrink-0 rounded-full border border-black bg-white px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-black">
               Proposal
             </div>
           </div>
         </div>
 
-        <div className="mx-8 flex items-start justify-between gap-8 rounded-2xl bg-[#F7F5F3] px-5 py-4">
+        <div className="mx-8 flex items-start justify-between gap-8 border border-black bg-white px-5 py-4">
           <div className="min-w-0">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
               Proposal to
             </p>
             {hasText(partyName) && (
-              <p className="mt-1 text-base font-semibold text-foreground">
+              <p className="mt-1 text-base font-semibold text-black">
                 {partyName}
               </p>
             )}
             {hasText(printData?.address) && (
-              <p className="mt-0.5 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-sm text-black">
                 {printData?.address}
               </p>
             )}
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
               Date
             </p>
             {printData?.printDate && (
-              <p className="mt-1 text-base font-semibold text-foreground">
+              <p className="mt-1 text-base font-semibold text-black">
                 {format(printData.printDate, "dd-MM-yyyy")}
               </p>
             )}
@@ -342,7 +343,7 @@ const PrintModal: FC<PrintModalProps> = ({
         return (
           <div
             key={key}
-            className="print-report-page relative mx-auto mb-4 flex min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white print:mb-0 print:overflow-visible"
+            className="print-report-page relative mx-auto mb-4 flex min-h-[297mm] w-[210mm] flex-col overflow-hidden border border-black bg-white text-black print:mb-0 print:overflow-visible"
           >
             {/* thead repeats the company header if a design spills onto another sheet */}
             <table className="w-full border-collapse">

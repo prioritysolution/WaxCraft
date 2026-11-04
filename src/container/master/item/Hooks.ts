@@ -23,8 +23,8 @@ import {
   getSalesLedgerAPI,
   updateItemAPI,
 } from "./ItemApis";
-import { threeDecimalRegex } from "@/utils/validationRegex";
-import { toUpToThreeDecimalString } from "@/utils/formatDecimal";
+import { rateRegex, threeDecimalRegex } from "@/utils/validationRegex";
+import { toRateString, toUpToThreeDecimalString } from "@/utils/formatDecimal";
 import {
   getMasterDeleteWarningMessage,
   isMasterDeleteDependencyResponse,
@@ -149,14 +149,14 @@ export const useItem = () => {
       .required("Purchase rate is required")
       .test("is-valid-number", "Invalid purchase rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return threeDecimalRegex.test(value); // Validate against the regex
+        return rateRegex.test(value); // Validate against the regex
       }),
     salesRate: yup
       .string()
       .required("Sales rate is required")
       .test("is-valid-number", "Invalid sales rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return threeDecimalRegex.test(value); // Validate against the regex
+        return rateRegex.test(value); // Validate against the regex
       }),
     openingQuantity: yup
       .string()
@@ -170,7 +170,7 @@ export const useItem = () => {
       .required("Opening rate is required")
       .test("is-valid-number", "Invalid opening rate", (value) => {
         if (!value) return false; // Ensure the field is not empty
-        return threeDecimalRegex.test(value); // Validate against the regex
+        return rateRegex.test(value); // Validate against the regex
       }),
     total: yup.string().default(""),
   });
@@ -264,10 +264,10 @@ export const useItem = () => {
       cgst: toUpToThreeDecimalString(item.cgst),
       sgst: toUpToThreeDecimalString(item.sgst),
       igst: toUpToThreeDecimalString(item.igst),
-      pur_rate: toUpToThreeDecimalString(item.purchaseRate),
-      sales_rate: toUpToThreeDecimalString(item.salesRate),
+      pur_rate: toRateString(item.purchaseRate),
+      sales_rate: toRateString(item.salesRate),
       open_qnty: toUpToThreeDecimalString(item.openingQuantity),
-      item_rate: toUpToThreeDecimalString(item.openingRate),
+      item_rate: toRateString(item.openingRate),
       item_mod: item.modelId || "",
       item_size: item.sizeId || "",
       item_color: item.colourId || "",
@@ -314,10 +314,10 @@ export const useItem = () => {
       cgst: toUpToThreeDecimalString(item.cgst),
       sgst: toUpToThreeDecimalString(item.sgst),
       igst: toUpToThreeDecimalString(item.igst),
-      pur_rate: toUpToThreeDecimalString(item.purchaseRate),
-      sales_rate: toUpToThreeDecimalString(item.salesRate),
+      pur_rate: toRateString(item.purchaseRate),
+      sales_rate: toRateString(item.salesRate),
       open_qnty: toUpToThreeDecimalString(item.openingQuantity),
-      item_rate: toUpToThreeDecimalString(item.openingRate),
+      item_rate: toRateString(item.openingRate),
       item_mod: item.modelId || "",
       item_size: item.sizeId || "",
       item_color: item.colourId || "",
@@ -511,10 +511,10 @@ export const useItem = () => {
         cgst: toUpToThreeDecimalString(editData.CGST),
         sgst: toUpToThreeDecimalString(editData.SGST),
         igst: toUpToThreeDecimalString(editData.IGST),
-        purchaseRate: toUpToThreeDecimalString(editData.Pur_Rate),
-        salesRate: toUpToThreeDecimalString(editData.Sale_Rate),
+        purchaseRate: toRateString(editData.Pur_Rate),
+        salesRate: toRateString(editData.Sale_Rate),
         openingQuantity: toUpToThreeDecimalString(editData.Open_Qnty),
-        openingRate: toUpToThreeDecimalString(editData.Item_Rate),
+        openingRate: toRateString(editData.Item_Rate),
       });
       setCategoryInput(editData.Cat_Name || "");
     } else {

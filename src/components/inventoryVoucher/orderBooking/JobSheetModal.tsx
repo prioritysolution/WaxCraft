@@ -501,6 +501,19 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                     else acc.push({ category, qty: stone.qty });
                     return acc;
                   }, []);
+                  // Sets made in each colour (white excluded): a colour's stones in a
+                  // size row divided by that size's 1-set qty (e.g. 408 / 34 = 12 sets).
+                  const colorSetQty = stoneRows.reduce<Record<string, number>>(
+                    (acc, row) => {
+                      if (!(row.setQty > 0)) return acc;
+                      Object.entries(row.colors).forEach(([color, qty]) => {
+                        if (!(qty > 0) || isWhiteColour(color)) return;
+                        acc[color] = Math.max(acc[color] || 0, qty / row.setQty);
+                      });
+                      return acc;
+                    },
+                    {},
+                  );
                   const designCode = design.Design_No || design.Design_Name || "—";
                   const designUnit = resolveDesignUnitLabel(
                     design,
@@ -728,6 +741,25 @@ const JobSheetModal: FC<JobSheetModalProps> = ({
                                 </tr>
                               </thead>
                               <tbody>
+                                {stoneRows.length ? (
+                                  <tr className="border-b border-black bg-neutral-100 font-semibold">
+                                    <td className="border-r border-black px-2 py-1.5 tabular-nums">
+                                      {formatQty(design.Order_Qnty, "—")}
+                                      {designUnit ? ` ${designUnit}` : ""}
+                                    </td>
+                                    <td className="border-r border-black px-2 py-1.5" />
+                                    {colorColumns.map((color) => (
+                                      <td
+                                        key={`set-qty-${color}`}
+                                        className="border-r border-black px-1.5 py-1.5 text-center tabular-nums last:border-r-0"
+                                      >
+                                        {colorSetQty[color]
+                                          ? formatQty(colorSetQty[color], "")
+                                          : ""}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ) : null}
                                 {(stoneRows.length
                                   ? stoneRows
                                   : Array.from({ length: 8 }).map(() => ({

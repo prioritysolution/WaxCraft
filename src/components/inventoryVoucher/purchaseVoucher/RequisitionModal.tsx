@@ -13,7 +13,7 @@ import {
   ItemRequisitionRow,
   RequisitionModalProps,
 } from "@/types/inventoryVoucher/PurchaseVoucherTypes";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
   Checkbox,
@@ -244,7 +244,7 @@ const RequisitionModal: FC<RequisitionModalProps> = ({
                                   {formatTwoDecimals(pickQuantity(row), "")}
                                 </td>
                                 <td className={nestedCellClassName}>
-                                  {formatTwoDecimals(pickRate(row), "")}
+                                  {formatRate(pickRate(row), "")}
                                 </td>
                               </tr>
                             ))}

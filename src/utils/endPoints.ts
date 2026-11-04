@@ -159,6 +159,24 @@ export const endPoints = {
   addParty: `${createApi}Org/Master/AddParty`,
   updateParty: `${createApi}Org/Master/UpdateParty`,
   deleteParty: `${createApi}Org/Master/DeleteParty`,
+  getPartyMakingRate: (
+    orgId: number | string,
+    page: number,
+    keyword: string,
+    perPage?: number
+  ) =>
+    appendPerPage(
+      `${createApi}Org/Master/GetPartyMakingRate?org_id=${orgId}&page=${page}&keyword=${keyword}`,
+      perPage
+    ),
+  getPartyMakingRateByParty: (
+    orgId: number | string,
+    partyId: string | number
+  ) =>
+    `${createApi}Org/Master/GetPartyMakingRateByParty?org_id=${orgId}&party_id=${partyId}`,
+  addPartyMakingRate: `${createApi}Org/Master/AddPartyMakingRate`,
+  updatePartyMakingRate: `${createApi}Org/Master/UpdatePartyMakingRate`,
+  deletePartyMakingRate: `${createApi}Org/Master/DeletePartyMakingRate`,
   getDesign: (
     orgId: number | string,
     page: number,

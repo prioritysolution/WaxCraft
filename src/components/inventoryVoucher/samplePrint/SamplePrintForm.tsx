@@ -19,10 +19,7 @@ import {
 } from "@/lib/uiStyles";
 import { SamplePrintFormProps } from "@/types/inventoryVoucher/SamplePrintTypes";
 import { cn } from "@/lib/utils";
-import {
-  formatTwoDecimals,
-  formatUpToDecimals,
-} from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
   Image,
@@ -277,7 +274,7 @@ const SamplePrintForm: FC<SamplePrintFormProps> = ({
                   </TableCell>
                   <TableCell>{data.designNo || "—"}</TableCell>
                   <TableCell>{formatTwoDecimals(data.wt)}</TableCell>
-                  <TableCell>{formatTwoDecimals(data.wtRate)}</TableCell>
+                  <TableCell>{formatRate(data.wtRate)}</TableCell>
                   <TableCell>{formatTwoDecimals(data.polish)}</TableCell>
                   <TableCell>
                     {String(data.ghat ?? "").trim()
@@ -363,10 +360,10 @@ const SamplePrintForm: FC<SamplePrintFormProps> = ({
                                         {item.itemQuantity || "—"}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatUpToDecimals(item.itemRate)}
+                                        {formatRate(item.itemRate)}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatUpToDecimals(item.makingRate)}
+                                        {formatRate(item.makingRate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(item.itemTotal)}

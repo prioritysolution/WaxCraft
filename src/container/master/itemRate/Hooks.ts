@@ -7,7 +7,7 @@ import getCookieData from "@/utils/getCookieData";
 import { ItemRateFormData } from "@/types/master/ItemRateTypes";
 import { ApiResponse } from "@/types/ApiTypes";
 import { addItemRateAPI, getItemRateAPI } from "./ItemRateApis";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { toRateString } from "@/utils/formatDecimal";
 
 export const useItemRate = () => {
   const [addItemRateLoading, setAddItemRateLoading] = useState(false);
@@ -63,7 +63,7 @@ export const useItemRate = () => {
     const data = {
       org_id: orgId,
       item_id: item.itemId,
-      item_rate: toTwoDecimalString(item.currentRate),
+      item_rate: toRateString(item.currentRate),
     };
 
     try {
@@ -90,7 +90,7 @@ export const useItemRate = () => {
       const res: ApiResponse = await getItemRateAPI(orgId, itemId);
 
       if (res.status === 200) {
-        form.setValue("previousRate", toTwoDecimalString(res.data.details));
+        form.setValue("previousRate", toRateString(res.data.details));
       } else {
         form.setValue("previousRate", "");
       }

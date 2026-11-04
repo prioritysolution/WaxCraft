@@ -24,7 +24,12 @@ import {
 } from "@/lib/orderStatusChip";
 import { cn } from "@/lib/utils";
 import { getDesignGhat } from "@/utils/designGhat";
-import { formatCompactNumber, toTwoDecimalString } from "@/utils/formatDecimal";
+import { getStoneColourSets } from "@/utils/groupStoneItems";
+import {
+  formatCompactNumber,
+  formatRate,
+  toTwoDecimalString,
+} from "@/utils/formatDecimal";
 import {
   Button,
   Chip,
@@ -167,6 +172,18 @@ const DesignCard: FC<{
   design: OrderProcessDesignRow;
 }> = ({ design }) => {
   const items = design.ItemRow ?? [];
+  const orderQty = Number(design.Order_Qnty) || 0;
+  const colourSetOf = getStoneColourSets(
+    items,
+    (item) => item.Item_Name,
+    (item) => {
+      const qty = Number(item.Item_Qnty) || 0;
+      return orderQty > 0 ? qty / orderQty : qty;
+    },
+    orderQty,
+  );
+  const formatSetQty = (value: number) =>
+    formatCompactNumber(Number(value.toFixed(2)));
   const ghatInfo = getDesignGhat(design);
   const metrics = [
     { label: "Order Qty", value: design.Order_Qnty },
@@ -232,11 +249,17 @@ const DesignCard: FC<{
             Item details
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse text-center">
+            <table className="w-full min-w-[640px] border-collapse text-center">
               <thead>
                 <tr className="bg-[#F7F5F3]/50">
                   <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     Item Name
+                  </th>
+                  <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Colour Qty
+                  </th>
+                  <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Per Set
                   </th>
                   <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     Quantity
@@ -245,33 +268,36 @@ const DesignCard: FC<{
                     Item Rate
                   </th>
                   <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    Making Rate
-                  </th>
-                  <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     Total
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, index) => (
+                {items.map((item, index) => {
+                  const { colourQty, perSet } = colourSetOf(item);
+                  return (
                   <tr key={`${design.Design_Id}-${item.Item_Id}-${index}`}>
                     <td className="px-3 py-2.5 text-left text-sm text-foreground">
                       {item.Item_Name || "—"}
                     </td>
                     <td className="px-3 py-2.5 text-center text-sm text-foreground">
+                      {colourQty != null ? formatSetQty(colourQty) : ""}
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-sm text-foreground">
+                      {formatSetQty(perSet)}
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-sm text-foreground">
                       {formatCompactNumber(item.Item_Qnty)}
                     </td>
                     <td className="px-3 py-2.5 text-center text-sm text-foreground">
-                      {formatCompactNumber(item.Item_Rate)}
-                    </td>
-                    <td className="px-3 py-2.5 text-center text-sm text-foreground">
-                      {formatCompactNumber(item.Making_Rate)}
+                      {formatRate(item.Item_Rate)}
                     </td>
                     <td className="px-3 py-2.5 text-center text-sm text-foreground">
                       {formatCompactNumber(item.Item_Tot)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

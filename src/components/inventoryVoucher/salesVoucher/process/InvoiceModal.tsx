@@ -17,7 +17,10 @@ import {
   resolveDesignUnitName,
 } from "@/utils/designUnits";
 import getCookieData from "@/utils/getCookieData";
-import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
+import {
+  getStoneColourSets,
+  groupStoneItemsBySize,
+} from "@/utils/groupStoneItems";
 import {
   Button,
   Image,
@@ -59,8 +62,9 @@ function formatAmount(value: string | number | null | undefined) {
 }
 
 function formatQty(value: string | number | null | undefined) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return String(value ?? "");
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return String(value ?? "");
+  const num = Number(raw.toFixed(6));
   return Number.isInteger(num) ? String(num) : num.toFixed(2);
 }
 
@@ -363,6 +367,17 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     );
     const partyItem = isPartyItemFlag(ownFlag);
 
+    const perSetOf = (item: { Item_Qnty?: unknown }) => {
+      const qty = Number(item.Item_Qnty) || 0;
+      return (orderQty > 0 ? qty / safeOrderQty : qty) / safeOrderQty;
+    };
+    const colourSetOf = getStoneColourSets(
+      design.ItemRow || [],
+      (item) => item.Item_Name,
+      perSetOf,
+      orderQty,
+    );
+
     return groupStoneItemsBySize(
       design.ItemRow || [],
       (item) => item.Item_Name,
@@ -370,7 +385,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
       const itemId = String(item.Item_Id ?? "");
       const itemQnty = Number(item.Item_Qnty) || 0;
       const consumed = orderQty > 0 ? itemQnty / safeOrderQty : itemQnty;
-      const perSet = consumed / safeOrderQty;
+      const { colourQty, perSet } = colourSetOf(item);
       const fetchedRate = Number(fetchedItemRates[itemId]);
       const rawRate = item.Item_Rate;
       const hasExplicitRate =
@@ -398,6 +413,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
         itemId,
         category: resolveItemCategory(item),
         itemName: item.Item_Name || "—",
+        colourQty,
         perSet,
         consumed,
         rate,
@@ -507,15 +523,15 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
 
   const InvoiceSummary = () => (
     <div className="px-5 pb-3.5 pt-3">
-      <div className="overflow-hidden border border-black/[0.08]">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-black/[0.06] bg-[#F7F5F3] px-3 py-2 text-xs font-semibold">
+      <div className="overflow-hidden border border-black">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-black px-3 py-2 text-xs font-semibold">
           <span className="truncate uppercase tracking-[0.12em]">
             P.Code - {summaryPartyCode || "—"}
           </span>
-          <span className="truncate text-center text-sm uppercase tracking-[0.08em] text-foreground">
+          <span className="truncate text-center text-sm uppercase tracking-[0.08em] text-black">
             {orgName}
           </span>
-          <span className="text-right text-muted-foreground">
+          <span className="text-right text-black">
             {invoice?.Sale_Date
               ? `Date - ${format(invoice.Sale_Date, "dd-MM-yyyy")}`
               : ""}
@@ -523,88 +539,88 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
         </div>
         <table className="w-full border-collapse text-xs">
           <thead>
-            <tr className="bg-[#F7F5F3]/70 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              <th className="px-2 py-2 text-left">SL</th>
-              <th className="px-2 py-2 text-left">D.No</th>
-              <th className="px-2 py-2 text-right">Qnt</th>
-              <th className="px-2 py-2 text-right">W.T</th>
+            <tr className="text-[10px] font-medium uppercase tracking-[0.12em] text-black">
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-left">SL</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-left">D.No</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Qnt</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">W.T</th>
               {summaryCategories.map((category) => (
-                <th key={category} className="px-2 py-2 text-right">
+                <th key={category} className="border-l border-black first:border-l-0 px-2 py-2 text-right">
                   {category}
                 </th>
               ))}
               {summaryHasGhat ? (
-                <th className="px-2 py-2 text-right">Ghat</th>
+                <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Ghat</th>
               ) : null}
-              <th className="px-2 py-2 text-right">Polish</th>
-              <th className="px-2 py-2 text-right">Stone</th>
-              <th className="px-2 py-2 text-right">Amount</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Polish</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Stone</th>
+              <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
             {summaryRows.map((row, index) => (
-              <tr key={row.key} className="border-t border-black/[0.05]">
-                <td className="px-2 py-1.5 text-left">{index + 1}</td>
-                <td className="px-2 py-1.5 text-left font-medium">
+              <tr key={row.key} className="border-t border-black">
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-left">{index + 1}</td>
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-left font-medium">
                   {row.designNo}
                 </td>
-                <td className="px-2 py-1.5 text-right">{row.qty}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right">{row.qty}</td>
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right tabular-nums">
                   {formatAmount(row.wt)}
                 </td>
                 {summaryCategories.map((category) => (
                   <td
                     key={category}
-                    className="px-2 py-1.5 text-right tabular-nums"
+                    className="border-l border-black first:border-l-0 px-2 py-1.5 text-right tabular-nums"
                   >
                     {formatQty(row.qtyByCategory[category] || 0)}
                   </td>
                 ))}
                 {summaryHasGhat ? (
-                  <td className="px-2 py-1.5 text-right tabular-nums">
+                  <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right tabular-nums">
                     {row.hasGhat ? formatAmount(row.ghat) : "—"}
                   </td>
                 ) : null}
-                <td className="px-2 py-1.5 text-right tabular-nums">
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right tabular-nums">
                   {formatAmount(row.polish)}
                 </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right tabular-nums">
                   {formatAmount(row.stone)}
                 </td>
-                <td className="px-2 py-1.5 text-right font-medium tabular-nums">
+                <td className="border-l border-black first:border-l-0 px-2 py-1.5 text-right font-medium tabular-nums">
                   {formatAmount(row.amount)}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-black/[0.08] bg-[#F7F5F3]/80 font-semibold">
+            <tr className="border-t border-black bg-white font-semibold">
               <td
                 colSpan={3}
-                className="px-2 py-2 text-left uppercase tracking-[0.12em]"
+                className="border-l border-black first:border-l-0 px-2 py-2 text-left uppercase tracking-[0.12em]"
               >
                 Total
               </td>
-              <td className="px-2 py-2 text-right tabular-nums">
+              <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                 {formatAmount(summaryTotals.wt)}
               </td>
               {summaryCategories.map((category) => (
-                <td key={category} className="px-2 py-2 text-right tabular-nums">
+                <td key={category} className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                   {formatQty(summaryCategoryTotals[category] || 0)}
                 </td>
               ))}
               {summaryHasGhat ? (
-                <td className="px-2 py-2 text-right tabular-nums">
+                <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                   {formatAmount(summaryTotals.ghat)}
                 </td>
               ) : null}
-              <td className="px-2 py-2 text-right tabular-nums">
+              <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                 {formatAmount(summaryTotals.polish)}
               </td>
-              <td className="px-2 py-2 text-right tabular-nums">
+              <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                 {formatAmount(summaryTotals.stone)}
               </td>
-              <td className="px-2 py-2 text-right text-sm tabular-nums">
+              <td className="border-l border-black first:border-l-0 px-2 py-2 text-right text-sm tabular-nums">
                 {formatAmount(summaryTotals.amount)}
               </td>
             </tr>
@@ -617,13 +633,13 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
   const OrgHeader = ({ compact = false }: { compact?: boolean }) => (
     <div
       className={cn(
-        "flex items-center gap-3 border-b border-black/[0.08] px-5",
+        "mx-5 flex items-center gap-3 border-b border-black",
         compact ? "py-2.5" : "py-3.5",
       )}
     >
       <div
         className={cn(
-          "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F7F5F3]",
+          "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white",
           compact ? "h-12 w-12" : "h-[72px] w-[72px]",
         )}
       >
@@ -636,23 +652,23 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "truncate font-semibold uppercase tracking-tight text-foreground",
+            "truncate font-semibold uppercase tracking-tight text-black",
             compact ? "text-base" : "text-xl",
           )}
         >
           {orgName}
         </p>
-        <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">
+        <p className="mt-0.5 text-xs uppercase tracking-wide text-black">
           {orgAddress}
         </p>
         {isTaxInvoice ? (
-          <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+          <p className="mt-1 text-[11px] font-medium text-black">
             GSTIN : {orgGstNo}
           </p>
         ) : null}
       </div>
       <div className="shrink-0 text-right">
-        <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+        <span className="inline-flex rounded-full border border-black bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-black">
           {isTaxInvoice ? "Tax Invoice" : "Invoice"}
         </span>
       </div>
@@ -660,45 +676,45 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
   );
 
   const PartyMeta = () => (
-    <div className="grid grid-cols-3 gap-px border-b border-black/[0.08] bg-black/[0.06]">
-      <div className="bg-white px-5 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+    <div className="mx-5 grid grid-cols-3 border-b border-black">
+      <div className="py-3 pr-5">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
           Bill To
         </p>
-        <p className="mt-1 text-sm font-semibold text-foreground">
+        <p className="mt-1 text-sm font-semibold text-black">
           {invoice?.Party_Name}
         </p>
-        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+        <p className="mt-0.5 text-xs leading-5 text-black">
           {invoice?.Party_Add}
         </p>
         {isTaxInvoice ? (
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-black">
             GSTIN : {invoice?.Party_GST}
           </p>
         ) : null}
       </div>
-      <div className="bg-white px-5 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="px-5 py-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
           Place Of Supply
         </p>
-        <p className="mt-1 text-sm font-semibold text-foreground">
+        <p className="mt-1 text-sm font-semibold text-black">
           {invoice?.Party_Name}
         </p>
-        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+        <p className="mt-0.5 text-xs leading-5 text-black">
           {invoice?.Party_Add}
         </p>
       </div>
-      <div className="bg-white px-5 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="py-3 pl-5">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-black">
           Invoice Details
         </p>
         <div className="mt-1.5 space-y-1 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Invoice</span>
+            <span className="text-black">Invoice</span>
             <span className="font-semibold">{invoice?.Sale_No}</span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">Date</span>
+            <span className="text-black">Date</span>
             <span className="font-semibold">
               {invoice?.Sale_Date
                 ? format(invoice.Sale_Date, "dd-MM-yyyy")
@@ -711,7 +727,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
   );
 
   const PageFooter = ({ pageNo }: { pageNo: number }) => (
-    <div className="flex items-center justify-between border-t border-black/[0.08] px-5 py-2 text-[11px] text-muted-foreground">
+    <div className="mx-5 flex items-center justify-between border-t border-black py-2 text-[11px] text-black">
       <span>This is a computer generated invoice</span>
       <span>
         Page {pageNo} of {totalPages}
@@ -730,7 +746,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
   }) => (
     <div
       className={cn(
-        "invoice-page relative mx-auto mb-4 flex w-[210mm] flex-col overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] print:mb-0 print:rounded-none print:shadow-none",
+        "invoice-page relative mx-auto mb-4 flex w-[210mm] flex-col overflow-hidden rounded-2xl bg-white text-black shadow-[0_8px_24px_rgba(15,23,42,0.06)] print:mb-0 print:rounded-none print:shadow-none",
         overflow ? "min-h-[297mm]" : "h-[297mm]",
       )}
     >
@@ -758,12 +774,12 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
     return (
       <div
         className={cn(
-          "grid grid-cols-[148px_1fr] items-start gap-4 px-5 py-3",
-          withDivider && "border-t border-black/[0.06]",
+          "mx-5 grid grid-cols-[148px_1fr] items-start gap-4 py-3",
+          withDivider && "border-t border-black",
         )}
       >
         <div className="flex flex-col items-center self-start">
-          <div className="overflow-hidden border border-black/[0.08] bg-[#F7F5F3]">
+          <div className="overflow-hidden bg-white">
             <Image
               src={design.Image}
               alt="Design"
@@ -774,8 +790,8 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
               className="h-[140px] w-[140px] object-contain"
             />
           </div>
-          <div className="mt-2 grid w-full grid-cols-2 overflow-hidden border border-black/[0.08] text-center text-xs">
-            <p className="border-r border-black/[0.08] bg-[#F7F5F3] px-2 py-2 font-medium">
+          <div className="mt-2 grid w-full grid-cols-2 overflow-hidden border border-black text-center text-xs">
+            <p className="border-r border-black bg-white px-2 py-2 font-medium">
               {formatAmount(design.Order_Qnty)} {unitLabel}
             </p>
             <p className="px-2 py-2 font-medium">
@@ -783,9 +799,9 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             </p>
           </div>
           {ghatInfo ? (
-            <div className="mt-2 grid w-full grid-cols-2 overflow-hidden border border-black/[0.08] text-center text-xs">
-              <div className="border-r border-black/[0.08] bg-[#F7F5F3] px-2 py-1.5">
-                <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mt-2 grid w-full grid-cols-2 overflow-hidden border border-black text-center text-xs">
+              <div className="border-r border-black bg-white px-2 py-1.5">
+                <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-black">
                   Ghat
                 </p>
                 <p className="mt-0.5 font-medium tabular-nums">
@@ -793,7 +809,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                 </p>
               </div>
               <div className="px-2 py-1.5">
-                <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-black">
                   Total Ghat
                 </p>
                 <p className="mt-0.5 font-medium tabular-nums">
@@ -803,19 +819,20 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
             </div>
           ) : null}
         </div>
-        <div className="min-w-0 self-start overflow-hidden border border-black/[0.08]">
-          <div className="border-b border-black/[0.06] bg-[#F7F5F3] px-3 py-2 text-center text-xs font-semibold">
+        <div className="min-w-0 self-start overflow-hidden border border-black">
+          <div className="border-b border-black bg-white px-3 py-2 text-center text-xs font-semibold">
             {design.Design_Name} - {design.Design_No}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
+          <div>
+            <table className="w-full border-collapse text-[13px]">
               <thead>
-                <tr className="bg-[#F7F5F3]/70 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  <th className="px-3 py-2 text-left">Item</th>
-                  <th className="px-3 py-2 text-right">Per {unitLabel}</th>
-                  <th className="px-3 py-2 text-right">Consumed</th>
-                  <th className="px-3 py-2 text-right">Rate</th>
-                  <th className="px-3 py-2 text-right">Total</th>
+                <tr className="text-[10px] font-medium uppercase tracking-[0.12em] text-black">
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-left">Item</th>
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Colour Qty</th>
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Per {unitLabel}</th>
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Consumed</th>
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Rate</th>
+                  <th className="border-l border-black first:border-l-0 px-2 py-2 text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -823,19 +840,24 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                   markRows.map((row, itemIndex) => (
                     <tr
                       key={`mix-${designInvoice.Id}-${designIndex}-${row.itemId}-${itemIndex}`}
-                      className="border-t border-black/[0.05]"
+                      className="border-t border-black"
                     >
-                      <td className="px-3 py-2 text-left">{row.itemName}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {formatAmount(row.perSet)}
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-left">{row.itemName}</td>
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
+                        {row.colourQty != null
+                          ? formatQty(row.colourQty)
+                          : ""}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
+                        {formatQty(row.perSet)}
+                      </td>
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                         {formatAmount(row.consumed)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-right tabular-nums">
                         {formatAmount(row.rate)}
                       </td>
-                      <td className="px-3 py-2 text-right font-medium tabular-nums">
+                      <td className="border-l border-black first:border-l-0 px-2 py-2 text-right font-medium tabular-nums">
                         {formatAmount(row.total)}
                       </td>
                     </tr>
@@ -843,8 +865,8 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
-                      className="px-3 py-6 text-center text-sm text-muted-foreground"
+                      colSpan={6}
+                      className="border-l border-black first:border-l-0 px-2 py-6 text-center text-sm text-black"
                     >
                       No items found.
                     </td>
@@ -852,14 +874,14 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                 )}
               </tbody>
               <tfoot>
-                <tr className="border-t border-black/[0.08] bg-[#F7F5F3]/80">
+                <tr className="border-t border-black bg-white">
                   <td
-                    colSpan={4}
-                    className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.12em]"
+                    colSpan={5}
+                    className="border-l border-black first:border-l-0 px-2 py-2.5 text-right text-xs font-semibold uppercase tracking-[0.12em]"
                   >
                     Grand Total
                   </td>
-                  <td className="px-3 py-2.5 text-right text-sm font-semibold tabular-nums">
+                  <td className="border-l border-black first:border-l-0 px-2 py-2.5 text-right text-sm font-semibold tabular-nums">
                     {formatAmount(grandTotal)}
                   </td>
                 </tr>

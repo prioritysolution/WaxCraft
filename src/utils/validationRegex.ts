@@ -9,3 +9,6 @@ export const uptoThreeDigitDecimalRegex = decimalRegex;
 
 /** Up to 3 decimal places (e.g. 15, 0.5, 0.095). */
 export const threeDecimalRegex = /^\d+(\.\d{1,3})?$/;
+
+/** Rates are accepted exactly as entered — any number of decimal places. */
+export const rateRegex = /^\d+(\.\d+)?$/;

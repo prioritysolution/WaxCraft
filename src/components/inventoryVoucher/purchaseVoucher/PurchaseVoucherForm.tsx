@@ -37,7 +37,7 @@ import {
 } from "@heroui/react";
 import { TableDeleteButton } from "@/components/ui/table-edit-button";
 import { Input } from "@/components/ui/input";
-import { sanitizeDecimalInput } from "@/utils/formatDecimal";
+import { sanitizeRateInput } from "@/utils/formatDecimal";
 import { FC, useState } from "react";
 import { useSelector } from "react-redux";
 import RequisitionModal from "./RequisitionModal";
@@ -150,7 +150,7 @@ const PurchaseVoucherForm: FC<PurchaseVoucherFormProps> = ({
             aria-label={`Edit rate for ${data?.itemName || "item"}`}
             className="mx-auto h-9 w-[96px] rounded-lg border border-black/15 bg-[#F7F5F3] px-2 text-center text-sm tabular-nums shadow-none focus-visible:border-black/25 focus-visible:outline-none focus-visible:ring-0"
             onChange={(e) => {
-              const next = sanitizeDecimalInput(e.target.value);
+              const next = sanitizeRateInput(e.target.value);
               handleUpdatePurchaseTableRate(index, next);
             }}
           />

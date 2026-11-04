@@ -21,7 +21,7 @@ import { OrderBookingTableData } from "@/types/inventoryVoucher/OrderBookingType
 import { OrderProcessTableProps } from "@/types/inventoryVoucher/OrderProcessTypes";
 import { getDesignGhat } from "@/utils/designGhat";
 import { getOrderItemType } from "@/utils/orderItemType";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
   Chip,
@@ -339,7 +339,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                         {formatTwoDecimals(design.Wt)}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Wt_Rate)}
+                                        {formatRate(design.Wt_Rate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Tot_Wt)}
@@ -388,9 +388,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                           Item Rate
                                         </th>
                                         <th className={nestedHeadClassName}>
-                                          Making Rate
-                                        </th>
-                                        <th className={nestedHeadClassName}>
                                           Item Total
                                         </th>
                                       </tr>
@@ -416,13 +413,8 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
-                                              {formatTwoDecimals(
+                                              {formatRate(
                                                 child.Item_Rate,
-                                              )}
-                                            </td>
-                                            <td className={nestedCellClassName}>
-                                              {formatTwoDecimals(
-                                                child.Making_Rate,
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
@@ -435,7 +427,7 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                       ) : (
                                         <tr>
                                           <td
-                                            colSpan={5}
+                                            colSpan={4}
                                             className="px-4 py-6 text-center text-sm text-muted-foreground"
                                           >
                                             No items found.

@@ -22,10 +22,7 @@ import {
 } from "@/types/inventoryVoucher/OrderBookingTypes";
 import { getDesignGhat } from "@/utils/designGhat";
 import { getOrderItemType } from "@/utils/orderItemType";
-import {
-  formatTwoDecimals,
-  formatUpToDecimals,
-} from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
   Chip,
@@ -357,7 +354,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                         {formatTwoDecimals(design.Wt)}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Wt_Rate)}
+                                        {formatRate(design.Wt_Rate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Tot_Wt)}
@@ -406,9 +403,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                           Item Rate
                                         </th>
                                         <th className={nestedHeadClassName}>
-                                          Making Rate
-                                        </th>
-                                        <th className={nestedHeadClassName}>
                                           Item Total
                                         </th>
                                       </tr>
@@ -434,13 +428,8 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
-                                              {formatUpToDecimals(
+                                              {formatRate(
                                                 child.Item_Rate,
-                                              )}
-                                            </td>
-                                            <td className={nestedCellClassName}>
-                                              {formatUpToDecimals(
-                                                child.Making_Rate,
                                               )}
                                             </td>
                                             <td className={nestedCellClassName}>
@@ -453,7 +442,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                       ) : (
                                         <tr>
                                           <td
-                                            colSpan={5}
+                                            colSpan={4}
                                             className="px-4 py-6 text-center text-sm text-muted-foreground"
                                           >
                                             No items found.

@@ -17,10 +17,7 @@ import { addGstBillAPI, deleteGstBillAPI, getGstBillAPI, getGstBillPrintAPI } fr
 import { getGstBillData } from "./GstBillReducer";
 import { getInvoicePrintDataAPI } from "../salesVoucher/SalesVoucherApis";
 
-import {
-  uptoThreeDigitDecimalRegex,
-  decimalRegex,
-} from "@/utils/validationRegex";
+import { decimalRegex, rateRegex } from "@/utils/validationRegex";
 import { format } from "date-fns";
 
 interface OrderPartyData {
@@ -113,7 +110,7 @@ export const useGstBill = () => {
       .required("Item rate is required")
       .test("is-valid-number", "Invalid rate", (value) => {
         if (!value) return false;
-        return uptoThreeDigitDecimalRegex.test(value);
+        return rateRegex.test(value);
       }),
     itemHsn: yup.string().required("Item HSN is required"),
     discount: yup.string().default(""),

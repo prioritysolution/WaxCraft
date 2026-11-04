@@ -21,8 +21,9 @@ import {
   OrderBookingFormData,
 } from "@/types/inventoryVoucher/OrderBookingTypes";
 import {
-  formatUpToDecimals,
   sanitizeDecimalInput,
+  sanitizeRateInput,
+  toRateString,
 } from "@/utils/formatDecimal";
 import {
   Image,
@@ -36,7 +37,7 @@ import {
 import { FC, useMemo } from "react";
 import { Path } from "react-hook-form";
 
-const formatOrderItemRate = (rate: string) => formatUpToDecimals(rate, 4, "");
+const formatOrderItemRate = (rate: string) => toRateString(rate);
 
 const DesignModal: FC<DesignModalProps> = ({
   showDesignDialog,
@@ -226,10 +227,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               disabled={isPartyItem}
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(
-                                  input.value,
-                                  4,
-                                );
+                                const next = sanitizeRateInput(input.value);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.itemRate` as Path<OrderBookingFormData>,
@@ -252,10 +250,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               className="min-w-[70px]"
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(
-                                  input.value,
-                                  4,
-                                );
+                                const next = sanitizeRateInput(input.value);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.makingRate` as Path<OrderBookingFormData>,

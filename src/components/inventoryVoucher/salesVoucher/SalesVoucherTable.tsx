@@ -13,7 +13,7 @@ import {
   SalesVoucherTableData,
   SalesVoucherTableProps,
 } from "@/types/inventoryVoucher/SalesVoucherTypes";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import { groupStoneItemsBySize } from "@/utils/groupStoneItems";
 import {
   Button,
@@ -312,7 +312,7 @@ const SalesVoucherTable: FC<SalesVoucherTableProps> = ({
                                             {formatTwoDecimals(child.Item_Qnty)}
                                           </td>
                                           <td className={nestedCellClassName}>
-                                            {formatTwoDecimals(child.Item_Rate)}
+                                            {formatRate(child.Item_Rate)}
                                           </td>
                                           <td className={nestedCellClassName}>
                                             {formatTwoDecimals(child.Item_Tot)}

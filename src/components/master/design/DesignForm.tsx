@@ -27,7 +27,7 @@ import { ItemCategoryTableData } from "@/types/master/ItemCategoryTypes";
 import { DesignFormProps } from "@/types/master/DesignTypes";
 import { ItemTableData } from "@/types/master/ItemTypes";
 import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate } from "@/utils/formatDecimal";
 import {
   Image,
   Modal,
@@ -444,7 +444,7 @@ const DesignForm: FC<DesignFormProps> = ({
                               {String(data.quantity ?? "")}
                             </td>
                             <td className="px-3 py-3.5 text-center text-sm sm:px-4">
-                              {formatTwoDecimals(data.makingRate, "")}
+                              {formatRate(data.makingRate, "")}
                             </td>
                             <td className="px-3 py-3.5 text-center sm:px-4">
                               <div className="inline-flex justify-center">

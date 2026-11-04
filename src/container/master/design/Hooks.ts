@@ -22,8 +22,8 @@ import {
 } from "@/utils/designItemRates";
 import { ItemTableData } from "@/types/master/ItemTypes";
 import { ItemUnitTableData } from "@/types/master/ItemUnitTypes";
-import { decimalRegex } from "@/utils/validationRegex";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { decimalRegex, rateRegex } from "@/utils/validationRegex";
+import { toRateString, toTwoDecimalString } from "@/utils/formatDecimal";
 import {
   getMasterDeleteWarningMessage,
   isMasterDeleteDependencyResponse,
@@ -264,7 +264,7 @@ export const useDesign = () => {
       .required("WT rate is required")
       .test("is-valid-number", "Invalid WT rate", (value) => {
         if (!value) return false;
-        return decimalRegex.test(value);
+        return rateRegex.test(value);
       }),
     polish: yup.string().required("Polish is required"),
     ghat: yup
@@ -301,7 +301,7 @@ export const useDesign = () => {
       .required("Making rate is required")
       .test("is-valid-number", "Invalid making rate", (value) => {
         if (!value) return false;
-        return decimalRegex.test(value);
+        return rateRegex.test(value);
       }),
   });
 
@@ -336,7 +336,7 @@ export const useDesign = () => {
       itemName: itemData.find((item) => item.Id.toString() === values.itemId)
         ?.Item_Name,
       quantity: values.quantity,
-      makingRate: toTwoDecimalString(values.makingRate),
+      makingRate: toRateString(values.makingRate),
     };
 
     setDesignFormTableData([...designFormTableData, newDesignFormTableData]);
@@ -345,7 +345,7 @@ export const useDesign = () => {
       designName: values.designName,
       designNo: values.designNo,
       wt: toTwoDecimalString(values.wt),
-      wtRate: toTwoDecimalString(values.wtRate),
+      wtRate: toRateString(values.wtRate),
       polish: toTwoDecimalString(values.polish),
       ghat: toGhatString(values.ghat),
       designImage: values.designImage,
@@ -455,7 +455,7 @@ export const useDesign = () => {
     formData.append("design_name", toScalarString(form.getValues("designName")));
     formData.append("design_no", toScalarString(form.getValues("designNo")));
     formData.append("wt", toTwoDecimalString(form.getValues("wt")));
-    formData.append("wt_rate", toTwoDecimalString(form.getValues("wtRate")));
+    formData.append("wt_rate", toRateString(form.getValues("wtRate")));
     formData.append("polish", toTwoDecimalString(form.getValues("polish")));
     formData.append("ghat", toGhatString(form.getValues("ghat")));
     formData.append("design_unit", toScalarString(form.getValues("unitId")));
@@ -472,7 +472,7 @@ export const useDesign = () => {
     const designArray = designFormTableData.map((data) => ({
       item_id: String(data.itemId ?? ""),
       qnty: String(data.quantity ?? ""),
-      making_rate: toTwoDecimalString(data.makingRate),
+      making_rate: toRateString(data.makingRate),
     }));
     formData.append("design_array", JSON.stringify(designArray));
 
@@ -521,7 +521,7 @@ export const useDesign = () => {
     formData.append("design_name", toScalarString(form.getValues("designName")));
     formData.append("design_no", toScalarString(form.getValues("designNo")));
     formData.append("wt", toTwoDecimalString(form.getValues("wt")));
-    formData.append("wt_rate", toTwoDecimalString(form.getValues("wtRate")));
+    formData.append("wt_rate", toRateString(form.getValues("wtRate")));
     formData.append("polish", toTwoDecimalString(form.getValues("polish")));
     formData.append("ghat", toGhatString(form.getValues("ghat")));
     formData.append("design_unit", toScalarString(form.getValues("unitId")));
@@ -538,7 +538,7 @@ export const useDesign = () => {
     const designArray = designFormTableData.map((data) => ({
       item_id: String(data.itemId ?? ""),
       qnty: String(data.quantity ?? ""),
-      making_rate: toTwoDecimalString(data.makingRate),
+      making_rate: toRateString(data.makingRate),
     }));
     formData.append("design_array", JSON.stringify(designArray));
 
@@ -740,7 +740,7 @@ export const useDesign = () => {
         designName: toScalarString(editData.Design_Name),
         designNo: toScalarString(editData.Design_No),
         wt: toTwoDecimalString(editData.WT),
-        wtRate: toTwoDecimalString(editData.Wt_Rate ?? editRecord.wt_rate),
+        wtRate: toRateString(editData.Wt_Rate ?? editRecord.wt_rate),
         polish: toTwoDecimalString(editData.Polish),
         ghat: toGhatString(editData.Ghat ?? editRecord.ghat),
         designImage: editData.File_Name || editData.image || "",
@@ -757,7 +757,7 @@ export const useDesign = () => {
           itemId: String(child.Item_Id ?? ""),
           itemName: toScalarString(child.Item_Name || child.Item_Sh_Name),
           quantity: toScalarString(child.Qnty),
-          makingRate: toTwoDecimalString(child.Making_Rate),
+          makingRate: toRateString(child.Making_Rate),
         })),
       );
       setPhotoPreview(editData.image);

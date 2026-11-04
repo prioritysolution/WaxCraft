@@ -26,15 +26,13 @@ import {
 import { getSamplePrintData } from "./SamplePrintReducer";
 import getCookieData from "@/utils/getCookieData";
 import { format } from "date-fns";
-import { formatUpToDecimals, toTwoDecimalString } from "@/utils/formatDecimal";
+import { toRateString, toTwoDecimalString } from "@/utils/formatDecimal";
 import { computeSamplePrintHistoryTotal } from "@/utils/samplePrintTotal";
+import { getPartyMakingRateByPartyAPI } from "@/container/master/partyMakingRate/PartyMakingRateApis";
+import { parsePartyMakingRateDetails } from "@/utils/partyMakingRate";
 
-/** Design item rates can include up to 3 decimal places (e.g. 0.250). */
-const itemRateRegex = /^\d+(\.\d{1,4})?$/;
-
-/** Item rate / making rate: at least 2, at most 4 decimals. */
-const toRateString = (value: unknown): string =>
-  formatUpToDecimals(value, 4, "");
+/** Design item rates are accepted as entered — any number of decimal places. */
+const itemRateRegex = /^\d+(\.\d+)?$/;
 
 interface OrderPartyData {
   Id: number;
@@ -436,10 +434,10 @@ const mapChildItems = (
         ""
       )
     ),
-    itemRate: String(
+    itemRate: toRateString(
       pickValue(item.Item_Rate, item.item_rate, item.ItemRate, "")
     ),
-    makingRate: String(
+    makingRate: toRateString(
       pickValue(item.Making_Rate, item.making_rate, item.MakingRate, "")
     ),
     itemTotal: String(
@@ -900,7 +898,7 @@ const mapSamplePrintDetailsToPrintData = (
           const rowWt = toTwoDecimalString(
             pickValue(row.Wt, row.WT, row.wt, "")
           );
-          const rowWtRate = toTwoDecimalString(
+          const rowWtRate = toRateString(
             pickValue(row.Wt_Rate, row.wt_rate, "")
           );
           const rowPolish = toTwoDecimalString(
@@ -958,7 +956,7 @@ const mapSamplePrintDetailsToPrintData = (
   const wt = toTwoDecimalString(
     pickValue(details.Wt, details.WT, designRow.Wt, designRow.WT, fallbackRow?.Wt, "")
   );
-  const wtRate = toTwoDecimalString(
+  const wtRate = toRateString(
     pickValue(
       details.Wt_Rate,
       designRow.Wt_Rate,
@@ -1478,7 +1476,7 @@ export const useSamplePrint = () => {
         designNo,
         wt: toTwoDecimalString(form.getValues("wt")) || form.getValues("wt") || "",
         wtRate:
-          toTwoDecimalString(form.getValues("wtRate")) ||
+          toRateString(form.getValues("wtRate")) ||
           form.getValues("wtRate") ||
           "",
         polish:
@@ -1519,9 +1517,32 @@ export const useSamplePrint = () => {
     );
   };
 
+  const fetchPartyMakingRate = async (
+    orgIdValue: number,
+    partyIdValue: string,
+  ): Promise<string> => {
+    if (!partyIdValue) return "";
+    try {
+      const res: ApiResponse = await getPartyMakingRateByPartyAPI(
+        orgIdValue,
+        partyIdValue,
+      );
+      if (res.status === 200 || res.status === 202) {
+        return parsePartyMakingRateDetails(res.data?.details);
+      }
+    } catch {
+      // Keep empty making rate if lookup fails.
+    }
+    return "";
+  };
+
   const getDesignDetailsApiCall = async (orgId: number, designId: string) => {
     try {
-      const res: ApiResponse = await getDesignDetailsAPI(orgId, designId);
+      const selectedPartyId = String(form.getValues("partyId") ?? "").trim();
+      const [res, partyMakingRate] = await Promise.all([
+        getDesignDetailsAPI(orgId, designId),
+        fetchPartyMakingRate(orgId, selectedPartyId),
+      ]);
 
       if (res.status === 200) {
         dispatch(getOrderDesignDetailsData(res.data.details[0]));
@@ -1534,7 +1555,7 @@ export const useSamplePrint = () => {
         );
         form.setValue(
           "wtRate",
-          toTwoDecimalString(res.data.details[0].Wt_Rate) || "",
+          toRateString(res.data.details[0].Wt_Rate) || "",
         );
         form.setValue(
           "polish",
@@ -1549,6 +1570,8 @@ export const useSamplePrint = () => {
         );
         form.setValue("image", res.data.details[0].Image);
         const partyItem = form.getValues("itemType") === "0";
+        const makingRate =
+          toRateString(partyMakingRate) || partyMakingRate || "";
         form.setValue(
           "item",
           (res.data.details[0].childrow || []).map((child: ChildRow) => {
@@ -1557,7 +1580,6 @@ export const useSamplePrint = () => {
               ? "0.00"
               : toRateString(child.Item_Rate) ||
                 (child.Item_Rate != null ? String(child.Item_Rate) : "");
-            const makingRate = "";
             const itemTotal = calcRowTotal(quantity, rate, makingRate);
 
             const pickAttr = (...keys: (keyof ChildRow)[]) => {
@@ -1628,7 +1650,7 @@ export const useSamplePrint = () => {
     const designDetails = designTableData.map((data) => ({
       design_id: data.designId,
       qnty: "1",
-      wt_rate: toTwoDecimalString(data.wtRate) || data.wtRate || null,
+      wt_rate: toRateString(data.wtRate) || data.wtRate || null,
       wt: toTwoDecimalString(data.wt) || data.wt || null,
       tot_wt:
         toTwoDecimalString(
@@ -1887,7 +1909,7 @@ export const useSamplePrint = () => {
                   row.Image ||
                   String(pickValue(detail.Image, detail.image, "")),
                 Wt: toTwoDecimalString(wt) || wt,
-                Wt_Rate: toTwoDecimalString(wtRate) || wtRate,
+                Wt_Rate: toRateString(wtRate) || wtRate,
                 Polish: toTwoDecimalString(polish) || polish,
               };
               const recomputed = computeSamplePrintHistoryTotal(
@@ -1935,6 +1957,33 @@ export const useSamplePrint = () => {
         ?.Party_Gst || ""
     );
   }, [partyId]);
+
+  // If party changes while Design Details is open, refresh making rates.
+  useEffect(() => {
+    if (!orgId || !showDesignDialog || !partyId) return;
+    const rows = form.getValues("item") ?? [];
+    if (!rows.length) return;
+
+    let cancelled = false;
+    (async () => {
+      const makingRate = await fetchPartyMakingRate(orgId, String(partyId));
+      if (cancelled) return;
+      const rate = toRateString(makingRate) || makingRate || "";
+      rows.forEach((row, index) => {
+        form.setValue(`item.${index}.makingRate`, rate, { shouldDirty: true });
+        form.setValue(
+          `item.${index}.itemTotal`,
+          calcRowTotal(row?.itemQuantity, row?.itemRate, rate),
+          { shouldDirty: false },
+        );
+      });
+      queueMicrotask(() => syncItemTotalsAndTotalRate());
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, partyId, showDesignDialog]);
 
   // Party item: force rate to 0.00 whenever item type or rows change.
   useEffect(() => {

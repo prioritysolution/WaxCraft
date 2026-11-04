@@ -13,6 +13,7 @@ import itemSlice from "@/container/master/item/ItemReducer";
 import accountGroupSlice from "@/container/master/accountGroup/AccountGroupReducer";
 import accountLedgerSlice from "@/container/master/accountLedger/AccountLedgerReducer";
 import partySlice from "@/container/master/party/PartyReducer";
+import partyMakingRateSlice from "@/container/master/partyMakingRate/PartyMakingRateReducer";
 import designSlice from "@/container/master/design/DesignReducer";
 import employeeSlice from "@/container/master/employee/EmployeeReducer";
 import bankAccountSlice from "@/container/master/bankAccount/BankAccountReducer";
@@ -56,6 +57,7 @@ export const store = configureStore({
     accountGroup: accountGroupSlice,
     accountLedger: accountLedgerSlice,
     party: partySlice,
+    partyMakingRate: partyMakingRateSlice,
     design: designSlice,
     employee: employeeSlice,
     bankAccount: bankAccountSlice,

@@ -13,7 +13,7 @@ import {
 import { formatTableSerial } from "@/components/ui/table-edit-button";
 import { DesignTableData } from "@/types/master/DesignTypes";
 import { getDesignTotalRate } from "@/utils/designTotalRate";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import getCookieData from "@/utils/getCookieData";
 import { Image } from "@heroui/react";
 import { Dispatch, FC, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
@@ -100,7 +100,7 @@ const PreviewModal: FC<PreviewModalProps> = ({
                         {formatTwoDecimals(data.WT)}
                       </td>
                       <td className={`${printTdClass} text-right`}>
-                        {formatTwoDecimals(data.Wt_Rate)}
+                        {formatRate(data.Wt_Rate)}
                       </td>
                       <td className={`${printTdClass} text-right`}>
                         {formatTwoDecimals(data.Polish)}

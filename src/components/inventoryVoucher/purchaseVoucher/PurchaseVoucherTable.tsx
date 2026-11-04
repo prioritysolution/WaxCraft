@@ -13,7 +13,7 @@ import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { TablePaginationBar } from "@/components/ui/table-pagination";
 import { cn } from "@/lib/utils";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import { getPurchaseTypeLabel } from "@/utils/purchaseType";
 
 import {
@@ -262,7 +262,7 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
                                     {formatTwoDecimals(child.Item_Qnty)}
                                   </td>
                                   <td className={nestedCellClassName}>
-                                    {formatTwoDecimals(child.Item_Rate)}
+                                    {formatRate(child.Item_Rate)}
                                   </td>
                                   <td className={nestedCellClassName}>
                                     {itemTotal(

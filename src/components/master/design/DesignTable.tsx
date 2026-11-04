@@ -26,7 +26,7 @@ import {
   getDesignItemsSum,
   getDesignTotalRate,
 } from "@/utils/designTotalRate";
-import { formatTwoDecimals } from "@/utils/formatDecimal";
+import { formatRate, formatTwoDecimals } from "@/utils/formatDecimal";
 import {
   Button,
   Image,
@@ -230,7 +230,7 @@ const DesignTable: FC<DesignTableProps> = ({
                 </TableCell>
                 <TableCell>{data.Design_No}</TableCell>
                 <TableCell>{formatTwoDecimals(data.WT)}</TableCell>
-                <TableCell>{formatTwoDecimals(data.Wt_Rate)}</TableCell>
+                <TableCell>{formatRate(data.Wt_Rate)}</TableCell>
                 <TableCell>{formatTwoDecimals(data.Polish)}</TableCell>
                 <TableCell>
                   {formatTwoDecimals(getDesignTotalRate(data))}
@@ -319,10 +319,10 @@ const DesignTable: FC<DesignTableProps> = ({
                                   {getDesignChildQty(child)}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-sm text-foreground">
-                                  {formatTwoDecimals(getDesignChildItemRate(child))}
+                                  {formatRate(getDesignChildItemRate(child))}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-sm text-foreground">
-                                  {formatTwoDecimals(getDesignChildMakingRate(child))}
+                                  {formatRate(getDesignChildMakingRate(child))}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-sm tabular-nums text-foreground">
                                   {formatTwoDecimals(getDesignItemLineTotal(child))}

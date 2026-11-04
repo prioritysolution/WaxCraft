@@ -1,7 +1,7 @@
 import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
 import { ApiResponse } from "@/types/ApiTypes";
 import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { toRateString } from "@/utils/formatDecimal";
 
 type LooseRecord = Record<string, unknown>;
 
@@ -190,7 +190,7 @@ const resolveMissingRatesFromItemMaster = async (
       try {
         const res: ApiResponse = await getItemRateAPI(orgId, itemId);
         if (res.status === 200 && res.data.details != null) {
-          const rate = toTwoDecimalString(res.data.details) || String(res.data.details);
+          const rate = toRateString(res.data.details) || String(res.data.details);
           if (hasResolvedItemRate(rate)) {
             return [itemId, rate] as const;
           }

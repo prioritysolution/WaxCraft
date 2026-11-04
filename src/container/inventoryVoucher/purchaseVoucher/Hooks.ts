@@ -29,7 +29,7 @@ import {
 } from "./PurchaseVoucherReducer";
 import { ItemTableData } from "@/types/master/ItemTypes";
 import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
-import { toTwoDecimalString } from "@/utils/formatDecimal";
+import { toRateString, toTwoDecimalString } from "@/utils/formatDecimal";
 import { resolvePurchaseOrderType } from "@/utils/purchaseType";
 
 interface PurchasePartyData {
@@ -251,7 +251,7 @@ export const usePurchaseVoucher = () => {
     ];
 
     for (const candidate of candidates) {
-      const value = toTwoDecimalString(candidate);
+      const value = toRateString(candidate);
       if (value && Number(value) >= 0 && String(candidate ?? "").trim() !== "") {
         return value;
       }
@@ -265,7 +265,7 @@ export const usePurchaseVoucher = () => {
     itemId: string,
     fallbackRate?: unknown,
   ) => {
-    const fromFallback = toTwoDecimalString(fallbackRate);
+    const fromFallback = toRateString(fallbackRate);
     if (fromFallback && Number(fromFallback) > 0) return fromFallback;
 
     if (!itemId) return fromFallback || "";
@@ -273,7 +273,7 @@ export const usePurchaseVoucher = () => {
     try {
       const res: ApiResponse = await getItemRateAPI(orgId, itemId);
       if (res.status === 200 && res.data.details != null) {
-        const fetched = toTwoDecimalString(res.data.details);
+        const fetched = toRateString(res.data.details);
         if (fetched) return fetched;
       }
     } catch {

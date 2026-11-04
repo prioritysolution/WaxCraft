@@ -21,8 +21,9 @@ import {
 } from "@/types/inventoryVoucher/SamplePrintTypes";
 import { DesignTableData } from "@/types/master/DesignTypes";
 import {
-  formatUpToDecimals,
   sanitizeDecimalInput,
+  sanitizeRateInput,
+  toRateString,
 } from "@/utils/formatDecimal";
 import {
   Image,
@@ -45,7 +46,7 @@ interface RootState {
   orderBooking: OrderBookingState;
 }
 
-const formatSampleItemRate = (rate: string) => formatUpToDecimals(rate, 4, "");
+const formatSampleItemRate = (rate: string) => toRateString(rate);
 
 const calcRowTotal = (
   quantity: unknown,
@@ -272,7 +273,7 @@ const DesignModal: FC<DesignModalProps> = ({
                   inputMode="decimal"
                   onInput={(e) => {
                     const input = e.currentTarget;
-                    const next = sanitizeDecimalInput(input.value);
+                    const next = sanitizeRateInput(input.value);
                     input.value = next;
                     form.setValue("wtRate", next, {
                       shouldValidate: true,
@@ -387,7 +388,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               disabled={isPartyItem}
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(input.value, 4);
+                                const next = sanitizeRateInput(input.value);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.itemRate` as Path<SamplePrintFormData>,
@@ -407,7 +408,7 @@ const DesignModal: FC<DesignModalProps> = ({
                               className="min-w-[70px]"
                               onInput={(e) => {
                                 const input = e.currentTarget;
-                                const next = sanitizeDecimalInput(input.value, 4);
+                                const next = sanitizeRateInput(input.value);
                                 input.value = next;
                                 form.setValue(
                                   `item.${index}.makingRate` as Path<SamplePrintFormData>,

@@ -37,6 +37,9 @@ import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
 import { format } from "date-fns";
 import { resolveListLastPage } from "@/lib/listTotalCount";
 import { useSearchDebounce } from "@/lib/useSearchDebounce";
+import { toRateString } from "@/utils/formatDecimal";
+import { getPartyMakingRateByPartyAPI } from "@/container/master/partyMakingRate/PartyMakingRateApis";
+import { parsePartyMakingRateDetails } from "@/utils/partyMakingRate";
 
 interface OrderPartyData {
   Id: number;
@@ -417,8 +420,12 @@ export const useOrderBooking = () => {
               record.Item_Sh_Name ?? record.item_sh_name ?? child.Item_Name ?? "",
             ),
             itemQuantity: toFormNumber(itemQuantity),
-            itemRate: toFormNumber(itemRate),
-            makingRate: toFormNumber(makingRate),
+            itemRate:
+              itemType === "0"
+                ? toFormNumber(itemRate)
+                : toRateString(child.Item_Rate) || toFormNumber(itemRate),
+            makingRate:
+              toRateString(child.Making_Rate) || toFormNumber(makingRate),
             itemTotal: (
               itemQuantity * itemRate +
               itemQuantity * makingRate
@@ -449,7 +456,7 @@ export const useOrderBooking = () => {
         designRate: designRate.toFixed(2),
         totalRate: (designRate * orderQty).toFixed(2),
         wt: toFormNumber(wt),
-        wtRate: toFormNumber(wtRate),
+        wtRate: toRateString(design.Wt_Rate) || toFormNumber(wtRate),
         polish: toFormNumber(polish),
         ghat:
           ghatRaw == null || String(ghatRaw).trim() === ""
@@ -955,9 +962,32 @@ export const useOrderBooking = () => {
     }
   };
 
+  const fetchPartyMakingRate = async (
+    orgIdValue: number,
+    partyIdValue: string,
+  ): Promise<string> => {
+    if (!partyIdValue) return "";
+    try {
+      const res: ApiResponse = await getPartyMakingRateByPartyAPI(
+        orgIdValue,
+        partyIdValue,
+      );
+      if (res.status === 200 || res.status === 202) {
+        return parsePartyMakingRateDetails(res.data?.details);
+      }
+    } catch {
+      // Keep empty making rate if lookup fails.
+    }
+    return "";
+  };
+
   const getDesignDetailsApiCall = async (orgId: number, designId: string) => {
     try {
-      const res: ApiResponse = await getDesignDetailsAPI(orgId, designId);
+      const selectedPartyId = String(form.getValues("partyId") ?? "").trim();
+      const [res, partyMakingRate] = await Promise.all([
+        getDesignDetailsAPI(orgId, designId),
+        fetchPartyMakingRate(orgId, selectedPartyId),
+      ]);
 
       if (res.status === 200) {
         const detail = res.data.details[0] as DesignTableData & {
@@ -975,6 +1005,8 @@ export const useOrderBooking = () => {
           detail?.Design_No || selectedDesign?.Design_No || ""
         ).trim();
         const image = String(detail?.Image || detail?.image || "").trim();
+        const makingRate =
+          toRateString(partyMakingRate) || partyMakingRate || "";
 
         dispatch(getOrderDesignDetailsData(detail));
         form.setValue("designName", designName);
@@ -995,7 +1027,6 @@ export const useOrderBooking = () => {
             const itemRate = isPartyItem
               ? "0"
               : String(child.Item_Rate ?? "");
-            const makingRate = "";
             const itemTotal = computeItemLineTotal(
               {
                 itemQuantity: quantity,
@@ -1067,6 +1098,36 @@ export const useOrderBooking = () => {
         ?.Party_Gst || ""
     );
   }, [partyId]);
+
+  // If party changes while Design Details is open, refresh making rates.
+  useEffect(() => {
+    if (!orgId || !showDesignDialog || !partyId) return;
+    const rows = form.getValues("item") ?? [];
+    if (!rows.length) return;
+
+    let cancelled = false;
+    (async () => {
+      const makingRate = await fetchPartyMakingRate(orgId, String(partyId));
+      if (cancelled) return;
+      const rate = toRateString(makingRate) || makingRate || "";
+      const isPartyItem = form.getValues("itemType") === "0";
+      rows.forEach((row, index) => {
+        form.setValue(`item.${index}.makingRate`, rate, { shouldDirty: true });
+        const nextTotal = computeItemLineTotal(
+          { ...row, makingRate: rate },
+          isPartyItem,
+        ).toFixed(2);
+        form.setValue(`item.${index}.itemTotal`, nextTotal, {
+          shouldDirty: false,
+        });
+      });
+      queueMicrotask(() => syncDesignItemTotals());
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, partyId, showDesignDialog]);
 
   useEffect(() => {
     const subscription = form.watch((_values, info) => {
