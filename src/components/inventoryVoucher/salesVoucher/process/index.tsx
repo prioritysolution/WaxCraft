@@ -132,14 +132,12 @@ const SalesVoucherProcess = () => {
           description: "WT",
           quantity: design.Wt,
           rate: design.Wt_Rate,
-          makingRate: "",
           total: design.Tot_Wt,
         },
         {
           description: "Polish",
           quantity: design.Order_Qnty,
           rate: design.Polish,
-          makingRate: "",
           total: design.Tot_Polish,
         },
         ...groupStoneItemsBySize(
@@ -149,7 +147,6 @@ const SalesVoucherProcess = () => {
           description: item.Item_Name,
           quantity: item.Item_Qnty,
           rate: item.Item_Rate,
-          makingRate: item.Making_Rate ?? "",
           total: item.Item_Tot,
         })),
       ],
@@ -278,7 +275,6 @@ const SalesVoucherProcess = () => {
                         <TableColumn align="center">Description</TableColumn>
                         <TableColumn align="center">Quantity</TableColumn>
                         <TableColumn align="center">Rate</TableColumn>
-                        <TableColumn align="center">Making Rate</TableColumn>
                         <TableColumn align="center">Total</TableColumn>
                       </TableHeader>
                       <TableBody emptyContent={"No data found."}>
@@ -287,8 +283,9 @@ const SalesVoucherProcess = () => {
                             <TableCell>{index + 1}</TableCell>
                             <TableCell>{data.description}</TableCell>
                             <TableCell>{data.quantity}</TableCell>
-                            <TableCell>{data.rate}</TableCell>
-                            <TableCell>{data.makingRate}</TableCell>
+                            <TableCell>
+                              {data.description === "WT" ? "" : data.rate}
+                            </TableCell>
                             <TableCell>{data.total}</TableCell>
                           </TableRow>
                         ))}
@@ -309,7 +306,6 @@ const SalesVoucherProcess = () => {
                 <TableColumn align="center">Description</TableColumn>
                 <TableColumn align="center">Quantity</TableColumn>
                 <TableColumn align="center">Rate</TableColumn>
-                <TableColumn align="center">Making Rate</TableColumn>
                 <TableColumn align="center">Total</TableColumn>
               </TableHeader>
               <TableBody emptyContent={"No data found."}>
@@ -317,7 +313,7 @@ const SalesVoucherProcess = () => {
                 ...(tempData.length > 0
                   ? [
                       <TableRow key={`${tempData.length}-amount`}>
-                        <TableCell colSpan={5} className="text-center font-medium">
+                        <TableCell colSpan={4} className="text-center font-medium">
                           {gstChoice === "Y" ? "Taxable " : "Total "} Amount
                         </TableCell>
                         <TableCell className="font-medium">{totalOrderAmount}</TableCell>
@@ -327,7 +323,7 @@ const SalesVoucherProcess = () => {
                 ...(tempData.length > 0 && gstChoice === "Y"
                   ? [
                       <TableRow key={`${tempData.length}-cgst`}>
-                        <TableCell colSpan={5} className="text-center font-medium">
+                        <TableCell colSpan={4} className="text-center font-medium">
                           CGST
                         </TableCell>
                         <TableCell className="font-medium">
@@ -338,7 +334,7 @@ const SalesVoucherProcess = () => {
                         </TableCell>
                       </TableRow>,
                       <TableRow key={`${tempData.length}-sgst`}>
-                        <TableCell colSpan={5} className="text-center font-medium">
+                        <TableCell colSpan={4} className="text-center font-medium">
                           SGST
                         </TableCell>
                         <TableCell className="font-medium">
@@ -353,7 +349,7 @@ const SalesVoucherProcess = () => {
                 ...(tempData.length > 0
                   ? [
                       <TableRow key={`${tempData.length}-round`}>
-                        <TableCell colSpan={5} className="text-center font-medium">
+                        <TableCell colSpan={4} className="text-center font-medium">
                           Round Off
                         </TableCell>
                         <TableCell className="font-medium">
@@ -389,7 +385,7 @@ const SalesVoucherProcess = () => {
                         </TableCell>
                       </TableRow>,
                       <TableRow key={`${tempData.length}-discount`}>
-                        <TableCell colSpan={5} className="text-center font-medium">
+                        <TableCell colSpan={4} className="text-center font-medium">
                           Discount
                         </TableCell>
                         <TableCell>
@@ -412,7 +408,7 @@ const SalesVoucherProcess = () => {
                       </TableRow>,
                       <TableRow key={`${tempData.length}-grand`}>
                         <TableCell
-                          colSpan={5}
+                          colSpan={4}
                           className="text-center text-lg font-semibold text-primary"
                         >
                           Grand Total

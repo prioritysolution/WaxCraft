@@ -27,6 +27,7 @@ const OrderProcessContainer = () => {
     handleFinalClose,
     processPostType,
     getOrderBookingApiCall,
+    getOrderPartyApiCall,
     getEmployeeListForOrderProcessApiCall,
     getEmployeeLoading,
     orderProcessEmployeeData,
@@ -35,6 +36,21 @@ const OrderProcessContainer = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    orderTableInput,
+    handleFilterOrderTable,
+    orderFromDate,
+    orderToDate,
+    orderFromDateApi,
+    orderToDateApi,
+    handleOrderFromDateChange,
+    handleOrderToDateChange,
+    orderPartyFilter,
+    handleOrderPartyFilterChange,
+    orderItemTypeFilter,
+    handleOrderItemTypeFilterChange,
+    orderStatusFilter,
+    handleOrderStatusFilterChange,
+    handleResetOrderFilters,
   } = useOrderProcess();
 
   const { getWorkProcessApiCall, loading: getWorkProcessLoading } =
@@ -47,12 +63,23 @@ const OrderProcessContainer = () => {
 
   useEffect(() => {
     if (token && orgId) {
-      getOrderBookingApiCall(orgId, currentPage, "", perPage);
+      getOrderBookingApiCall(orgId, currentPage, orderTableInput.trim(), perPage);
     }
-  }, [token, orgId, currentPage, perPage]);
+  }, [
+    token,
+    orgId,
+    currentPage,
+    perPage,
+    orderFromDateApi,
+    orderToDateApi,
+    orderPartyFilter,
+    orderItemTypeFilter,
+    orderStatusFilter,
+  ]);
 
   useEffect(() => {
     if (token && orgId) {
+      getOrderPartyApiCall(orgId);
       getWorkProcessApiCall(orgId);
       getEmployeeListForOrderProcessApiCall(orgId);
     }
@@ -80,6 +107,19 @@ const OrderProcessContainer = () => {
       lastPage={lastPage}
       perPage={perPage}
       onPerPageChange={handlePerPageChange}
+      orderTableInput={orderTableInput}
+      handleFilterOrderTable={handleFilterOrderTable}
+      orderFromDate={orderFromDate}
+      orderToDate={orderToDate}
+      onOrderFromDateChange={handleOrderFromDateChange}
+      onOrderToDateChange={handleOrderToDateChange}
+      orderPartyFilter={orderPartyFilter}
+      onOrderPartyFilterChange={handleOrderPartyFilterChange}
+      orderItemTypeFilter={orderItemTypeFilter}
+      onOrderItemTypeFilterChange={handleOrderItemTypeFilterChange}
+      orderStatusFilter={orderStatusFilter}
+      onOrderStatusFilterChange={handleOrderStatusFilterChange}
+      onResetOrderFilters={handleResetOrderFilters}
       getWorkProcessLoading={getWorkProcessLoading}
       getEmployeeLoading={getEmployeeLoading}
       orderProcessEmployeeData={orderProcessEmployeeData}

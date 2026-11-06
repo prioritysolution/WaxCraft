@@ -24,7 +24,15 @@ const buildGetOrderBookingKey = (
   page: number,
   keyword: string,
   perPage?: number,
-) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+    itemType?: string;
+    orderStatus?: string;
+  },
+) =>
+  `${orgId}:${page}:${keyword}:${perPage ?? ""}:${filters?.fromDate ?? ""}:${filters?.toDate ?? ""}:${filters?.partyId ?? ""}:${filters?.itemType ?? ""}:${filters?.orderStatus ?? ""}`;
 
 const buildGetOrderPartyKey = (
   orgId: string | number,
@@ -110,13 +118,20 @@ export const getOrderBookingAPI = async (
   orgId: string | number,
   page: number,
   keyword: string,
-  perPage?: number
+  perPage?: number,
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+    itemType?: string;
+    orderStatus?: string;
+  },
 ): Promise<ApiResponse> => {
-  const key = buildGetOrderBookingKey(orgId, page, keyword, perPage);
+  const key = buildGetOrderBookingKey(orgId, page, keyword, perPage, filters);
 
   return getOrderBookingInFlight.run(key, () =>
     doGetApiCall({
-      url: endPoints.getOrderBooking(orgId, page, keyword, perPage),
+      url: endPoints.getOrderBooking(orgId, page, keyword, perPage, filters),
     }),
   );
 };

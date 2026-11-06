@@ -39,6 +39,17 @@ const SalesVoucherContainer = () => {
     handlePerPageChange,
     orderPartyInput,
     setOrderPartyInput,
+    invoiceTableInput,
+    handleFilterInvoiceTable,
+    invoiceFromDate,
+    invoiceToDate,
+    invoiceFromDateApi,
+    invoiceToDateApi,
+    handleInvoiceFromDateChange,
+    handleInvoiceToDateChange,
+    invoicePartyFilter,
+    handleInvoicePartyFilterChange,
+    handleResetInvoiceFilters,
   } = useSalesVoucher();
 
   const {
@@ -74,9 +85,24 @@ const SalesVoucherContainer = () => {
 
   useEffect(() => {
     if (token && orgId && tabSelected === "table") {
-      getInvoiceListApiCall(orgId, currentPage, "");
+      getOrderPartyApiCall(orgId, 1, "", "");
     }
-  }, [token, orgId, tabSelected, currentPage, perPage]);
+  }, [token, orgId, tabSelected]);
+
+  useEffect(() => {
+    if (token && orgId && tabSelected === "table") {
+      getInvoiceListApiCall(orgId, currentPage, invoiceTableInput.trim());
+    }
+  }, [
+    token,
+    orgId,
+    tabSelected,
+    currentPage,
+    perPage,
+    invoiceFromDateApi,
+    invoiceToDateApi,
+    invoicePartyFilter,
+  ]);
 
   return (
     <SalesVoucher
@@ -108,6 +134,15 @@ const SalesVoucherContainer = () => {
       onPerPageChange={handlePerPageChange}
       orderPartyInput={orderPartyInput}
       setOrderPartyInput={setOrderPartyInput}
+      invoiceTableInput={invoiceTableInput}
+      handleFilterInvoiceTable={handleFilterInvoiceTable}
+      invoiceFromDate={invoiceFromDate}
+      invoiceToDate={invoiceToDate}
+      onInvoiceFromDateChange={handleInvoiceFromDateChange}
+      onInvoiceToDateChange={handleInvoiceToDateChange}
+      invoicePartyFilter={invoicePartyFilter}
+      onInvoicePartyFilterChange={handleInvoicePartyFilterChange}
+      onResetInvoiceFilters={handleResetInvoiceFilters}
     />
   );
 };

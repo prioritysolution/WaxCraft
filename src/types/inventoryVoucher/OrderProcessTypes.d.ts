@@ -83,6 +83,19 @@ export interface OrderProcessProps {
   getWorkProcessLoading: boolean;
   getEmployeeLoading: boolean;
   orderProcessEmployeeData: OrderProcessEmployeeOption[];
+  orderTableInput: string;
+  handleFilterOrderTable: (value: string) => void;
+  orderFromDate?: Date;
+  orderToDate?: Date;
+  onOrderFromDateChange: (value: Date | undefined) => void;
+  onOrderToDateChange: (value: Date | undefined) => void;
+  orderPartyFilter: string;
+  onOrderPartyFilterChange: (value: string) => void;
+  orderItemTypeFilter: string;
+  onOrderItemTypeFilterChange: (value: string) => void;
+  orderStatusFilter: string;
+  onOrderStatusFilterChange: (value: string) => void;
+  onResetOrderFilters: () => void;
 }
 
 export interface OrderProcessEmployeeOption {
@@ -120,6 +133,19 @@ export interface OrderProcessTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  orderTableInput: string;
+  handleFilterOrderTable: (value: string) => void;
+  orderFromDate?: Date;
+  orderToDate?: Date;
+  onOrderFromDateChange: (value: Date | undefined) => void;
+  onOrderToDateChange: (value: Date | undefined) => void;
+  orderPartyFilter: string;
+  onOrderPartyFilterChange: (value: string) => void;
+  orderItemTypeFilter: string;
+  onOrderItemTypeFilterChange: (value: string) => void;
+  orderStatusFilter: string;
+  onOrderStatusFilterChange: (value: string) => void;
+  onResetOrderFilters: () => void;
 }
 
 export interface ProcessTableData {

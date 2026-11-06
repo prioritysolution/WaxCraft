@@ -57,6 +57,17 @@ const OrderBooking: FC<OrderBookingProps> = ({
   onPerPageChange,
   orderTableInput,
   handleFilterOrderTable,
+  orderFromDate,
+  orderToDate,
+  onOrderFromDateChange,
+  onOrderToDateChange,
+  orderPartyFilter,
+  onOrderPartyFilterChange,
+  orderItemTypeFilter,
+  onOrderItemTypeFilterChange,
+  orderStatusFilter,
+  onOrderStatusFilterChange,
+  onResetOrderFilters,
   orderPartyInput,
   setOrderPartyInput,
   orderDesignInput,
@@ -132,6 +143,17 @@ const OrderBooking: FC<OrderBookingProps> = ({
               onPerPageChange={onPerPageChange}
               orderTableInput={orderTableInput}
               handleFilterOrderTable={handleFilterOrderTable}
+              orderFromDate={orderFromDate}
+              orderToDate={orderToDate}
+              onOrderFromDateChange={onOrderFromDateChange}
+              onOrderToDateChange={onOrderToDateChange}
+              orderPartyFilter={orderPartyFilter}
+              onOrderPartyFilterChange={onOrderPartyFilterChange}
+              orderItemTypeFilter={orderItemTypeFilter}
+              onOrderItemTypeFilterChange={onOrderItemTypeFilterChange}
+              orderStatusFilter={orderStatusFilter}
+              onOrderStatusFilterChange={onOrderStatusFilterChange}
+              onResetOrderFilters={onResetOrderFilters}
             />
         </Tab>
       </Tabs>

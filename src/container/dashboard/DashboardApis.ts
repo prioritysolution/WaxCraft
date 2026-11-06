@@ -26,3 +26,43 @@ export const getDashboardStatsAPI = async (
     }),
   );
 };
+
+const getRoleDashboardInFlight = createInFlightRequest<ApiResponse>();
+
+export const getManagerDashboardAPI = async (
+  orgId: string | number,
+  formDate: string,
+  toDate: string,
+): Promise<ApiResponse> =>
+  getRoleDashboardInFlight.run(`manager:${orgId}:${formDate}:${toDate}`, () =>
+    doGetApiCall({
+      url: endPoints.getManagerDashboard(orgId, formDate, toDate),
+    }),
+  );
+
+export const getAccountantDashboardAPI = async (
+  orgId: string | number,
+  formDate: string,
+  toDate: string,
+): Promise<ApiResponse> =>
+  getRoleDashboardInFlight.run(
+    `accountant:${orgId}:${formDate}:${toDate}`,
+    () =>
+      doGetApiCall({
+        url: endPoints.getAccountantDashboard(orgId, formDate, toDate),
+      }),
+  );
+
+export const getOperatorDashboardAPI = async (
+  orgId: string | number,
+  formDate: string,
+  toDate: string,
+  userId: string | number,
+): Promise<ApiResponse> =>
+  getRoleDashboardInFlight.run(
+    `operator:${orgId}:${formDate}:${toDate}:${userId}`,
+    () =>
+      doGetApiCall({
+        url: endPoints.getOperatorDashboard(orgId, formDate, toDate, userId),
+      }),
+  );

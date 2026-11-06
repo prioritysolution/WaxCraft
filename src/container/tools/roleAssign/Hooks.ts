@@ -1,15 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as yup from "yup";
 import toast from "react-hot-toast";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { yupResolver } from "@/lib/yupResolver";
 import { useDispatch, useSelector } from "react-redux";
 import { RoleAssignFormData, ModuleData } from "@/types/tools/RoleAssignTypes";
-import { addRoleAssignAPI, getModuleDataAPI } from "./RoleAssignApis";
+import {
+  addRoleAssignAPI,
+  getModuleDataAPI,
+  getUserRoleMenuAPI,
+} from "./RoleAssignApis";
 import { getModuleData } from "./RoleAssignReducer";
 import { ApiResponse } from "@/types/ApiTypes";
+import getCookieData from "@/utils/getCookieData";
+
+type AssignedMenuRow = {
+  module_id?: string | number;
+  Module_Id?: string | number;
+  menue_id?: string | number | null;
+  Menue_Id?: string | number | null;
+  menu_id?: string | number | null;
+  ChildRow?: Array<Record<string, unknown>>;
+  childrow?: Array<Record<string, unknown>>;
+};
+
+const normalizeAssignedMenus = (details: unknown): AssignedMenuRow[] => {
+  const record =
+    details && typeof details === "object"
+      ? (details as Record<string, unknown>)
+      : null;
+  const list = Array.isArray(details)
+    ? details
+    : Array.isArray(record?.Module_Array)
+      ? record.Module_Array
+      : Array.isArray(record?.data)
+        ? record.data
+        : [];
+
+  const rows: AssignedMenuRow[] = [];
+  list.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const row = item as AssignedMenuRow;
+    const children = row.ChildRow || row.childrow;
+    if (Array.isArray(children) && children.length) {
+      children.forEach((child) => {
+        rows.push({
+          module_id: row.Module_Id ?? row.module_id,
+          menue_id: (child.Menue_Id ?? child.menue_id) as
+            | string
+            | number
+            | null,
+        });
+      });
+      return;
+    }
+    rows.push(row);
+  });
+  return rows;
+};
 
 export const useRoleAssign = () => {
   const dispatch = useDispatch();
@@ -138,6 +188,116 @@ export const useRoleAssign = () => {
       dispatch(getModuleData([]));
     }
   };
+
+  const userId = form.watch("userId");
+  const roleAssignListRef = useRef(roleAssignList);
+  const roleAssignSingleListRef = useRef(roleAssignSingleList);
+  roleAssignListRef.current = roleAssignList;
+  roleAssignSingleListRef.current = roleAssignSingleList;
+
+  const moduleKey = [
+    ...(roleAssignList || []).map((module) => module.Module_Id),
+    ...(roleAssignSingleList || []).map((module) => module.Module_Id),
+  ].join(",");
+
+  const [assignedMenus, setAssignedMenus] = useState<AssignedMenuRow[]>([]);
+  const assignedForUserRef = useRef("");
+
+  const clearPermissions = () => {
+    (roleAssignListRef.current || []).forEach((module) => {
+      form.setValue(`moduleData_${module.Module_Id}`, [], {
+        shouldDirty: false,
+      });
+    });
+    setSelected([]);
+    setOpenModuleId([]);
+  };
+
+  const applyAssignedMenus = (rows: AssignedMenuRow[]) => {
+    const modules = roleAssignListRef.current || [];
+    const singles = roleAssignSingleListRef.current || [];
+    const singleIds = new Set(singles.map((module) => String(module.Module_Id)));
+    const byModule: Record<string, number[]> = {};
+
+    modules.forEach((module) => {
+      byModule[String(module.Module_Id)] = [];
+    });
+
+    const selectedSingles: string[] = [];
+
+    rows.forEach((row) => {
+      const moduleId = String(row.Module_Id ?? row.module_id ?? "");
+      const menuRaw = row.Menue_Id ?? row.menue_id ?? row.menu_id;
+      const menuId =
+        menuRaw == null || String(menuRaw).trim() === ""
+          ? null
+          : Number(menuRaw);
+
+      if (!moduleId) return;
+
+      if (menuId == null || !Number.isFinite(menuId) || menuId === 0) {
+        if (singleIds.has(moduleId)) selectedSingles.push(moduleId);
+        return;
+      }
+
+      if (!byModule[moduleId]) byModule[moduleId] = [];
+      if (!byModule[moduleId].includes(menuId)) byModule[moduleId].push(menuId);
+    });
+
+    const openIds: number[] = [];
+    modules.forEach((module) => {
+      const ids = byModule[String(module.Module_Id)] ?? [];
+      form.setValue(`moduleData_${module.Module_Id}`, ids, {
+        shouldDirty: false,
+      });
+      if (ids.length) openIds.push(module.Module_Id);
+    });
+
+    setSelected(selectedSingles);
+    setOpenModuleId(openIds);
+  };
+
+  useEffect(() => {
+    if (!userId) {
+      setAssignedMenus([]);
+      clearPermissions();
+      return;
+    }
+
+    const orgId = getCookieData<number | null>("waxCraftClientOrgId");
+    if (!orgId) return;
+
+    let cancelled = false;
+    assignedForUserRef.current = "";
+    clearPermissions();
+
+    (async () => {
+      try {
+        const res: ApiResponse = await getUserRoleMenuAPI(orgId, userId);
+        if (cancelled) return;
+        assignedForUserRef.current = String(userId);
+        if (res.status === 200 || res.status === 202) {
+          setAssignedMenus(normalizeAssignedMenus(res.data?.details));
+        } else {
+          setAssignedMenus([]);
+        }
+      } catch {
+        if (!cancelled) {
+          assignedForUserRef.current = String(userId);
+          setAssignedMenus([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || assignedForUserRef.current !== String(userId)) return;
+    applyAssignedMenus(assignedMenus);
+  }, [userId, assignedMenus, moduleKey]);
 
   return {
     getModuleDataApiCall,

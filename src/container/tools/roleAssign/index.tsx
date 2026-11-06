@@ -23,11 +23,13 @@ const RoleAssignContainer: FC = () => {
     getModuleDataApiCall,
   } = useRoleAssign();
 
-  const { getUserListApiCall, loading: getUserLoading } = useAddUser();
+  const { getUserListApiCall, getUserRolesApiCall, loading: getUserLoading } =
+    useAddUser();
 
   useEffect(() => {
     if (token && orgId) {
       getUserListApiCall(orgId);
+      getUserRolesApiCall();
       getModuleDataApiCall(orgId);
     }
   }, [token, orgId]);

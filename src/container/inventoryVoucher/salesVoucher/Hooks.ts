@@ -2,7 +2,9 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import toast from "react-hot-toast";
 import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
@@ -142,9 +144,22 @@ const extractInvoiceNos = (
   return fromMessage(message);
 };
 
+type InvoiceListFilters = {
+  fromDate: string;
+  toDate: string;
+  partyId: string;
+};
+
+const emptyInvoiceListFilters = (): InvoiceListFilters => ({
+  fromDate: "",
+  toDate: "",
+  partyId: "",
+});
+
 export const useSalesVoucher = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addSalesVoucherLoading, setAddSalesVoucherLoading] = useState(false);
   const [deleteInvoiceLoading, setDeleteInvoiceLoading] = useState(false);
@@ -170,6 +185,26 @@ export const useSalesVoucher = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [invoiceTableInput, setInvoiceTableInput] = useState("");
+  const [invoiceFromDate, setInvoiceFromDate] = useState<Date | undefined>();
+  const [invoiceToDate, setInvoiceToDate] = useState<Date | undefined>();
+  const [invoicePartyFilter, setInvoicePartyFilter] = useState("");
+  const invoiceFromDateApi = useMemo(
+    () => toApiDate(invoiceFromDate),
+    [invoiceFromDate],
+  );
+  const invoiceToDateApi = useMemo(
+    () => toApiDate(invoiceToDate),
+    [invoiceToDate],
+  );
+  const invoiceListFiltersRef = useRef<InvoiceListFilters>(
+    emptyInvoiceListFilters(),
+  );
+  invoiceListFiltersRef.current = {
+    fromDate: invoiceFromDateApi,
+    toDate: invoiceToDateApi,
+    partyId: invoicePartyFilter,
+  };
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -427,7 +462,7 @@ export const useSalesVoucher = () => {
         setShowDeleteDialog(false);
         setTempDeleteId(null);
         setCurrentPage(1);
-        getInvoiceListApiCall(orgId, 1, "");
+        getInvoiceListApiCall(orgId, 1, invoiceTableInput.trim());
 
         toast.success(res.data.message);
       } else {
@@ -502,20 +537,63 @@ export const useSalesVoucher = () => {
         page,
         keyword,
         perPage,
+        invoiceListFiltersRef.current,
       );
 
       if (res.status === 200) {
-        dispatch(getInvoiceListData(res.data.details?.data));
-        setLastPage(res.data.details?.last_page);
+        const rows = Array.isArray(res.data.details?.data)
+          ? res.data.details.data
+          : [];
+        dispatch(getInvoiceListData(rows));
+        const apiLastPage = Number(res.data.details?.last_page) || 1;
+        setLastPage(rows.length < perPage ? page : apiLastPage);
       } else {
         dispatch(getInvoiceListData([]));
+        setLastPage(1);
       }
     } catch (err) {
       toast.error("Something went wrong");
       dispatch(getInvoiceListData([]));
+      setLastPage(1);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterInvoiceTable = (value: string) => {
+    setInvoiceTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getInvoiceListApiCall(orgId, 1, value.trim());
+    });
+  };
+
+  const handleInvoiceFromDateChange = (value: Date | undefined) => {
+    setInvoiceFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleInvoiceToDateChange = (value: Date | undefined) => {
+    setInvoiceToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleInvoicePartyFilterChange = (value: string) => {
+    setInvoicePartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetInvoiceFilters = () => {
+    setInvoiceFromDate(undefined);
+    setInvoiceToDate(undefined);
+    setInvoicePartyFilter("");
+    setInvoiceTableInput("");
+    invoiceListFiltersRef.current = emptyInvoiceListFilters();
+    setCurrentPage(1);
+    if (orgId) getInvoiceListApiCall(orgId, 1, "");
   };
 
   useEffect(() => {
@@ -574,5 +652,16 @@ export const useSalesVoucher = () => {
     handlePerPageChange,
     orderPartyInput,
     setOrderPartyInput,
+    invoiceTableInput,
+    handleFilterInvoiceTable,
+    invoiceFromDate,
+    invoiceToDate,
+    invoiceFromDateApi,
+    invoiceToDateApi,
+    handleInvoiceFromDateChange,
+    handleInvoiceToDateChange,
+    invoicePartyFilter,
+    handleInvoicePartyFilterChange,
+    handleResetInvoiceFilters,
   };
 };

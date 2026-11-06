@@ -57,6 +57,19 @@ const OrderBookingContainer = () => {
     handlePerPageChange,
     orderTableInput,
     handleFilterOrderTable,
+    orderFromDate,
+    orderToDate,
+    orderFromDateApi,
+    orderToDateApi,
+    handleOrderFromDateChange,
+    handleOrderToDateChange,
+    orderPartyFilter,
+    handleOrderPartyFilterChange,
+    orderItemTypeFilter,
+    handleOrderItemTypeFilterChange,
+    orderStatusFilter,
+    handleOrderStatusFilterChange,
+    handleResetOrderFilters,
     orderPartyInput,
     setOrderPartyInput,
     orderDesignInput,
@@ -113,9 +126,26 @@ const OrderBookingContainer = () => {
 
   useEffect(() => {
     if (token && orgId && selected === "table") {
+      getOrderPartyApiCall(orgId, 1, "", "");
+    }
+  }, [token, orgId, selected]);
+
+  useEffect(() => {
+    if (token && orgId && selected === "table") {
       getOrderBookingApiCall(orgId, currentPage, orderTableInput.trim(), perPage);
     }
-  }, [token, orgId, selected, currentPage, perPage]);
+  }, [
+    token,
+    orgId,
+    selected,
+    currentPage,
+    perPage,
+    orderFromDateApi,
+    orderToDateApi,
+    orderPartyFilter,
+    orderItemTypeFilter,
+    orderStatusFilter,
+  ]);
 
   useEffect(() => {
     if (token && orgId && designId) {
@@ -167,6 +197,17 @@ const OrderBookingContainer = () => {
       onPerPageChange={handlePerPageChange}
       orderTableInput={orderTableInput}
       handleFilterOrderTable={handleFilterOrderTable}
+      orderFromDate={orderFromDate}
+      orderToDate={orderToDate}
+      onOrderFromDateChange={handleOrderFromDateChange}
+      onOrderToDateChange={handleOrderToDateChange}
+      orderPartyFilter={orderPartyFilter}
+      onOrderPartyFilterChange={handleOrderPartyFilterChange}
+      orderItemTypeFilter={orderItemTypeFilter}
+      onOrderItemTypeFilterChange={handleOrderItemTypeFilterChange}
+      orderStatusFilter={orderStatusFilter}
+      onOrderStatusFilterChange={handleOrderStatusFilterChange}
+      onResetOrderFilters={handleResetOrderFilters}
       orderPartyInput={orderPartyInput}
       setOrderPartyInput={setOrderPartyInput}
       orderDesignInput={orderDesignInput}

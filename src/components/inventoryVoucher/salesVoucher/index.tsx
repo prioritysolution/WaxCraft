@@ -42,6 +42,15 @@ const SalesVoucher: FC<SalesVoucherProps> = ({
   onPerPageChange,
   orderPartyInput,
   setOrderPartyInput,
+  invoiceTableInput,
+  handleFilterInvoiceTable,
+  invoiceFromDate,
+  invoiceToDate,
+  onInvoiceFromDateChange,
+  onInvoiceToDateChange,
+  invoicePartyFilter,
+  onInvoicePartyFilterChange,
+  onResetInvoiceFilters,
 }) => {
   return (
     <PageShell>
@@ -94,6 +103,15 @@ const SalesVoucher: FC<SalesVoucherProps> = ({
               perPage={perPage}
               onPerPageChange={onPerPageChange}
               loading={loading}
+              invoiceTableInput={invoiceTableInput}
+              handleFilterInvoiceTable={handleFilterInvoiceTable}
+              invoiceFromDate={invoiceFromDate}
+              invoiceToDate={invoiceToDate}
+              onInvoiceFromDateChange={onInvoiceFromDateChange}
+              onInvoiceToDateChange={onInvoiceToDateChange}
+              invoicePartyFilter={invoicePartyFilter}
+              onInvoicePartyFilterChange={onInvoicePartyFilterChange}
+              onResetInvoiceFilters={onResetInvoiceFilters}
             />
         </Tab>
       </Tabs>

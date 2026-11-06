@@ -12,7 +12,13 @@ const buildGetGstBillKey = (
   page: number,
   keyword: string,
   perPage?: number,
-) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
+) =>
+  `${orgId}:${page}:${keyword}:${perPage ?? ""}:${filters?.fromDate ?? ""}:${filters?.toDate ?? ""}:${filters?.partyId ?? ""}`;
 
 const buildGetGstBillPrintKey = (
   orgId: string | number,
@@ -59,13 +65,18 @@ export const getGstBillAPI = async (
   orgId: string | number,
   page: number,
   keyword: string,
-  perPage?: number
+  perPage?: number,
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
 ): Promise<ApiResponse> => {
-  const key = buildGetGstBillKey(orgId, page, keyword, perPage);
+  const key = buildGetGstBillKey(orgId, page, keyword, perPage, filters);
 
   return getGstBillInFlight.run(key, () =>
     doGetApiCall({
-      url: endPoints.getGstBill(orgId, page, keyword, perPage),
+      url: endPoints.getGstBill(orgId, page, keyword, perPage, filters),
     }),
   );
 };

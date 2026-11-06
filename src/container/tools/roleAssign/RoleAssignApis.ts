@@ -27,3 +27,12 @@ export const getModuleDataAPI = async (orgId: number): Promise<ApiResponse> => {
 
   return res;
 };
+
+export const getUserRoleMenuAPI = async (
+  orgId: string | number,
+  userId: string | number,
+): Promise<ApiResponse> => {
+  return doGetApiCall({
+    url: endPoints.getUserRoleMenu(orgId, userId),
+  });
+};

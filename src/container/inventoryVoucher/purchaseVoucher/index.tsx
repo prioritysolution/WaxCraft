@@ -43,6 +43,19 @@ const PurchaseVoucherContainer = () => {
     setPurchasePartyInput,
     itemInput,
     setItemInput,
+    purchaseTableInput,
+    handleFilterPurchaseTable,
+    purchaseFromDate,
+    purchaseToDate,
+    purchaseFromDateApi,
+    purchaseToDateApi,
+    handlePurchaseFromDateChange,
+    handlePurchaseToDateChange,
+    purchasePartyFilter,
+    handlePurchasePartyFilterChange,
+    purchaseTypeFilter,
+    handlePurchaseTypeFilterChange,
+    handleResetPurchaseFilters,
     orderPurchaseType,
     handleOrderPurchaseTypeChange,
     showRequisitionModal,
@@ -111,9 +124,25 @@ const PurchaseVoucherContainer = () => {
 
   useEffect(() => {
     if (token && orgId && selected === "table") {
-      getPurchaseVoucherApiCall(orgId, currentPage, "");
+      getPurchasePartyApiCall(orgId, 1, "");
     }
-  }, [token, orgId, selected, currentPage, perPage]);
+  }, [token, orgId, selected]);
+
+  useEffect(() => {
+    if (token && orgId && selected === "table") {
+      getPurchaseVoucherApiCall(orgId, currentPage, purchaseTableInput.trim());
+    }
+  }, [
+    token,
+    orgId,
+    selected,
+    currentPage,
+    perPage,
+    purchaseFromDateApi,
+    purchaseToDateApi,
+    purchasePartyFilter,
+    purchaseTypeFilter,
+  ]);
 
   return (
     <PurchaseVoucher
@@ -147,6 +176,17 @@ const PurchaseVoucherContainer = () => {
       setPurchasePartyInput={setPurchasePartyInput}
       itemInput={itemInput}
       setItemInput={setItemInput}
+      purchaseTableInput={purchaseTableInput}
+      handleFilterPurchaseTable={handleFilterPurchaseTable}
+      purchaseFromDate={purchaseFromDate}
+      purchaseToDate={purchaseToDate}
+      onPurchaseFromDateChange={handlePurchaseFromDateChange}
+      onPurchaseToDateChange={handlePurchaseToDateChange}
+      purchasePartyFilter={purchasePartyFilter}
+      onPurchasePartyFilterChange={handlePurchasePartyFilterChange}
+      purchaseTypeFilter={purchaseTypeFilter}
+      onPurchaseTypeFilterChange={handlePurchaseTypeFilterChange}
+      onResetPurchaseFilters={handleResetPurchaseFilters}
       orderPurchaseType={orderPurchaseType}
       handleOrderPurchaseTypeChange={handleOrderPurchaseTypeChange}
       showRequisitionModal={showRequisitionModal}

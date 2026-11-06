@@ -1,10 +1,12 @@
 "use client";
 
+import { TableDateFilter } from "@/components/ui/table-date-filter";
 import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { getPaginatedTableRows, getTableSerialIndex } from "@/components/ui/table-edit-button";
-import { useClientTableSearch } from "@/lib/useClientTableSearch";
-import { Printer } from "lucide-react";
+import { filterBySearch } from "@/lib/useClientTableSearch";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { ListFilter, Printer, RotateCcw } from "lucide-react";
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
 import { TablePaginationBar } from "@/components/ui/table-pagination";
@@ -29,13 +31,26 @@ import { FC } from "react";
 import { TableDeleteButton } from "@/components/ui/table-edit-button";
 import { useSelector } from "react-redux";
 
+interface SamplePrintPartyOption {
+  Id: number;
+  Party_Name: string;
+}
+
 interface SamplePrintState {
   samplePrintData: SamplePrintTableData[];
 }
 
+interface OrderBookingState {
+  orderPartyData: SamplePrintPartyOption[];
+}
+
 interface RootState {
   samplePrint: SamplePrintState;
+  orderBooking: OrderBookingState;
 }
+
+const filterSelectClassName =
+  "h-10 min-w-[148px] rounded-full border border-black/15 bg-white px-3 text-sm text-foreground outline-none focus:border-black/25";
 
 const formatPrintDate = (value?: string) => {
   if (!value) return "";
@@ -58,12 +73,65 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  samplePrintTableInput,
+  handleFilterSamplePrintTable,
+  samplePrintFromDate,
+  samplePrintToDate,
+  onSamplePrintFromDateChange,
+  onSamplePrintToDateChange,
+  samplePrintPartyFilter,
+  onSamplePrintPartyFilterChange,
+  onResetSamplePrintFilters,
 }) => {
   const samplePrintData: SamplePrintTableData[] = useSelector(
     (state: RootState) => state?.samplePrint?.samplePrintData
   );
+  const orderPartyData: SamplePrintPartyOption[] =
+    useSelector(
+      (state: RootState) => state?.orderBooking?.orderPartyData,
+    ) ?? [];
 
-  const { search, setSearch, filtered } = useClientTableSearch(samplePrintData);
+  const search = samplePrintTableInput;
+  const fromDay = toApiDate(samplePrintFromDate);
+  const toDay = toApiDate(samplePrintToDate);
+  const selectedParty = orderPartyData.find(
+    (party) => String(party.Id) === samplePrintPartyFilter,
+  );
+  const safeRows = Array.isArray(samplePrintData) ? samplePrintData : [];
+  const filtered = filterBySearch(
+    safeRows.filter((row) => {
+      if (samplePrintPartyFilter) {
+        const rowPartyId = row.Party_Id;
+        if (rowPartyId != null && String(rowPartyId).trim() !== "") {
+          if (String(rowPartyId) !== samplePrintPartyFilter) return false;
+        } else if (
+          selectedParty &&
+          String(row.Party_Name ?? "").trim().toLowerCase() !==
+            String(selectedParty.Party_Name ?? "").trim().toLowerCase()
+        ) {
+          return false;
+        }
+      }
+      const rawDate = String(row.Print_Date ?? "");
+      const printDay = toApiDate(
+        rawDate.includes("T") ? parseISO(rawDate) : new Date(rawDate),
+      );
+      if (fromDay && (!printDay || printDay < fromDay)) return false;
+      if (toDay && (!printDay || printDay > toDay)) return false;
+      return true;
+    }),
+    search,
+  );
+  const hasActiveFilters = Boolean(
+    search ||
+      samplePrintFromDate ||
+      samplePrintToDate ||
+      samplePrintPartyFilter,
+  );
+  const effectiveLastPage =
+    filtered.length < perPage
+      ? Math.max(1, currentPage)
+      : Math.max(lastPage, currentPage);
 
   return (
     <div className="w-full">
@@ -73,20 +141,67 @@ const SamplePrintTable: FC<SamplePrintTableProps> = ({
         bottomContent={
           <TablePaginationBar
             currentPage={currentPage}
-            lastPage={lastPage}
+            lastPage={effectiveLastPage}
             onPageChange={setCurrentPage}
             perPage={perPage}
             onPerPageChange={onPerPageChange}
           />
         }
         topContent={
-          <TableSearchInput
-            title="Sample print history"
-            description="Saved sample PDFs for previously generated proposals."
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Search sample print"
-          />
+          <div className="flex w-full flex-col gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Sample print history
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Saved sample PDFs for previously generated proposals.
+              </p>
+            </div>
+            <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-black/[0.08] bg-white p-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 pr-1 text-sm font-medium text-foreground">
+                <ListFilter className="h-4 w-4 text-primary" />
+                Filter
+              </span>
+              <TableSearchInput
+                value={search}
+                onValueChange={handleFilterSamplePrintTable}
+                placeholder="Search sample print"
+                className="w-auto shrink-0 justify-start"
+              />
+              <TableDateFilter
+                fromDate={samplePrintFromDate}
+                toDate={samplePrintToDate}
+                onFromDateChange={onSamplePrintFromDateChange}
+                onToDateChange={onSamplePrintToDateChange}
+              />
+              <select
+                aria-label="Party"
+                value={samplePrintPartyFilter}
+                onChange={(event) =>
+                  onSamplePrintPartyFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All parties</option>
+                {orderPartyData.map((party) => (
+                  <option key={party.Id} value={String(party.Id)}>
+                    {party.Party_Name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="bordered"
+                radius="full"
+                className="h-10 min-w-[108px] border-black/15 bg-white px-3 text-sm font-medium"
+                startContent={<RotateCcw className="h-4 w-4" />}
+                isDisabled={!hasActiveFilters}
+                onPress={onResetSamplePrintFilters}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
         }
         classNames={tableClassNames}
       >

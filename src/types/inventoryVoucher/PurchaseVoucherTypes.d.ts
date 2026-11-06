@@ -96,6 +96,17 @@ export interface PurchaseVoucherProps {
   editPurchaseId: number | null;
   handleEditPurchase: (data: PurchaseVoucherTableData) => void;
   handleCancelEditPurchase: () => void;
+  purchaseTableInput: string;
+  handleFilterPurchaseTable: (value: string) => void;
+  purchaseFromDate?: Date;
+  purchaseToDate?: Date;
+  onPurchaseFromDateChange: (value: Date | undefined) => void;
+  onPurchaseToDateChange: (value: Date | undefined) => void;
+  purchasePartyFilter: string;
+  onPurchasePartyFilterChange: (value: string) => void;
+  purchaseTypeFilter: string;
+  onPurchaseTypeFilterChange: (value: string) => void;
+  onResetPurchaseFilters: () => void;
 }
 
 export interface PurchaseVoucherFormProps {
@@ -141,6 +152,17 @@ export interface PurchaseVoucherTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  purchaseTableInput: string;
+  handleFilterPurchaseTable: (value: string) => void;
+  purchaseFromDate?: Date;
+  purchaseToDate?: Date;
+  onPurchaseFromDateChange: (value: Date | undefined) => void;
+  onPurchaseToDateChange: (value: Date | undefined) => void;
+  purchasePartyFilter: string;
+  onPurchasePartyFilterChange: (value: string) => void;
+  purchaseTypeFilter: string;
+  onPurchaseTypeFilterChange: (value: string) => void;
+  onResetPurchaseFilters: () => void;
 }
 
 export interface PurchaseTableData {

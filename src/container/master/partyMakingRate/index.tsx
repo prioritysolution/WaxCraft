@@ -11,8 +11,8 @@ const PartyMakingRateContainer = () => {
 
   const {
     getPartyMakingRateApiCall,
-    addPartyMakingRateLoading,
-    updatePartyMakingRateLoading,
+    savePartyMakingRateLoading,
+    rowsLoading,
     loading,
     form,
     handleSubmit,
@@ -20,6 +20,7 @@ const PartyMakingRateContainer = () => {
     setIsOpen,
     editData,
     handleEditData,
+    handleOpenAdd,
     currentPage,
     setCurrentPage,
     lastPage,
@@ -27,13 +28,11 @@ const PartyMakingRateContainer = () => {
     handlePerPageChange,
     tableInput,
     handleFilterTableData,
-    showDeleteDialog,
-    setShowDeleteDialog,
-    setTempDeleteId,
-    handleShowDeleteDialog,
-    handleDeletePartyMakingRate,
-    deletePartyMakingRateLoading,
-    deleteWarning,
+    visibleParties,
+    filterPartyOptions,
+    filterPartyLoading,
+    partyFilterId,
+    onPartyFilterChange,
     totalCount,
     partyOptions,
     partyInput,
@@ -41,17 +40,17 @@ const PartyMakingRateContainer = () => {
     handleSearchParty,
     handleScrollParty,
     getPartyLoading,
+    getModelLoading,
   } = usePartyMakingRate();
 
   useEffect(() => {
-    if (token && orgId)
-      getPartyMakingRateApiCall(orgId, currentPage, tableInput);
-  }, [token, orgId, currentPage, perPage]);
+    if (token && orgId) getPartyMakingRateApiCall(orgId, 1, "");
+  }, [token, orgId]);
 
   return (
     <PartyMakingRate
-      addPartyMakingRateLoading={addPartyMakingRateLoading}
-      updatePartyMakingRateLoading={updatePartyMakingRateLoading}
+      savePartyMakingRateLoading={savePartyMakingRateLoading}
+      rowsLoading={rowsLoading}
       loading={loading}
       form={form}
       handleSubmit={handleSubmit}
@@ -59,6 +58,7 @@ const PartyMakingRateContainer = () => {
       setIsOpen={setIsOpen}
       editData={editData}
       handleEditData={handleEditData}
+      handleOpenAdd={handleOpenAdd}
       currentPage={currentPage}
       setCurrentPage={setCurrentPage}
       lastPage={lastPage}
@@ -66,13 +66,11 @@ const PartyMakingRateContainer = () => {
       onPerPageChange={handlePerPageChange}
       tableInput={tableInput}
       handleFilterTableData={handleFilterTableData}
-      showDeleteDialog={showDeleteDialog}
-      setShowDeleteDialog={setShowDeleteDialog}
-      setTempDeleteId={setTempDeleteId}
-      handleShowDeleteDialog={handleShowDeleteDialog}
-      handleDeletePartyMakingRate={handleDeletePartyMakingRate}
-      deletePartyMakingRateLoading={deletePartyMakingRateLoading}
-      deleteWarning={deleteWarning}
+      visibleParties={visibleParties}
+      filterPartyOptions={filterPartyOptions}
+      filterPartyLoading={filterPartyLoading}
+      partyFilterId={partyFilterId}
+      onPartyFilterChange={onPartyFilterChange}
       totalCount={totalCount}
       partyOptions={partyOptions}
       partyInput={partyInput}
@@ -80,6 +78,7 @@ const PartyMakingRateContainer = () => {
       handleSearchParty={handleSearchParty}
       handleScrollParty={handleScrollParty}
       getPartyLoading={getPartyLoading}
+      getModelLoading={getModelLoading}
     />
   );
 };

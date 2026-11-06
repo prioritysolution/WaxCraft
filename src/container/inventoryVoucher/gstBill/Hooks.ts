@@ -2,7 +2,9 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import toast from "react-hot-toast";
 import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
@@ -41,8 +43,21 @@ interface RootState {
   orderBooking: OrderBookingState;
 }
 
+type GstBillListFilters = {
+  fromDate: string;
+  toDate: string;
+  partyId: string;
+};
+
+const emptyGstBillListFilters = (): GstBillListFilters => ({
+  fromDate: "",
+  toDate: "",
+  partyId: "",
+});
+
 export const useGstBill = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addGstBillLoading, setAddGstBillLoading] = useState(false);
   const [deleteGstBillLoading, setDeleteGstBillLoading] = useState(false);
@@ -59,6 +74,23 @@ export const useGstBill = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [gstBillTableInput, setGstBillTableInput] = useState("");
+  const [gstBillFromDate, setGstBillFromDate] = useState<Date | undefined>();
+  const [gstBillToDate, setGstBillToDate] = useState<Date | undefined>();
+  const [gstBillPartyFilter, setGstBillPartyFilter] = useState("");
+  const gstBillFromDateApi = useMemo(
+    () => toApiDate(gstBillFromDate),
+    [gstBillFromDate],
+  );
+  const gstBillToDateApi = useMemo(() => toApiDate(gstBillToDate), [gstBillToDate]);
+  const gstBillListFiltersRef = useRef<GstBillListFilters>(
+    emptyGstBillListFilters(),
+  );
+  gstBillListFiltersRef.current = {
+    fromDate: gstBillFromDateApi,
+    toDate: gstBillToDateApi,
+    partyId: gstBillPartyFilter,
+  };
 
   const [selected, setSelected] = useState("form");
 
@@ -398,7 +430,7 @@ export const useGstBill = () => {
         setShowDeleteDialog(false);
         setTempDeleteId(null);
         setCurrentPage(1);
-        getGstBillApiCall(orgId, 1, "");
+        getGstBillApiCall(orgId, 1, gstBillTableInput.trim());
       } else {
         toast.error(message || "Unable to cancel GST bill");
       }
@@ -422,6 +454,7 @@ export const useGstBill = () => {
         page,
         keyword,
         perPage,
+        gstBillListFiltersRef.current,
       );
 
       if (res.status === 200) {
@@ -448,13 +481,13 @@ export const useGstBill = () => {
           };
         });
         dispatch(getGstBillData(normalized));
-        setLastPage(
+        const apiLastPage =
           Number(details?.pagination?.last_page) > 0
             ? Number(details.pagination.last_page)
             : Number(details?.last_page) > 0
               ? Number(details.last_page)
-              : 1,
-        );
+              : 1;
+        setLastPage(normalized.length < perPage ? page : apiLastPage);
       } else {
         dispatch(getGstBillData([]));
         setLastPage(1);
@@ -466,6 +499,42 @@ export const useGstBill = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterGstBillTable = (value: string) => {
+    setGstBillTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getGstBillApiCall(orgId, 1, value.trim());
+    });
+  };
+
+  const handleGstBillFromDateChange = (value: Date | undefined) => {
+    setGstBillFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleGstBillToDateChange = (value: Date | undefined) => {
+    setGstBillToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleGstBillPartyFilterChange = (value: string) => {
+    setGstBillPartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetGstBillFilters = () => {
+    setGstBillFromDate(undefined);
+    setGstBillToDate(undefined);
+    setGstBillPartyFilter("");
+    setGstBillTableInput("");
+    gstBillListFiltersRef.current = emptyGstBillListFilters();
+    setCurrentPage(1);
+    if (orgId) getGstBillApiCall(orgId, 1, "");
   };
 
   useEffect(() => {
@@ -541,5 +610,16 @@ export const useGstBill = () => {
     setInvoiceData,
     orderPartyInput,
     setOrderPartyInput,
+    gstBillTableInput,
+    handleFilterGstBillTable,
+    gstBillFromDate,
+    gstBillToDate,
+    gstBillFromDateApi,
+    gstBillToDateApi,
+    handleGstBillFromDateChange,
+    handleGstBillToDateChange,
+    gstBillPartyFilter,
+    handleGstBillPartyFilterChange,
+    handleResetGstBillFilters,
   };
 };

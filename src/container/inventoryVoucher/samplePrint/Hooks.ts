@@ -1,8 +1,10 @@
-import { useForm, SubmitHandler, useWatch } from "react-hook-form";
+import { Resolver, useForm, SubmitHandler, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import toast from "react-hot-toast";
 import { useResetFormOnModalClose } from "@/lib/useResetFormOnModalClose";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,7 +14,7 @@ import {
   SamplePrintDesignTableData,
 } from "@/types/inventoryVoucher/SamplePrintTypes";
 import { ApiResponse } from "@/types/ApiTypes";
-import { ChildRow } from "@/types/master/DesignTypes";
+import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
 import { getOrderDesignDetailsData } from "../orderBooking/OrderBookingReducer";
 import {
   getDesignDetailsAPI,
@@ -29,7 +31,12 @@ import { format } from "date-fns";
 import { toRateString, toTwoDecimalString } from "@/utils/formatDecimal";
 import { computeSamplePrintHistoryTotal } from "@/utils/samplePrintTotal";
 import { getPartyMakingRateByPartyAPI } from "@/container/master/partyMakingRate/PartyMakingRateApis";
-import { parsePartyMakingRateDetails } from "@/utils/partyMakingRate";
+import {
+  findDesignPartyMakingRate,
+  findPartyMakingRate,
+  parsePartyMakingRateRows,
+  PartyMakingRateSetup,
+} from "@/utils/partyMakingRate";
 
 /** Design item rates are accepted as entered — any number of decimal places. */
 const itemRateRegex = /^\d+(\.\d+)?$/;
@@ -44,6 +51,7 @@ interface OrderPartyData {
 
 interface OrderBookingState {
   orderPartyData: OrderPartyData[];
+  orderDesignDetailsData: DesignTableData | DesignTableData[] | null;
 }
 
 interface RootState {
@@ -1152,7 +1160,20 @@ const mapSamplePrintDetailsToPrintData = (
   };
 };
 
+type SamplePrintListFilters = {
+  fromDate: string;
+  toDate: string;
+  partyId: string;
+};
+
+const emptySamplePrintListFilters = (): SamplePrintListFilters => ({
+  fromDate: "",
+  toDate: "",
+  partyId: "",
+});
+
 export const useSamplePrint = () => {
+  const runDebouncedSearch = useSearchDebounce();
   const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(false);
@@ -1186,12 +1207,39 @@ export const useSamplePrint = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [samplePrintTableInput, setSamplePrintTableInput] = useState("");
+  const [samplePrintFromDate, setSamplePrintFromDate] = useState<
+    Date | undefined
+  >();
+  const [samplePrintToDate, setSamplePrintToDate] = useState<
+    Date | undefined
+  >();
+  const [samplePrintPartyFilter, setSamplePrintPartyFilter] = useState("");
+  const samplePrintFromDateApi = useMemo(
+    () => toApiDate(samplePrintFromDate),
+    [samplePrintFromDate],
+  );
+  const samplePrintToDateApi = useMemo(
+    () => toApiDate(samplePrintToDate),
+    [samplePrintToDate],
+  );
+  const samplePrintListFiltersRef = useRef<SamplePrintListFilters>(
+    emptySamplePrintListFilters(),
+  );
+  samplePrintListFiltersRef.current = {
+    fromDate: samplePrintFromDateApi,
+    toDate: samplePrintToDateApi,
+    partyId: samplePrintPartyFilter,
+  };
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tempDeleteId, setTempDeleteId] = useState<number | null>(null);
 
   const orderPartyData: OrderPartyData[] = useSelector(
     (state: RootState) => state?.orderBooking?.orderPartyData
+  );
+  const orderDesignDetailsData = useSelector(
+    (state: RootState) => state?.orderBooking?.orderDesignDetailsData
   );
 
   useEffect(() => {
@@ -1214,6 +1262,7 @@ export const useSamplePrint = () => {
     wtRate: yup.string().default(""),
     polish: yup.string().default(""),
     ghat: yup.string().default(""),
+    manualDesignRates: yup.boolean().default(false),
     image: yup.string().default(""),
     itemType: yup.string().required("Item type is required"),
     // Design line items are validated in the modal before Save; form Add uses
@@ -1236,6 +1285,7 @@ export const useSamplePrint = () => {
               return itemRateRegex.test(String(value));
             }),
           makingRate: yup.string().default(""),
+          makingRateManual: yup.boolean().default(false),
           itemTotal: yup.string().default(""),
         })
       )
@@ -1244,7 +1294,7 @@ export const useSamplePrint = () => {
   });
 
   const form = useForm<SamplePrintFormData>({
-    resolver: yupResolver(formSchema),
+    resolver: yupResolver(formSchema) as Resolver<SamplePrintFormData>,
     defaultValues: {
       printDate: new Date(),
       partyId: "",
@@ -1258,6 +1308,7 @@ export const useSamplePrint = () => {
       wtRate: "",
       polish: "",
       ghat: "",
+      manualDesignRates: false,
       image: "",
       itemType: "1",
       item: [],
@@ -1338,6 +1389,7 @@ export const useSamplePrint = () => {
       wtRate: "",
       polish: "",
       ghat: "",
+      manualDesignRates: false,
       image: "",
       itemType: "1",
       item: [],
@@ -1358,6 +1410,7 @@ export const useSamplePrint = () => {
     form.setValue("wtRate", "");
     form.setValue("polish", "");
     form.setValue("ghat", "");
+    form.setValue("manualDesignRates", false);
     form.setValue("image", "");
     form.setValue("totalRate", "");
     form.clearErrors("item");
@@ -1517,69 +1570,176 @@ export const useSamplePrint = () => {
     );
   };
 
-  const fetchPartyMakingRate = async (
+  const fetchPartyMakingRates = async (
     orgIdValue: number,
     partyIdValue: string,
-  ): Promise<string> => {
-    if (!partyIdValue) return "";
+  ): Promise<PartyMakingRateSetup[]> => {
+    if (!partyIdValue) return [];
     try {
       const res: ApiResponse = await getPartyMakingRateByPartyAPI(
         orgIdValue,
         partyIdValue,
       );
       if (res.status === 200 || res.status === 202) {
-        return parsePartyMakingRateDetails(res.data?.details);
+        return parsePartyMakingRateRows(res.data?.details);
       }
     } catch {
-      // Keep empty making rate if lookup fails.
+      // Keep rates empty if the party setup cannot be loaded.
     }
-    return "";
+    return [];
+  };
+
+  const designRateFallback = (detail?: DesignTableData | null) => ({
+    wtRate: toRateString(detail?.Wt_Rate) || "",
+    polish:
+      detail?.Polish == null || String(detail.Polish).trim() === ""
+        ? ""
+        : toTwoDecimalString(detail.Polish) || String(detail.Polish),
+    ghat:
+      detail?.Ghat == null || String(detail.Ghat).trim() === ""
+        ? ""
+        : String(detail.Ghat).trim(),
+  });
+
+  const childModelId = (child: ChildRow) => {
+    const record = child as ChildRow & Record<string, unknown>;
+    const value =
+      record.Model_Id ??
+      record.model_id ??
+      record.item_mod ??
+      record.Mod_Id ??
+      record.mod_id;
+    return value == null || String(value).trim() === "" ? "" : String(value);
+  };
+
+  const applyPartyMakingRates = (
+    setups: PartyMakingRateSetup[],
+    detail?: DesignTableData | null,
+  ) => {
+    const rows = form.getValues("item") ?? [];
+    const partyItem = form.getValues("itemType") === "0";
+    const children = detail?.childrow ?? [];
+
+    rows.forEach((row, index) => {
+      const setup = findPartyMakingRate(setups, row.modelId);
+      const makingRateManual =
+        !setup || !String(setup.makingRate ?? "").trim();
+      const child = children.find(
+        (item) => String(item.Item_Id) === String(row.itemId),
+      );
+      const makingRate = makingRateManual
+        ? toRateString(child?.Making_Rate) || ""
+        : toRateString(setup?.makingRate) || setup?.makingRate || "";
+      const rate = partyItem ? "0.00" : row.itemRate;
+      form.setValue(`item.${index}.itemRate`, rate ?? "", {
+        shouldDirty: false,
+      });
+      form.setValue(`item.${index}.makingRate`, makingRate, {
+        shouldDirty: true,
+      });
+      form.setValue(`item.${index}.makingRateManual`, makingRateManual, {
+        shouldDirty: false,
+      });
+      form.setValue(
+        `item.${index}.itemTotal`,
+        calcRowTotal(row.itemQuantity, rate, makingRate),
+        { shouldDirty: false },
+      );
+    });
+
+    const designSetup = findDesignPartyMakingRate(
+      setups,
+      rows.map((row) => row.modelId),
+    );
+    const manualDesignRates = !designSetup;
+    const fallback = designRateFallback(detail);
+    form.setValue("manualDesignRates", manualDesignRates, {
+      shouldDirty: false,
+    });
+    form.setValue(
+      "wtRate",
+      manualDesignRates
+        ? fallback.wtRate
+        : toRateString(designSetup?.wtRate) || designSetup?.wtRate || "",
+      { shouldDirty: true },
+    );
+    form.setValue(
+      "polish",
+      manualDesignRates
+        ? fallback.polish
+        : toTwoDecimalString(designSetup?.polish) || designSetup?.polish || "",
+      { shouldDirty: true },
+    );
+    form.setValue(
+      "ghat",
+      manualDesignRates ? fallback.ghat : designSetup?.ghat ?? "",
+      { shouldDirty: true },
+    );
+    syncItemTotalsAndTotalRate();
   };
 
   const getDesignDetailsApiCall = async (orgId: number, designId: string) => {
     try {
       const selectedPartyId = String(form.getValues("partyId") ?? "").trim();
-      const [res, partyMakingRate] = await Promise.all([
+      const [res, partyMakingRates] = await Promise.all([
         getDesignDetailsAPI(orgId, designId),
-        fetchPartyMakingRate(orgId, selectedPartyId),
+        fetchPartyMakingRates(orgId, selectedPartyId),
       ]);
 
       if (res.status === 200) {
-        dispatch(getOrderDesignDetailsData(res.data.details[0]));
-        form.setValue("designName", res.data.details[0].Design_Name);
-        form.setValue("designNo", res.data.details[0].Design_No);
+        const detail = res.data.details[0] as DesignTableData;
+        dispatch(getOrderDesignDetailsData(detail));
+        const designSetup = findDesignPartyMakingRate(
+          partyMakingRates,
+          (detail.childrow ?? []).map((child) => childModelId(child)),
+        );
+        const manualDesignRates = !designSetup;
+        const fallback = designRateFallback(detail);
+
+        form.setValue("designName", detail.Design_Name);
+        form.setValue("designNo", detail.Design_No);
         form.setValue(
           "wt",
-          toTwoDecimalString(res.data.details[0].WT) ||
-            String(res.data.details[0].WT ?? ""),
+          toTwoDecimalString(detail.WT) || String(detail.WT ?? ""),
         );
+        form.setValue("image", detail.image || (detail as DesignTableData & { Image?: string }).Image || "");
+        form.setValue("manualDesignRates", manualDesignRates);
         form.setValue(
           "wtRate",
-          toRateString(res.data.details[0].Wt_Rate) || "",
+          manualDesignRates
+            ? fallback.wtRate
+            : toRateString(designSetup?.wtRate) || designSetup?.wtRate || "",
         );
         form.setValue(
           "polish",
-          toTwoDecimalString(res.data.details[0].Polish) ||
-            String(res.data.details[0].Polish ?? ""),
+          manualDesignRates
+            ? fallback.polish
+            : toTwoDecimalString(designSetup?.polish) ||
+                designSetup?.polish ||
+                "",
         );
         form.setValue(
           "ghat",
-          res.data.details[0].Ghat == null
-            ? ""
-            : String(res.data.details[0].Ghat).trim(),
+          manualDesignRates ? fallback.ghat : designSetup?.ghat ?? "",
         );
-        form.setValue("image", res.data.details[0].Image);
         const partyItem = form.getValues("itemType") === "0";
-        const makingRate =
-          toRateString(partyMakingRate) || partyMakingRate || "";
         form.setValue(
           "item",
-          (res.data.details[0].childrow || []).map((child: ChildRow) => {
+          (detail.childrow || []).map((child: ChildRow) => {
             const quantity = Number(child.Qnty) || 0;
             const rate = partyItem
               ? "0.00"
               : toRateString(child.Item_Rate) ||
                 (child.Item_Rate != null ? String(child.Item_Rate) : "");
+            const modelId = childModelId(child);
+            const itemSetup = findPartyMakingRate(partyMakingRates, modelId);
+            const makingRateManual =
+              !itemSetup || !String(itemSetup.makingRate ?? "").trim();
+            const makingRate = makingRateManual
+              ? toRateString(child.Making_Rate) || ""
+              : toRateString(itemSetup?.makingRate) ||
+                itemSetup?.makingRate ||
+                "";
             const itemTotal = calcRowTotal(quantity, rate, makingRate);
 
             const pickAttr = (...keys: (keyof ChildRow)[]) => {
@@ -1592,23 +1752,24 @@ export const useSamplePrint = () => {
             };
 
             return {
-              designId: res.data.details[0].Id,
-              itemId: child.Item_Id,
+              designId: String(detail.Id),
+              itemId: String(child.Item_Id),
               itemName: child.Item_Name,
-              itemGl: child.Item_GL,
+              itemGl: child.Item_GL ?? "",
               itemShName: child.Item_Sh_Name,
-              itemQuantity: child.Qnty,
+              itemQuantity: String(child.Qnty ?? ""),
               itemRate: rate,
               makingRate,
+              makingRateManual,
               itemTotal,
               catId: pickAttr("Cat_Id", "cat_id"),
-              modelId: pickAttr("Model_Id", "model_id", "item_mod"),
+              modelId,
               sizeId: pickAttr("Size_Id", "size_id", "item_size"),
               colorId: pickAttr("Color_Id", "color_id", "item_color"),
             };
           })
         );
-        queueMicrotask(() => syncItemTotalsAndTotalRate());
+        syncItemTotalsAndTotalRate();
       } else {
         dispatch(getOrderDesignDetailsData([]));
       }
@@ -1718,7 +1879,12 @@ export const useSamplePrint = () => {
         setShowPrintDialog(true);
         resetSampleForm();
         setCurrentPage(1);
-        getSamplePrintApiCall(orgId, 1, "", printPayload);
+        getSamplePrintApiCall(
+          orgId,
+          1,
+          samplePrintTableInput.trim(),
+          printPayload,
+        );
         toast.success(
           typeof res.data.message === "string" && res.data.message.trim()
             ? res.data.message
@@ -1759,7 +1925,7 @@ export const useSamplePrint = () => {
             : "Sample print deleted"
         );
         setCurrentPage(1);
-        getSamplePrintApiCall(orgId, 1, "");
+        getSamplePrintApiCall(orgId, 1, samplePrintTableInput.trim());
         setShowDeleteDialog(false);
         setTempDeleteId(null);
       } else {
@@ -1790,6 +1956,7 @@ export const useSamplePrint = () => {
         page,
         keyword,
         perPage,
+        samplePrintListFiltersRef.current,
       );
 
       if (res.status === 200) {
@@ -1843,11 +2010,11 @@ export const useSamplePrint = () => {
 
         mapped = await enrichHistoryRowsFromPrintDetails(orgId, mapped);
 
-        setLastPage(
-          res.data.details?.pagination?.last_page ||
-            res.data.details?.last_page ||
-            1
-        );
+        const apiLastPage =
+          Number(res.data.details?.pagination?.last_page) ||
+          Number(res.data.details?.last_page) ||
+          1;
+        setLastPage(mapped.length < perPage ? page : apiLastPage);
 
         const designIds: string[] = Array.from(
           new Set(
@@ -1931,13 +2098,51 @@ export const useSamplePrint = () => {
         dispatch(getSamplePrintData(mapped.map(finalizeHistoryRowTotal)));
       } else {
         dispatch(getSamplePrintData([]));
+        setLastPage(1);
       }
     } catch (err) {
       toast.error("Something went wrong");
       dispatch(getSamplePrintData([]));
+      setLastPage(1);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterSamplePrintTable = (value: string) => {
+    setSamplePrintTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getSamplePrintApiCall(orgId, 1, value.trim());
+    });
+  };
+
+  const handleSamplePrintFromDateChange = (value: Date | undefined) => {
+    setSamplePrintFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleSamplePrintToDateChange = (value: Date | undefined) => {
+    setSamplePrintToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleSamplePrintPartyFilterChange = (value: string) => {
+    setSamplePrintPartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetSamplePrintFilters = () => {
+    setSamplePrintFromDate(undefined);
+    setSamplePrintToDate(undefined);
+    setSamplePrintPartyFilter("");
+    setSamplePrintTableInput("");
+    samplePrintListFiltersRef.current = emptySamplePrintListFilters();
+    setCurrentPage(1);
+    if (orgId) getSamplePrintApiCall(orgId, 1, "");
   };
 
   useEffect(() => {
@@ -1966,18 +2171,13 @@ export const useSamplePrint = () => {
 
     let cancelled = false;
     (async () => {
-      const makingRate = await fetchPartyMakingRate(orgId, String(partyId));
+      const setups = await fetchPartyMakingRates(orgId, String(partyId));
       if (cancelled) return;
-      const rate = toRateString(makingRate) || makingRate || "";
-      rows.forEach((row, index) => {
-        form.setValue(`item.${index}.makingRate`, rate, { shouldDirty: true });
-        form.setValue(
-          `item.${index}.itemTotal`,
-          calcRowTotal(row?.itemQuantity, row?.itemRate, rate),
-          { shouldDirty: false },
-        );
-      });
-      queueMicrotask(() => syncItemTotalsAndTotalRate());
+      const detail = orderDesignDetailsData;
+      applyPartyMakingRates(
+        setups,
+        detail && !Array.isArray(detail) ? detail : null,
+      );
     })();
 
     return () => {
@@ -2067,5 +2267,16 @@ export const useSamplePrint = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    samplePrintTableInput,
+    handleFilterSamplePrintTable,
+    samplePrintFromDate,
+    samplePrintToDate,
+    samplePrintFromDateApi,
+    samplePrintToDateApi,
+    handleSamplePrintFromDateChange,
+    handleSamplePrintToDateChange,
+    samplePrintPartyFilter,
+    handleSamplePrintPartyFilterChange,
+    handleResetSamplePrintFilters,
   };
 };

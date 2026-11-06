@@ -159,16 +159,18 @@ export function TablePaginationBar({
           </PopoverContent>
         </Popover>
       </div>
-      <Pagination
-        isCompact
-        showControls
-        showShadow
-        color="primary"
-        page={page}
-        total={total}
-        onChange={onPageChange}
-        renderItem={renderPaginationItem}
-      />
+      {total > 1 ? (
+        <Pagination
+          isCompact
+          showControls
+          showShadow
+          color="primary"
+          page={page}
+          total={total}
+          onChange={onPageChange}
+          renderItem={renderPaginationItem}
+        />
+      ) : null}
     </div>
   );
 }

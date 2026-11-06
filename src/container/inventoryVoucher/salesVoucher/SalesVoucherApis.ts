@@ -25,7 +25,13 @@ const buildGetInvoiceListDataKey = (
   page: number,
   keyword: string,
   perPage?: number,
-) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
+) =>
+  `${orgId}:${page}:${keyword}:${perPage ?? ""}:${filters?.fromDate ?? ""}:${filters?.toDate ?? ""}:${filters?.partyId ?? ""}`;
 
 const invalidateSalesVoucherInFlight = () => {
   getSalesVoucherInFlight.clear();
@@ -81,13 +87,30 @@ export const getInvoiceListDataAPI = async (
   orgId: number | string,
   page: number,
   keyword: string,
-  perPage?: number
+  perPage?: number,
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
 ): Promise<ApiResponse> => {
-  const key = buildGetInvoiceListDataKey(orgId, page, keyword, perPage);
+  const key = buildGetInvoiceListDataKey(
+    orgId,
+    page,
+    keyword,
+    perPage,
+    filters,
+  );
 
   return getInvoiceListDataInFlight.run(key, () =>
     doGetApiCall({
-      url: endPoints.getInvoiceListData(orgId, page, keyword, perPage),
+      url: endPoints.getInvoiceListData(
+        orgId,
+        page,
+        keyword,
+        perPage,
+        filters,
+      ),
     }),
   );
 };

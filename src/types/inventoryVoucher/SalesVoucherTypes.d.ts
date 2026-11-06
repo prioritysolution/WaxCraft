@@ -73,6 +73,15 @@ export interface SalesVoucherProps {
   onPerPageChange: (perPage: number) => void;
   orderPartyInput: string;
   setOrderPartyInput: Dispatch<SetStateAction<string>>;
+  invoiceTableInput: string;
+  handleFilterInvoiceTable: (value: string) => void;
+  invoiceFromDate?: Date;
+  invoiceToDate?: Date;
+  onInvoiceFromDateChange: (value: Date | undefined) => void;
+  onInvoiceToDateChange: (value: Date | undefined) => void;
+  invoicePartyFilter: string;
+  onInvoicePartyFilterChange: (value: string) => void;
+  onResetInvoiceFilters: () => void;
 }
 
 interface SalesVoucherFormProps {
@@ -117,6 +126,15 @@ export interface InvoiceTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  invoiceTableInput: string;
+  handleFilterInvoiceTable: (value: string) => void;
+  invoiceFromDate?: Date;
+  invoiceToDate?: Date;
+  onInvoiceFromDateChange: (value: Date | undefined) => void;
+  onInvoiceToDateChange: (value: Date | undefined) => void;
+  invoicePartyFilter: string;
+  onInvoicePartyFilterChange: (value: string) => void;
+  onResetInvoiceFilters: () => void;
 }
 
 interface InvoiceModalProps {
@@ -218,6 +236,7 @@ export interface InvoiceListData {
   Sales_Date: string;
   Sales_No: string;
   Party_Name: string;
+  Party_Id?: number | string | null;
   Party_Add: string;
   Party_Gst: string;
   Party_Mob: string;

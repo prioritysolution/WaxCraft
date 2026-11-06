@@ -2,7 +2,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useResetFormOnModalClose } from "@/lib/useResetFormOnModalClose";
 import getCookieData from "@/utils/getCookieData";
@@ -36,10 +36,17 @@ import { addPartyAPI } from "@/container/master/party/PartyApis";
 import { ChildRow, DesignTableData } from "@/types/master/DesignTypes";
 import { format } from "date-fns";
 import { resolveListLastPage } from "@/lib/listTotalCount";
+import { loadAllParties } from "@/lib/loadAllParties";
 import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import { toRateString } from "@/utils/formatDecimal";
+import { toApiDate } from "@/lib/voucherTableDate";
 import { getPartyMakingRateByPartyAPI } from "@/container/master/partyMakingRate/PartyMakingRateApis";
-import { parsePartyMakingRateDetails } from "@/utils/partyMakingRate";
+import {
+  findDesignPartyMakingRate,
+  findPartyMakingRate,
+  parsePartyMakingRateRows,
+  PartyMakingRateSetup,
+} from "@/utils/partyMakingRate";
 
 interface OrderPartyData {
   Id: number;
@@ -151,6 +158,30 @@ export const useOrderBooking = () => {
     setCurrentPage(1),
   );
   const [orderTableInput, setOrderTableInput] = useState("");
+  const [orderFromDate, setOrderFromDate] = useState<Date | undefined>();
+  const [orderToDate, setOrderToDate] = useState<Date | undefined>();
+  const [orderPartyFilter, setOrderPartyFilter] = useState("");
+  const [orderItemTypeFilter, setOrderItemTypeFilter] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("");
+  const orderFromDateApi = useMemo(
+    () => toApiDate(orderFromDate),
+    [orderFromDate],
+  );
+  const orderToDateApi = useMemo(() => toApiDate(orderToDate), [orderToDate]);
+  const orderListFiltersRef = useRef({
+    fromDate: "",
+    toDate: "",
+    partyId: "",
+    itemType: "",
+    orderStatus: "",
+  });
+  orderListFiltersRef.current = {
+    fromDate: orderFromDateApi,
+    toDate: orderToDateApi,
+    partyId: orderPartyFilter,
+    itemType: orderItemTypeFilter,
+    orderStatus: orderStatusFilter,
+  };
 
   const [selected, setSelected] = useState("form");
 
@@ -214,6 +245,7 @@ export const useOrderBooking = () => {
     wtRate: yup.string().default(""),
     polish: yup.string().default(""),
     ghat: yup.string().default(""),
+    manualDesignRates: yup.boolean().default(false),
     image: yup.string().default(""),
     itemType: yup.string().required("Item type is required"),
     // Design-modal rows only; validated in the modal, not on main order submit.
@@ -238,6 +270,7 @@ export const useOrderBooking = () => {
       wtRate: "",
       polish: "",
       ghat: "",
+      manualDesignRates: false,
       image: "",
       itemType: "1",
       item: [],
@@ -345,6 +378,7 @@ export const useOrderBooking = () => {
       wtRate: "",
       polish: "",
       ghat: "",
+      manualDesignRates: false,
       image: "",
       itemType: "1",
       item: [],
@@ -536,11 +570,18 @@ export const useOrderBooking = () => {
         return;
       }
 
-      const allHaveMakingRate = item.every(
-        (i) => i.makingRate && i.makingRate.trim() !== ""
+      const missingMakingRate = item.some(
+        (i) =>
+          toNum(i.itemQuantity) > 0 &&
+          !String(i.makingRate ?? "").trim(),
       );
 
-      if (allHaveMakingRate) {
+      if (missingMakingRate) {
+        toast.error("Enter making rate for all items.");
+        return;
+      }
+
+      {
         const ratePerDesign = form.getValues("totalRate");
         const details = orderDesignDetailsData as DesignTableData & {
           Image?: string;
@@ -604,13 +645,12 @@ export const useOrderBooking = () => {
         form.setValue("wtRate", "");
         form.setValue("polish", "");
         form.setValue("ghat", "");
+        form.setValue("manualDesignRates", false);
         form.setValue("image", "");
         form.setValue("totalRate", "");
         setOrderDesignInput("");
         setOrderDesignId(null);
         setShowDesignDialog(false);
-      } else {
-        toast.error("Add making rate to all item.");
       }
     }
   };
@@ -810,7 +850,8 @@ export const useOrderBooking = () => {
         orgId,
         page,
         keyword,
-        pageSize
+        pageSize,
+        orderListFiltersRef.current,
       );
 
       if (res.status === 200) {
@@ -824,7 +865,8 @@ export const useOrderBooking = () => {
               : [];
 
         dispatch(getOrderBookingData(rows));
-        setLastPage(resolveListLastPage(details, pageSize));
+        const apiLastPage = resolveListLastPage(details, pageSize);
+        setLastPage(rows.length < pageSize ? page : apiLastPage);
       } else {
         dispatch(getOrderBookingData([]));
         setLastPage(1);
@@ -849,6 +891,58 @@ export const useOrderBooking = () => {
     });
   };
 
+  const handleOrderFromDateChange = (value: Date | undefined) => {
+    setOrderFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderToDateChange = (value: Date | undefined) => {
+    setOrderToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderPartyFilterChange = (value: string) => {
+    setOrderPartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderItemTypeFilterChange = (value: string) => {
+    setOrderItemTypeFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderStatusFilterChange = (value: string) => {
+    setOrderStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetOrderFilters = () => {
+    setOrderFromDate(undefined);
+    setOrderToDate(undefined);
+    setOrderPartyFilter("");
+    setOrderItemTypeFilter("");
+    setOrderStatusFilter("");
+    setOrderTableInput("");
+    orderListFiltersRef.current = {
+      fromDate: "",
+      toDate: "",
+      partyId: "",
+      itemType: "",
+      orderStatus: "",
+    };
+    setCurrentPage(1);
+    if (orgId) getOrderBookingApiCall(orgId, 1, "", perPage);
+  };
+
+  const readOrderPartyRows = (details: unknown): OrderPartyData[] => {
+    if (Array.isArray(details)) return details as OrderPartyData[];
+    if (details && typeof details === "object") {
+      const data = (details as { data?: unknown }).data;
+      if (Array.isArray(data)) return data as OrderPartyData[];
+    }
+    return [];
+  };
+
   const getOrderPartyApiCall = async (
     orgId: number,
     page: number,
@@ -858,6 +952,15 @@ export const useOrderBooking = () => {
     setGetOrderPartyLoading(true);
 
     try {
+      const loadEveryParty = page === 1 && !keyword && !partyId;
+
+      if (loadEveryParty) {
+        const parties = await loadAllParties(orgId);
+        dispatch(getOrderPartyData(parties));
+        setLastOrderPartyPage(1);
+        return;
+      }
+
       const res: ApiResponse = await getOrderPartyAPI(
         orgId,
         page,
@@ -866,10 +969,8 @@ export const useOrderBooking = () => {
       );
 
       if (res.status === 200) {
-        const newData =
-          page === 1
-            ? res.data.details?.data
-            : [...orderPartyData, ...res.data.details?.data];
+        const batch = readOrderPartyRows(res.data.details);
+        const newData = page === 1 ? batch : [...orderPartyData, ...batch];
         dispatch(getOrderPartyData(newData));
         setLastOrderPartyPage(res.data.details?.last_page);
       } else {
@@ -962,31 +1063,111 @@ export const useOrderBooking = () => {
     }
   };
 
-  const fetchPartyMakingRate = async (
+  const fetchPartyMakingRates = async (
     orgIdValue: number,
     partyIdValue: string,
-  ): Promise<string> => {
-    if (!partyIdValue) return "";
+  ): Promise<PartyMakingRateSetup[]> => {
+    if (!partyIdValue) return [];
     try {
       const res: ApiResponse = await getPartyMakingRateByPartyAPI(
         orgIdValue,
         partyIdValue,
       );
       if (res.status === 200 || res.status === 202) {
-        return parsePartyMakingRateDetails(res.data?.details);
+        return parsePartyMakingRateRows(res.data?.details);
       }
     } catch {
-      // Keep empty making rate if lookup fails.
+      // Keep rates empty if the party setup cannot be loaded.
     }
-    return "";
+    return [];
+  };
+
+  const openDesignDetail = () => {
+    const detail = orderDesignDetailsData as DesignTableData | DesignTableData[] | null;
+    if (!detail || Array.isArray(detail) || !detail.Id) return null;
+    return detail;
+  };
+
+  const designRateFallback = (detail?: DesignTableData | null) => ({
+    wtRate: toRateString(detail?.Wt_Rate) || "",
+    polish:
+      detail?.Polish == null || String(detail.Polish).trim() === ""
+        ? ""
+        : toRateString(detail.Polish) || String(detail.Polish).trim(),
+    ghat:
+      detail?.Ghat == null || String(detail.Ghat).trim() === ""
+        ? ""
+        : String(detail.Ghat).trim(),
+  });
+
+  const applyPartyMakingRates = (
+    setups: PartyMakingRateSetup[],
+    detail?: DesignTableData | null,
+  ) => {
+    const rows = form.getValues("item") ?? [];
+    const isPartyItem = form.getValues("itemType") === "0";
+    const source = detail ?? openDesignDetail();
+    const children = source?.childrow ?? [];
+
+    rows.forEach((row, index) => {
+      const setup = findPartyMakingRate(setups, row.modelId);
+      const makingRateManual =
+        !setup || !String(setup.makingRate ?? "").trim();
+      const child = children.find(
+        (item) => String(item.Item_Id) === String(row.itemId),
+      );
+      const makingRate = makingRateManual
+        ? toRateString(child?.Making_Rate) || ""
+        : setup?.makingRate ?? "";
+      form.setValue(`item.${index}.makingRate`, makingRate, {
+        shouldDirty: true,
+      });
+      form.setValue(`item.${index}.makingRateManual`, makingRateManual, {
+        shouldDirty: false,
+      });
+      const nextTotal = computeItemLineTotal(
+        { ...row, makingRate },
+        isPartyItem,
+      ).toFixed(2);
+      form.setValue(`item.${index}.itemTotal`, nextTotal, {
+        shouldDirty: false,
+      });
+    });
+
+    const designSetup = findDesignPartyMakingRate(
+      setups,
+      rows.map((row) => row.modelId),
+    );
+    const manualDesignRates = !designSetup;
+    const fallback = designRateFallback(source);
+    form.setValue("manualDesignRates", manualDesignRates, {
+      shouldDirty: false,
+    });
+    form.setValue(
+      "wtRate",
+      manualDesignRates ? fallback.wtRate : designSetup?.wtRate ?? "",
+      { shouldDirty: true },
+    );
+    form.setValue(
+      "polish",
+      manualDesignRates ? fallback.polish : designSetup?.polish ?? "",
+      { shouldDirty: true },
+    );
+    form.setValue(
+      "ghat",
+      manualDesignRates ? fallback.ghat : designSetup?.ghat ?? "",
+      { shouldDirty: true },
+    );
+    // Item totals and design rate use the rates now on the form.
+    syncDesignItemTotals();
   };
 
   const getDesignDetailsApiCall = async (orgId: number, designId: string) => {
     try {
       const selectedPartyId = String(form.getValues("partyId") ?? "").trim();
-      const [res, partyMakingRate] = await Promise.all([
+      const [res, partyMakingRates] = await Promise.all([
         getDesignDetailsAPI(orgId, designId),
-        fetchPartyMakingRate(orgId, selectedPartyId),
+        fetchPartyMakingRates(orgId, selectedPartyId),
       ]);
 
       if (res.status === 200) {
@@ -1005,20 +1186,41 @@ export const useOrderBooking = () => {
           detail?.Design_No || selectedDesign?.Design_No || ""
         ).trim();
         const image = String(detail?.Image || detail?.image || "").trim();
-        const makingRate =
-          toRateString(partyMakingRate) || partyMakingRate || "";
 
         dispatch(getOrderDesignDetailsData(detail));
+        const designSetup = findDesignPartyMakingRate(
+          partyMakingRates,
+          (detail.childrow ?? []).map((child) => {
+            const record = child as ChildRow & Record<string, unknown>;
+            return (
+              record.Model_Id ??
+              record.model_id ??
+              record.item_mod ??
+              record.Mod_Id ??
+              record.mod_id
+            );
+          }),
+        );
+        const manualDesignRates = !designSetup;
+        const fallback = designRateFallback(detail);
+        const partyWtRate = manualDesignRates
+          ? fallback.wtRate
+          : designSetup?.wtRate ?? "";
+        const partyPolish = manualDesignRates
+          ? fallback.polish
+          : designSetup?.polish ?? "";
+        const partyGhat = manualDesignRates
+          ? fallback.ghat
+          : designSetup?.ghat ?? "";
+
         form.setValue("designName", designName);
         form.setValue("designNo", designNo);
         form.setValue("wt", detail.WT);
-        form.setValue("wtRate", detail.Wt_Rate || "");
-        form.setValue("polish", detail.Polish);
-        form.setValue(
-          "ghat",
-          detail.Ghat == null ? "" : String(detail.Ghat).trim(),
-        );
         form.setValue("image", image);
+        form.setValue("manualDesignRates", manualDesignRates);
+        form.setValue("wtRate", partyWtRate);
+        form.setValue("polish", partyPolish);
+        form.setValue("ghat", partyGhat);
         form.setValue(
           "item",
           (detail.childrow ?? []).map((child: ChildRow) => {
@@ -1027,15 +1229,6 @@ export const useOrderBooking = () => {
             const itemRate = isPartyItem
               ? "0"
               : String(child.Item_Rate ?? "");
-            const itemTotal = computeItemLineTotal(
-              {
-                itemQuantity: quantity,
-                itemRate,
-                makingRate,
-              },
-              isPartyItem,
-            ).toFixed(2);
-
             const pickAttr = (...keys: (keyof ChildRow)[]) => {
               for (const key of keys) {
                 const value = child[key];
@@ -1044,6 +1237,27 @@ export const useOrderBooking = () => {
               }
               return "";
             };
+            const modelId = pickAttr(
+              "Model_Id",
+              "model_id",
+              "item_mod",
+              "Mod_Id" as keyof ChildRow,
+              "mod_id" as keyof ChildRow,
+            );
+            const itemSetup = findPartyMakingRate(partyMakingRates, modelId);
+            const makingRateManual =
+              !itemSetup || !String(itemSetup.makingRate ?? "").trim();
+            const makingRate = makingRateManual
+              ? toRateString(child.Making_Rate) || ""
+              : itemSetup?.makingRate ?? "";
+            const itemTotal = computeItemLineTotal(
+              {
+                itemQuantity: quantity,
+                itemRate,
+                makingRate,
+              },
+              isPartyItem,
+            ).toFixed(2);
 
             return {
               designId: String(detail.Id),
@@ -1054,17 +1268,17 @@ export const useOrderBooking = () => {
               itemQuantity: String(quantity),
               itemRate,
               makingRate,
+              makingRateManual,
               itemTotal,
               catId: pickAttr("Cat_Id", "cat_id"),
-              modelId: pickAttr("Model_Id", "model_id", "item_mod"),
+              modelId,
               sizeId: pickAttr("Size_Id", "size_id", "item_size"),
               colorId: pickAttr("Color_Id", "color_id", "item_color"),
             };
           }),
         );
         setOrderDesignId(detail.Id);
-        // Ensure Total Rate includes WT/Polish after items load.
-        queueMicrotask(() => syncDesignItemTotals());
+        syncDesignItemTotals();
       } else {
         dispatch(getOrderDesignDetailsData([]));
       }
@@ -1107,21 +1321,9 @@ export const useOrderBooking = () => {
 
     let cancelled = false;
     (async () => {
-      const makingRate = await fetchPartyMakingRate(orgId, String(partyId));
+      const setups = await fetchPartyMakingRates(orgId, String(partyId));
       if (cancelled) return;
-      const rate = toRateString(makingRate) || makingRate || "";
-      const isPartyItem = form.getValues("itemType") === "0";
-      rows.forEach((row, index) => {
-        form.setValue(`item.${index}.makingRate`, rate, { shouldDirty: true });
-        const nextTotal = computeItemLineTotal(
-          { ...row, makingRate: rate },
-          isPartyItem,
-        ).toFixed(2);
-        form.setValue(`item.${index}.itemTotal`, nextTotal, {
-          shouldDirty: false,
-        });
-      });
-      queueMicrotask(() => syncDesignItemTotals());
+      applyPartyMakingRates(setups, openDesignDetail());
     })();
 
     return () => {
@@ -1156,6 +1358,7 @@ export const useOrderBooking = () => {
   useResetFormOnModalClose(showDesignDialog, () => {
     form.setValue("designId", "");
     form.setValue("item", []);
+    form.setValue("manualDesignRates", false);
     form.clearErrors("orderQuantity");
     setOrderDesignInput("");
   });
@@ -1213,6 +1416,19 @@ export const useOrderBooking = () => {
     handlePerPageChange,
     orderTableInput,
     handleFilterOrderTable,
+    orderFromDate,
+    orderToDate,
+    orderFromDateApi,
+    orderToDateApi,
+    handleOrderFromDateChange,
+    handleOrderToDateChange,
+    orderPartyFilter,
+    handleOrderPartyFilterChange,
+    orderItemTypeFilter,
+    handleOrderItemTypeFilterChange,
+    orderStatusFilter,
+    handleOrderStatusFilterChange,
+    handleResetOrderFilters,
     orderPartyInput,
     setOrderPartyInput,
     orderDesignInput,

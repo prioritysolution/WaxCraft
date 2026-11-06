@@ -12,18 +12,24 @@ import {
 } from "@/types/tools/RoleAssignTypes";
 import { Checkbox, CheckboxGroup } from "@heroui/react";
 import { MinusCircle, PlusCircle } from "lucide-react";
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
-// Define types for User Data
 interface UserData {
   Id: number;
   User_Name: string;
+  Role_Id?: number;
+  Role_Name?: string;
 }
 
-// Define state for RoleAssign, including user data
+interface UserRoleData {
+  Id: number;
+  Role_Name: string;
+}
+
 interface RoleAssignState {
   userListData: UserData[];
+  userRolesData: UserRoleData[];
 }
 
 // Define the structure of RootState to include roleAssign state
@@ -46,6 +52,26 @@ const RoleAssignForm: FC<RoleAssignFormProps> = ({
   // Use selector to access user data from Redux store
   const userListData = useSelector(
     (state: RootState) => state?.addUser?.userListData
+  );
+  const userRolesData = useSelector(
+    (state: RootState) => state?.addUser?.userRolesData
+  );
+
+  const userOptions = useMemo(
+    () =>
+      (userListData || []).map((user) => {
+        const roleName =
+          user.Role_Name ||
+          userRolesData?.find((role) => role.Id === user.Role_Id)?.Role_Name ||
+          "";
+        return {
+          ...user,
+          User_Label: roleName
+            ? `${user.User_Name} - ${roleName}`
+            : user.User_Name,
+        };
+      }),
+    [userListData, userRolesData],
   );
 
   // Define state for parent checkbox selections
@@ -93,8 +119,8 @@ const RoleAssignForm: FC<RoleAssignFormProps> = ({
             label="User"
             name="userId"
             control={form.control}
-            options={userListData || []}
-            optionLabelKey="User_Name" // Specify the key for label
+            options={userOptions}
+            optionLabelKey="User_Label"
             loading={getUserLoading}
           />
 
@@ -104,7 +130,7 @@ const RoleAssignForm: FC<RoleAssignFormProps> = ({
               {roleAssignSingleList?.map((module) => (
                 <Checkbox
                   key={module.Module_Id}
-                  value={module.Module_Id}
+                  value={String(module.Module_Id)}
                   classNames={{ base: "gap-3" }}
                 >
                   {module.Module_Name}

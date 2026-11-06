@@ -52,6 +52,15 @@ const SamplePrint: FC<SamplePrintProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  samplePrintTableInput,
+  handleFilterSamplePrintTable,
+  samplePrintFromDate,
+  samplePrintToDate,
+  onSamplePrintFromDateChange,
+  onSamplePrintToDateChange,
+  samplePrintPartyFilter,
+  onSamplePrintPartyFilterChange,
+  onResetSamplePrintFilters,
 }) => {
   return (
     <PageShell>
@@ -106,6 +115,15 @@ const SamplePrint: FC<SamplePrintProps> = ({
             lastPage={lastPage}
               perPage={perPage}
               onPerPageChange={onPerPageChange}
+              samplePrintTableInput={samplePrintTableInput}
+              handleFilterSamplePrintTable={handleFilterSamplePrintTable}
+              samplePrintFromDate={samplePrintFromDate}
+              samplePrintToDate={samplePrintToDate}
+              onSamplePrintFromDateChange={onSamplePrintFromDateChange}
+              onSamplePrintToDateChange={onSamplePrintToDateChange}
+              samplePrintPartyFilter={samplePrintPartyFilter}
+              onSamplePrintPartyFilterChange={onSamplePrintPartyFilterChange}
+              onResetSamplePrintFilters={onResetSamplePrintFilters}
           />
         </Tab>
       </Tabs>

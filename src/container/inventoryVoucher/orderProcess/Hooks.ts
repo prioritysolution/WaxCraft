@@ -2,11 +2,13 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useResetFormOnModalClose } from "@/lib/useResetFormOnModalClose";
 import getCookieData from "@/utils/getCookieData";
 import { useDispatch } from "react-redux";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import {
   OrderProcessDesignRow,
   OrderProcessEmployeeOption,
@@ -23,7 +25,11 @@ import {
 } from "./OrderProcessApis";
 import { format } from "date-fns";
 import { getOrderBookingAPI } from "../orderBooking/OrderBookingApis";
-import { getOrderBookingData } from "../orderBooking/OrderBookingReducer";
+import { loadAllParties } from "@/lib/loadAllParties";
+import {
+  getOrderBookingData,
+  getOrderPartyData,
+} from "../orderBooking/OrderBookingReducer";
 import { resolveListLastPage } from "@/lib/listTotalCount";
 import { decimalRegex } from "@/utils/validationRegex";
 import { toTwoDecimalString } from "@/utils/formatDecimal";
@@ -45,6 +51,22 @@ const formatOrderDate = (value?: string | Date | null) => {
   return "";
 };
 
+type OrderListFilters = {
+  fromDate: string;
+  toDate: string;
+  partyId: string;
+  itemType: string;
+  orderStatus: string;
+};
+
+const emptyOrderListFilters = (): OrderListFilters => ({
+  fromDate: "",
+  toDate: "",
+  partyId: "",
+  itemType: "",
+  orderStatus: "",
+});
+
 const extractActiveOrderRows = (details: unknown): OrderProcessTableData[] => {
   if (Array.isArray(details)) return details as OrderProcessTableData[];
   if (details && typeof details === "object") {
@@ -60,6 +82,7 @@ const extractActiveOrderRows = (details: unknown): OrderProcessTableData[] => {
 
 export const useOrderProcess = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addOrderProcessLoading, setAddOrderProcessLoading] = useState(false);
 
@@ -87,6 +110,25 @@ export const useOrderProcess = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [orderTableInput, setOrderTableInput] = useState("");
+  const [orderFromDate, setOrderFromDate] = useState<Date | undefined>();
+  const [orderToDate, setOrderToDate] = useState<Date | undefined>();
+  const [orderPartyFilter, setOrderPartyFilter] = useState("");
+  const [orderItemTypeFilter, setOrderItemTypeFilter] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("");
+  const orderFromDateApi = useMemo(
+    () => toApiDate(orderFromDate),
+    [orderFromDate],
+  );
+  const orderToDateApi = useMemo(() => toApiDate(orderToDate), [orderToDate]);
+  const orderListFiltersRef = useRef<OrderListFilters>(emptyOrderListFilters());
+  orderListFiltersRef.current = {
+    fromDate: orderFromDateApi,
+    toDate: orderToDateApi,
+    partyId: orderPartyFilter,
+    itemType: orderItemTypeFilter,
+    orderStatus: orderStatusFilter,
+  };
 
   const [dialogType, setDialogType] = useState<"View" | "Process">("View");
 
@@ -349,8 +391,9 @@ export const useOrderProcess = () => {
       const res: ApiResponse = await getOrderBookingAPI(
         orgId,
         currentPage,
-        "",
-        perPage
+        orderTableInput.trim(),
+        perPage,
+        orderListFiltersRef.current,
       );
 
       if (res.status !== 200) return;
@@ -451,7 +494,12 @@ export const useOrderProcess = () => {
       if (res.status === 200) {
         form.reset();
         setIsOpenProcess(false);
-        getOrderBookingApiCall(orgId, currentPage, "", perPage);
+        getOrderBookingApiCall(
+          orgId,
+          currentPage,
+          orderTableInput.trim(),
+          perPage,
+        );
         setDialogType("View");
         setProcessPostType("FurtherProcess");
         setProcessTableData([]);
@@ -485,7 +533,12 @@ export const useOrderProcess = () => {
       if (res.status === 200) {
         form.reset();
         setIsOpenProcess(false);
-        getOrderBookingApiCall(orgId, currentPage, "", perPage);
+        getOrderBookingApiCall(
+          orgId,
+          currentPage,
+          orderTableInput.trim(),
+          perPage,
+        );
         setDialogType("View");
         setProcessPostType("FurtherProcess");
         setProcessTableData([]);
@@ -593,6 +646,15 @@ export const useOrderProcess = () => {
     }
   };
 
+  const getOrderPartyApiCall = async (id: number) => {
+    try {
+      const parties = await loadAllParties(id);
+      dispatch(getOrderPartyData(parties));
+    } catch {
+      dispatch(getOrderPartyData([]));
+    }
+  };
+
   const getOrderBookingApiCall = async (
     orgId: number,
     page: number,
@@ -608,7 +670,8 @@ export const useOrderProcess = () => {
         orgId,
         page,
         keyword,
-        pageSize
+        pageSize,
+        orderListFiltersRef.current,
       );
 
       if (res.status === 200) {
@@ -616,7 +679,8 @@ export const useOrderProcess = () => {
         const rows = extractActiveOrderRows(details);
 
         dispatch(getOrderBookingData(rows));
-        setLastPage(resolveListLastPage(details, pageSize));
+        const apiLastPage = resolveListLastPage(details, pageSize);
+        setLastPage(rows.length < pageSize ? page : apiLastPage);
       } else {
         dispatch(getOrderBookingData([]));
         setLastPage(1);
@@ -628,6 +692,54 @@ export const useOrderProcess = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterOrderTable = (value: string) => {
+    setOrderTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getOrderBookingApiCall(orgId, 1, value.trim(), perPage);
+    });
+  };
+
+  const handleOrderFromDateChange = (value: Date | undefined) => {
+    setOrderFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderToDateChange = (value: Date | undefined) => {
+    setOrderToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderPartyFilterChange = (value: string) => {
+    setOrderPartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderItemTypeFilterChange = (value: string) => {
+    setOrderItemTypeFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleOrderStatusFilterChange = (value: string) => {
+    setOrderStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetOrderFilters = () => {
+    setOrderFromDate(undefined);
+    setOrderToDate(undefined);
+    setOrderPartyFilter("");
+    setOrderItemTypeFilter("");
+    setOrderStatusFilter("");
+    setOrderTableInput("");
+    orderListFiltersRef.current = emptyOrderListFilters();
+    setCurrentPage(1);
+    if (orgId) getOrderBookingApiCall(orgId, 1, "", perPage);
   };
 
   useResetFormOnModalClose(isOpenProcess, () => {
@@ -656,6 +768,7 @@ export const useOrderProcess = () => {
     handleFinalClose,
     processPostType,
     getOrderBookingApiCall,
+    getOrderPartyApiCall,
     getEmployeeListForOrderProcessApiCall,
     getEmployeeLoading,
     orderProcessEmployeeData,
@@ -664,5 +777,20 @@ export const useOrderProcess = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    orderTableInput,
+    handleFilterOrderTable,
+    orderFromDate,
+    orderToDate,
+    orderFromDateApi,
+    orderToDateApi,
+    handleOrderFromDateChange,
+    handleOrderToDateChange,
+    orderPartyFilter,
+    handleOrderPartyFilterChange,
+    orderItemTypeFilter,
+    handleOrderItemTypeFilterChange,
+    orderStatusFilter,
+    handleOrderStatusFilterChange,
+    handleResetOrderFilters,
   };
 };

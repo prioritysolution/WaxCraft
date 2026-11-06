@@ -93,14 +93,14 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                 ref={printRef}
                 className="invoice-print-sheet w-full max-w-[210mm] min-h-[297mm] bg-white text-black"
               >
-                <div className="flex min-h-0 w-full flex-col border-2 border-black">
-                  <div className="flex h-8 shrink-0 items-center justify-center border-b-2 border-black">
+                <div className="flex min-h-0 w-full flex-col border border-black">
+                  <div className="flex h-8 shrink-0 items-center justify-center border-b border-black">
                     <p className="text-sm font-semibold tracking-wide">
                       TAX INVOICE
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-3 border-b-2 border-black px-3 py-2">
+                  <div className="flex shrink-0 items-center gap-3 border-b border-black px-3 py-2">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden">
                       <Image
                         alt="Org Image"
@@ -121,14 +121,14 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-12 border-b-2 border-black text-[11px]">
-                    <div className="col-span-5 border-r-2 border-black px-2 py-1.5">
+                  <div className="grid shrink-0 grid-cols-12 border-b border-black text-[11px]">
+                    <div className="col-span-5 border-r border-black px-2 py-1.5">
                       <p className="font-semibold">Bill To</p>
                       <p className="mt-0.5 font-medium">
                         {invoiceData?.Party_Name || "—"}
                       </p>
                     </div>
-                    <div className="col-span-4 border-r-2 border-black px-2 py-1.5">
+                    <div className="col-span-4 border-r border-black px-2 py-1.5">
                       <p className="font-semibold">Place Of Supply</p>
                       <p className="mt-0.5 font-medium">
                         {invoiceData?.Party_Name || "—"}
@@ -217,8 +217,8 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                     </table>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-12 border-t-2 border-black text-[11px]">
-                    <div className="col-span-7 flex flex-col justify-between gap-3 border-r-2 border-black px-2 py-2">
+                  <div className="grid shrink-0 grid-cols-12 border-t border-black text-[11px]">
+                    <div className="col-span-7 flex flex-col justify-between gap-3 border-r border-black px-2 py-2">
                       <div>
                         <p className="font-semibold">
                           Amount Chargeable (in words)
@@ -284,7 +284,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                               {invoiceData?.Discount ?? 0}
                             </td>
                           </tr>
-                          <tr className="border-b-2 border-black">
+                          <tr className="border-b border-black">
                             <td className="border-r border-black px-2 py-1.5 font-semibold">
                               Grand Total
                             </td>
@@ -301,7 +301,7 @@ const InvoiceModal: FC<InvoiceModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex h-7 shrink-0 items-center justify-center border-t-2 border-black text-[11px] font-medium">
+                  <div className="flex h-7 shrink-0 items-center justify-center border-t border-black text-[11px] font-medium">
                     ** This is a computer generated Invoice **
                   </div>
                 </div>

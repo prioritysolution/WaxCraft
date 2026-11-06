@@ -13,8 +13,8 @@ import PartyMakingRateForm from "./PartyMakingRateForm";
 import PartyMakingRateTable from "./PartyMakingRateTable";
 
 const PartyMakingRate: FC<PartyMakingRateProps> = ({
-  addPartyMakingRateLoading,
-  updatePartyMakingRateLoading,
+  savePartyMakingRateLoading,
+  rowsLoading,
   loading,
   form,
   handleSubmit,
@@ -22,6 +22,7 @@ const PartyMakingRate: FC<PartyMakingRateProps> = ({
   setIsOpen,
   editData,
   handleEditData,
+  handleOpenAdd,
   currentPage,
   setCurrentPage,
   lastPage,
@@ -29,13 +30,11 @@ const PartyMakingRate: FC<PartyMakingRateProps> = ({
   onPerPageChange,
   tableInput,
   handleFilterTableData,
-  showDeleteDialog,
-  setShowDeleteDialog,
-  setTempDeleteId,
-  handleShowDeleteDialog,
-  handleDeletePartyMakingRate,
-  deletePartyMakingRateLoading,
-  deleteWarning,
+  visibleParties,
+  filterPartyOptions,
+  filterPartyLoading,
+  partyFilterId,
+  onPartyFilterChange,
   totalCount,
   partyOptions,
   partyInput,
@@ -43,30 +42,31 @@ const PartyMakingRate: FC<PartyMakingRateProps> = ({
   handleSearchParty,
   handleScrollParty,
   getPartyLoading,
+  getModelLoading,
 }) => {
   return (
     <PageShell>
       <PageHeader
         icon={Percent}
         title="Party Making Rate"
-        description="Manage making rates assigned to parties."
+        description="Set WT rate, ghat, and polish once per party, then enter a making rate for each item model."
         badge={
           <PageCountBadge
             count={totalCount}
-            singular="rate"
-            plural="rates"
+            singular="party"
+            plural="parties"
           />
         }
         action={
-          <PageActionButton onPress={() => setIsOpen(true)}>
+          <PageActionButton onPress={handleOpenAdd}>
             Add Party Making Rate
           </PageActionButton>
         }
       />
 
       <PartyMakingRateForm
-        addPartyMakingRateLoading={addPartyMakingRateLoading}
-        updatePartyMakingRateLoading={updatePartyMakingRateLoading}
+        savePartyMakingRateLoading={savePartyMakingRateLoading}
+        rowsLoading={rowsLoading}
         form={form}
         handleSubmit={handleSubmit}
         isOpen={isOpen}
@@ -78,10 +78,16 @@ const PartyMakingRate: FC<PartyMakingRateProps> = ({
         handleSearchParty={handleSearchParty}
         handleScrollParty={handleScrollParty}
         getPartyLoading={getPartyLoading}
+        getModelLoading={getModelLoading}
       />
 
       <PartyMakingRateTable
         loading={loading}
+        rows={visibleParties}
+        filterPartyOptions={filterPartyOptions}
+        filterPartyLoading={filterPartyLoading}
+        partyFilterId={partyFilterId}
+        onPartyFilterChange={onPartyFilterChange}
         handleEditData={handleEditData}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
@@ -90,13 +96,6 @@ const PartyMakingRate: FC<PartyMakingRateProps> = ({
         onPerPageChange={onPerPageChange}
         tableInput={tableInput}
         handleFilterTableData={handleFilterTableData}
-        showDeleteDialog={showDeleteDialog}
-        setShowDeleteDialog={setShowDeleteDialog}
-        setTempDeleteId={setTempDeleteId}
-        handleShowDeleteDialog={handleShowDeleteDialog}
-        handleDeletePartyMakingRate={handleDeletePartyMakingRate}
-        deletePartyMakingRateLoading={deletePartyMakingRateLoading}
-        deleteWarning={deleteWarning}
       />
     </PageShell>
   );

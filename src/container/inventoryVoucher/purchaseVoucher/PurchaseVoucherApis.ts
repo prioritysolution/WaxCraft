@@ -13,7 +13,14 @@ const buildGetPurchaseVoucherKey = (
   page: number,
   keyword: string,
   perPage?: number,
-) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+    purchaseType?: string;
+  },
+) =>
+  `${orgId}:${page}:${keyword}:${perPage ?? ""}:${filters?.fromDate ?? ""}:${filters?.toDate ?? ""}:${filters?.partyId ?? ""}:${filters?.purchaseType ?? ""}`;
 
 const buildGetPurchasePartyKey = (
   orgId: string | number,
@@ -86,13 +93,31 @@ export const getPurchaseVoucherAPI = async (
   orgId: string | number,
   page: number,
   keyword: string,
-  perPage?: number
+  perPage?: number,
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+    purchaseType?: string;
+  },
 ): Promise<ApiResponse> => {
-  const key = buildGetPurchaseVoucherKey(orgId, page, keyword, perPage);
+  const key = buildGetPurchaseVoucherKey(
+    orgId,
+    page,
+    keyword,
+    perPage,
+    filters,
+  );
 
   return getPurchaseVoucherInFlight.run(key, () =>
     doGetApiCall({
-      url: endPoints.getPurchaseVoucher(orgId, page, keyword, perPage),
+      url: endPoints.getPurchaseVoucher(
+        orgId,
+        page,
+        keyword,
+        perPage,
+        filters,
+      ),
     }),
   );
 };

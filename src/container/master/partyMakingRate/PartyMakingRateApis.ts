@@ -2,10 +2,14 @@ import { createInFlightRequest } from "@/lib/apiInFlight";
 import { doGetApiCall, doPostApiCall, doPutApiCall } from "@/utils/apiConfig";
 import { endPoints } from "@/utils/endPoints";
 import { ApiResponse } from "@/types/ApiTypes";
-import { PartyMakingRateBody } from "@/types/master/PartyMakingRateTypes";
+import {
+  PartyMakingRateBody,
+  PartyMakingRateSaveBody,
+} from "@/types/master/PartyMakingRateTypes";
 
 const getPartyMakingRateInFlight = createInFlightRequest<ApiResponse>();
 const getPartyMakingRateByPartyInFlight = createInFlightRequest<ApiResponse>();
+const getPartyMakingRateLogInFlight = createInFlightRequest<ApiResponse>();
 
 const buildGetPartyMakingRateKey = (
   orgId: string | number,
@@ -19,9 +23,17 @@ const buildGetPartyMakingRateByPartyKey = (
   partyId: string | number,
 ) => `${orgId}:${partyId}`;
 
+const buildGetPartyMakingRateLogKey = (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage: number,
+) => `${orgId}:${page}:${keyword}:${perPage}`;
+
 const invalidateGetPartyMakingRateInFlight = () => {
   getPartyMakingRateInFlight.clear();
   getPartyMakingRateByPartyInFlight.clear();
+  getPartyMakingRateLogInFlight.clear();
 };
 
 export const addPartyMakingRateAPI = async (
@@ -42,6 +54,17 @@ export const updatePartyMakingRateAPI = async (
 
   return await doPutApiCall({
     url: endPoints.updatePartyMakingRate,
+    bodyData,
+  });
+};
+
+export const savePartyMakingRateAPI = async (
+  bodyData: PartyMakingRateSaveBody,
+): Promise<ApiResponse> => {
+  invalidateGetPartyMakingRateInFlight();
+
+  return await doPostApiCall({
+    url: endPoints.savePartyMakingRate,
     bodyData,
   });
 };
@@ -71,6 +94,21 @@ export const deletePartyMakingRateAPI = async (bodyData: {
     url: endPoints.deletePartyMakingRate,
     bodyData,
   });
+};
+
+export const getPartyMakingRateLogAPI = async (
+  orgId: string | number,
+  page: number,
+  keyword: string,
+  perPage = 10,
+): Promise<ApiResponse> => {
+  const key = buildGetPartyMakingRateLogKey(orgId, page, keyword, perPage);
+
+  return getPartyMakingRateLogInFlight.run(key, () =>
+    doGetApiCall({
+      url: endPoints.getPartyMakingRateLog(orgId, page, keyword, perPage),
+    }),
+  );
 };
 
 export const getPartyMakingRateByPartyAPI = async (

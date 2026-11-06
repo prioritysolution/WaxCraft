@@ -1,9 +1,11 @@
 "use client";
 
+import { TableDateFilter } from "@/components/ui/table-date-filter";
 import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
-import { useClientTableSearch } from "@/lib/useClientTableSearch";
-import { Printer, Receipt } from "lucide-react";
+import { filterBySearch } from "@/lib/useClientTableSearch";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { ListFilter, Printer, Receipt, RotateCcw } from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
@@ -34,13 +36,26 @@ import {
 } from "@/components/ui/table-edit-button";
 import { useSelector } from "react-redux";
 
+interface GstBillPartyOption {
+  Id: number;
+  Party_Name: string;
+}
+
 interface GstBillState {
   gstBillData: GstBillTableData[];
 }
 
+interface OrderBookingState {
+  orderPartyData: GstBillPartyOption[];
+}
+
 interface RootState {
   gstBill: GstBillState;
+  orderBooking: OrderBookingState;
 }
+
+const filterSelectClassName =
+  "h-10 min-w-[148px] rounded-full border border-black/15 bg-white px-3 text-sm text-foreground outline-none focus:border-black/25";
 
 const formatBillDate = (value?: string) => {
   if (!value) return "—";
@@ -63,13 +78,62 @@ const GstBillTable: FC<GstBillTableProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  gstBillTableInput,
+  handleFilterGstBillTable,
+  gstBillFromDate,
+  gstBillToDate,
+  onGstBillFromDateChange,
+  onGstBillToDateChange,
+  gstBillPartyFilter,
+  onGstBillPartyFilterChange,
+  onResetGstBillFilters,
 }) => {
   const gstBillData: GstBillTableData[] = useSelector(
     (state: RootState) => state?.gstBill?.gstBillData
   );
+  const orderPartyData: GstBillPartyOption[] =
+    useSelector(
+      (state: RootState) => state?.orderBooking?.orderPartyData,
+    ) ?? [];
 
   const safeRows = Array.isArray(gstBillData) ? gstBillData : [];
-  const { search, setSearch, filtered } = useClientTableSearch(safeRows);
+  const search = gstBillTableInput;
+  const fromDay = toApiDate(gstBillFromDate);
+  const toDay = toApiDate(gstBillToDate);
+  const selectedParty = orderPartyData.find(
+    (party) => String(party.Id) === gstBillPartyFilter,
+  );
+  const filtered = filterBySearch(
+    safeRows.filter((bill) => {
+      if (gstBillPartyFilter) {
+        const rowPartyId = bill.Party_Id;
+        if (rowPartyId != null && String(rowPartyId).trim() !== "") {
+          if (String(rowPartyId) !== gstBillPartyFilter) return false;
+        } else if (
+          selectedParty &&
+          String(bill.Party_Name ?? "").trim().toLowerCase() !==
+            String(selectedParty.Party_Name ?? "").trim().toLowerCase()
+        ) {
+          return false;
+        }
+      }
+      const rawDate = String(bill.Sales_Date || bill.Bill_Date || "");
+      const billDay = toApiDate(
+        rawDate.includes("T") ? parseISO(rawDate) : new Date(rawDate),
+      );
+      if (fromDay && (!billDay || billDay < fromDay)) return false;
+      if (toDay && (!billDay || billDay > toDay)) return false;
+      return true;
+    }),
+    search,
+  );
+  const hasActiveFilters = Boolean(
+    search || gstBillFromDate || gstBillToDate || gstBillPartyFilter,
+  );
+  const effectiveLastPage =
+    filtered.length < perPage
+      ? Math.max(1, currentPage)
+      : Math.max(lastPage, currentPage);
 
   return (
     <div className="w-full">
@@ -79,20 +143,67 @@ const GstBillTable: FC<GstBillTableProps> = ({
         bottomContent={
           <TablePaginationBar
             currentPage={currentPage}
-            lastPage={lastPage}
+            lastPage={effectiveLastPage}
             onPageChange={setCurrentPage}
             perPage={perPage}
             onPerPageChange={onPerPageChange}
           />
         }
         topContent={
-          <TableSearchInput
-            title="Active GST bills"
-            description="Search, review, and manage existing GST bills."
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Search GST bill"
-          />
+          <div className="flex w-full flex-col gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Active GST bills
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Search, review, and manage existing GST bills.
+              </p>
+            </div>
+            <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-black/[0.08] bg-white p-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 pr-1 text-sm font-medium text-foreground">
+                <ListFilter className="h-4 w-4 text-primary" />
+                Filter
+              </span>
+              <TableSearchInput
+                value={search}
+                onValueChange={handleFilterGstBillTable}
+                placeholder="Search GST bill"
+                className="w-auto shrink-0 justify-start"
+              />
+              <TableDateFilter
+                fromDate={gstBillFromDate}
+                toDate={gstBillToDate}
+                onFromDateChange={onGstBillFromDateChange}
+                onToDateChange={onGstBillToDateChange}
+              />
+              <select
+                aria-label="Party"
+                value={gstBillPartyFilter}
+                onChange={(event) =>
+                  onGstBillPartyFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All parties</option>
+                {orderPartyData.map((party) => (
+                  <option key={party.Id} value={String(party.Id)}>
+                    {party.Party_Name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="bordered"
+                radius="full"
+                className="h-10 min-w-[108px] border-black/15 bg-white px-3 text-sm font-medium"
+                startContent={<RotateCcw className="h-4 w-4" />}
+                isDisabled={!hasActiveFilters}
+                onPress={onResetGstBillFilters}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
         }
         classNames={tableClassNames}
       >

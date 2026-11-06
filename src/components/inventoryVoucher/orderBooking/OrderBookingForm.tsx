@@ -349,9 +349,6 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
                                     Quantity
                                   </th>
                                   <th className={nestedHeadClassName}>Rate</th>
-                                  <th className={nestedHeadClassName}>
-                                    Making Rate
-                                  </th>
                                   <th className={nestedHeadClassName}>Total</th>
                                 </tr>
                               </thead>
@@ -385,9 +382,6 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
                                         {formatRate(item.itemRate)}
                                       </td>
                                       <td className={nestedCellClassName}>
-                                        {formatRate(item.makingRate)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
                                         {formatTwoDecimals(item.itemTotal)}
                                       </td>
                                     </tr>
@@ -395,7 +389,7 @@ const OrderBookingForm: FC<OrderBookingFormProps> = ({
                                 ) : (
                                   <tr>
                                     <td
-                                      colSpan={6}
+                                      colSpan={5}
                                       className="px-4 py-6 text-center text-sm text-muted-foreground"
                                     >
                                       No items found.

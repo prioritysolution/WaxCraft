@@ -1,13 +1,15 @@
 "use client";
 
+import { TableDateFilter } from "@/components/ui/table-date-filter";
 import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import {
   getPaginatedTableRows,
   getTableSerialIndex,
 } from "@/components/ui/table-edit-button";
-import { useClientTableSearch } from "@/lib/useClientTableSearch";
-import { ChevronRight, FileInput } from "lucide-react";
+import { filterBySearch } from "@/lib/useClientTableSearch";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { ChevronRight, FileInput, ListFilter, RotateCcw } from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
@@ -38,13 +40,27 @@ import {
 } from "@/components/ui/table-edit-button";
 import { useSelector } from "react-redux";
 
+interface PurchasePartyOption {
+  Id: number;
+  Party_Name: string;
+}
+
 interface PurchaseVoucherState {
   purchaseVoucherData: PurchaseVoucherTableData[];
+  purchasePartyData: PurchasePartyOption[];
 }
 
 interface RootState {
   purchaseVoucher: PurchaseVoucherState;
 }
+
+const PURCHASE_TYPE_OPTIONS = [
+  { value: "ordered", label: "Ordered Purchase" },
+  { value: "regular", label: "Regular Purchase" },
+];
+
+const filterSelectClassName =
+  "h-10 min-w-[148px] rounded-full border border-black/15 bg-white px-3 text-sm text-foreground outline-none focus:border-black/25";
 
 const nestedHeadClassName =
   "px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
@@ -74,6 +90,17 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  purchaseTableInput,
+  handleFilterPurchaseTable,
+  purchaseFromDate,
+  purchaseToDate,
+  onPurchaseFromDateChange,
+  onPurchaseToDateChange,
+  purchasePartyFilter,
+  onPurchasePartyFilterChange,
+  purchaseTypeFilter,
+  onPurchaseTypeFilterChange,
+  onResetPurchaseFilters,
 }) => {
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
 
@@ -87,6 +114,10 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
   const purchaseVoucherData = useSelector(
     (state: RootState) => state?.purchaseVoucher?.purchaseVoucherData,
   );
+  const purchasePartyData: PurchasePartyOption[] =
+    useSelector(
+      (state: RootState) => state?.purchaseVoucher?.purchasePartyData,
+    ) ?? [];
 
   const safeRows = useMemo(() => {
     if (Array.isArray(purchaseVoucherData)) return purchaseVoucherData;
@@ -102,7 +133,54 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
     return [];
   }, [purchaseVoucherData]);
 
-  const { search, setSearch, filtered } = useClientTableSearch(safeRows);
+  const search = purchaseTableInput;
+  const fromDay = toApiDate(purchaseFromDate);
+  const toDay = toApiDate(purchaseToDate);
+  const selectedParty = purchasePartyData.find(
+    (party) => String(party.Id) === purchasePartyFilter,
+  );
+  const selectedTypeLabel = PURCHASE_TYPE_OPTIONS.find(
+    (option) => option.value === purchaseTypeFilter,
+  )?.label;
+  const filtered = filterBySearch(
+    safeRows.filter((purchase) => {
+      if (purchasePartyFilter) {
+        const rowPartyId = purchase.Party_Id;
+        if (rowPartyId != null && String(rowPartyId).trim() !== "") {
+          if (String(rowPartyId) !== purchasePartyFilter) return false;
+        } else if (
+          selectedParty &&
+          String(purchase.Party_Name ?? "").trim().toLowerCase() !==
+            String(selectedParty.Party_Name ?? "").trim().toLowerCase()
+        ) {
+          return false;
+        }
+      }
+      if (
+        selectedTypeLabel &&
+        getPurchaseTypeLabel(purchase).toLowerCase() !==
+          selectedTypeLabel.toLowerCase()
+      ) {
+        return false;
+      }
+      const purchaseDay = toApiDate(new Date(purchase.Purchase_Date));
+      if (fromDay && (!purchaseDay || purchaseDay < fromDay)) return false;
+      if (toDay && (!purchaseDay || purchaseDay > toDay)) return false;
+      return true;
+    }),
+    search,
+  );
+  const hasActiveFilters = Boolean(
+    search ||
+      purchaseFromDate ||
+      purchaseToDate ||
+      purchasePartyFilter ||
+      purchaseTypeFilter,
+  );
+  const effectiveLastPage =
+    filtered.length < perPage
+      ? Math.max(1, currentPage)
+      : Math.max(lastPage, currentPage);
 
   return (
     <div className="w-full">
@@ -112,20 +190,82 @@ const PurchaseVoucherTable: FC<PurchaseVoucherTableProps> = ({
         bottomContent={
           <TablePaginationBar
             currentPage={currentPage}
-            lastPage={lastPage}
+            lastPage={effectiveLastPage}
             onPageChange={setCurrentPage}
             perPage={perPage}
             onPerPageChange={onPerPageChange}
           />
         }
         topContent={
-          <TableSearchInput
-            title="Active purchases"
-            description="Search, review, and manage existing purchases."
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Search purchase"
-          />
+          <div className="flex w-full flex-col gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Active purchases
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Search, review, and manage existing purchases.
+              </p>
+            </div>
+            <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-black/[0.08] bg-white p-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 pr-1 text-sm font-medium text-foreground">
+                <ListFilter className="h-4 w-4 text-primary" />
+                Filter
+              </span>
+              <TableSearchInput
+                value={search}
+                onValueChange={handleFilterPurchaseTable}
+                placeholder="Search purchase"
+                className="w-auto shrink-0 justify-start"
+              />
+              <TableDateFilter
+                fromDate={purchaseFromDate}
+                toDate={purchaseToDate}
+                onFromDateChange={onPurchaseFromDateChange}
+                onToDateChange={onPurchaseToDateChange}
+              />
+              <select
+                aria-label="Party"
+                value={purchasePartyFilter}
+                onChange={(event) =>
+                  onPurchasePartyFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All parties</option>
+                {purchasePartyData.map((party) => (
+                  <option key={party.Id} value={String(party.Id)}>
+                    {party.Party_Name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Purchase type"
+                value={purchaseTypeFilter}
+                onChange={(event) =>
+                  onPurchaseTypeFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All purchase types</option>
+                {PURCHASE_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="bordered"
+                radius="full"
+                className="h-10 min-w-[108px] border-black/15 bg-white px-3 text-sm font-medium"
+                startContent={<RotateCcw className="h-4 w-4" />}
+                isDisabled={!hasActiveFilters}
+                onPress={onResetPurchaseFilters}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
         }
         classNames={tableClassNames}
       >

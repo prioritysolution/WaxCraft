@@ -28,6 +28,19 @@ const OrderProcess: FC<OrderProcessProps> = ({
   lastPage,
   perPage,
   onPerPageChange,
+  orderTableInput,
+  handleFilterOrderTable,
+  orderFromDate,
+  orderToDate,
+  onOrderFromDateChange,
+  onOrderToDateChange,
+  orderPartyFilter,
+  onOrderPartyFilterChange,
+  orderItemTypeFilter,
+  onOrderItemTypeFilterChange,
+  orderStatusFilter,
+  onOrderStatusFilterChange,
+  onResetOrderFilters,
   getWorkProcessLoading,
   getEmployeeLoading,
   orderProcessEmployeeData,
@@ -66,6 +79,19 @@ const OrderProcess: FC<OrderProcessProps> = ({
           lastPage={lastPage}
               perPage={perPage}
               onPerPageChange={onPerPageChange}
+              orderTableInput={orderTableInput}
+              handleFilterOrderTable={handleFilterOrderTable}
+              orderFromDate={orderFromDate}
+              orderToDate={orderToDate}
+              onOrderFromDateChange={onOrderFromDateChange}
+              onOrderToDateChange={onOrderToDateChange}
+              orderPartyFilter={orderPartyFilter}
+              onOrderPartyFilterChange={onOrderPartyFilterChange}
+              orderItemTypeFilter={orderItemTypeFilter}
+              onOrderItemTypeFilterChange={onOrderItemTypeFilterChange}
+              orderStatusFilter={orderStatusFilter}
+              onOrderStatusFilterChange={onOrderStatusFilterChange}
+              onResetOrderFilters={onResetOrderFilters}
         />
     </PageShell>
   );

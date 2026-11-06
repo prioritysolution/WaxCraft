@@ -1,7 +1,5 @@
 "use client";
 
-import { tableClassNames } from "@/lib/uiStyles";
-
 import InputField from "@/common/formFields/InputField";
 import {
   ItemShortNameCell,
@@ -25,16 +23,8 @@ import {
   sanitizeRateInput,
   toRateString,
 } from "@/utils/formatDecimal";
-import {
-  Image,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@heroui/react";
-import { FC, useEffect, useMemo } from "react";
+import { Image } from "@heroui/react";
+import { FC, useEffect } from "react";
 import { Path, UseFormReturn, useWatch } from "react-hook-form";
 import { useSelector } from "react-redux";
 
@@ -47,6 +37,10 @@ interface RootState {
 }
 
 const formatSampleItemRate = (rate: string) => toRateString(rate);
+
+const headClassName =
+  "bg-[#F7F5F3] h-11 px-3 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+const cellClassName = "px-3 py-3.5 text-center align-middle text-sm text-foreground";
 
 const calcRowTotal = (
   quantity: unknown,
@@ -191,14 +185,12 @@ const DesignModal: FC<DesignModalProps> = ({
 
   const items = useWatch({ control: form.control, name: "item" });
   const itemType = useWatch({ control: form.control, name: "itemType" });
+  const manualDesignRates = useWatch({
+    control: form.control,
+    name: "manualDesignRates",
+  });
   const isPartyItem = itemType === "0";
-
-  // Snapshot on open so the field stays visible while the user edits/clears it.
-  const showGhat = useMemo(
-    () =>
-      showDesignDialog && String(form.getValues("ghat") ?? "").trim() !== "",
-    [showDesignDialog, form],
-  );
+  const showMakingRate = (items ?? []).some((row) => row?.makingRateManual);
 
   const { variantsByAttrs, variantsLoading } = useItemVariants(
     showDesignDialog,
@@ -265,58 +257,60 @@ const DesignModal: FC<DesignModalProps> = ({
                   disabled
                 />
 
-                <InputField
-                  control={form.control}
-                  name="wtRate"
-                  label="WT Rate"
-                  type="text"
-                  inputMode="decimal"
-                  onInput={(e) => {
-                    const input = e.currentTarget;
-                    const next = sanitizeRateInput(input.value);
-                    input.value = next;
-                    form.setValue("wtRate", next, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  }}
-                />
+                {manualDesignRates ? (
+                  <>
+                    <InputField
+                      control={form.control}
+                      name="wtRate"
+                      label="WT Rate"
+                      type="text"
+                      inputMode="decimal"
+                      onInput={(e) => {
+                        const input = e.currentTarget;
+                        const next = sanitizeRateInput(input.value);
+                        input.value = next;
+                        form.setValue("wtRate", next, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                      }}
+                    />
 
-                <InputField
-                  control={form.control}
-                  name="polish"
-                  label="Polish"
-                  type="text"
-                  inputMode="decimal"
-                  onInput={(e) => {
-                    const input = e.currentTarget;
-                    const next = sanitizeDecimalInput(input.value);
-                    input.value = next;
-                    form.setValue("polish", next, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                    });
-                  }}
-                />
+                    <InputField
+                      control={form.control}
+                      name="polish"
+                      label="Polish"
+                      type="text"
+                      inputMode="decimal"
+                      onInput={(e) => {
+                        const input = e.currentTarget;
+                        const next = sanitizeDecimalInput(input.value);
+                        input.value = next;
+                        form.setValue("polish", next, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                      }}
+                    />
 
-                {showGhat && (
-                  <InputField
-                    control={form.control}
-                    name="ghat"
-                    label="Ghat"
-                    type="text"
-                    inputMode="decimal"
-                    onInput={(e) => {
-                      const input = e.currentTarget;
-                      const next = sanitizeDecimalInput(input.value);
-                      input.value = next;
-                      form.setValue("ghat", next, {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      });
-                    }}
-                  />
-                )}
+                    <InputField
+                      control={form.control}
+                      name="ghat"
+                      label="Ghat"
+                      type="text"
+                      inputMode="decimal"
+                      onInput={(e) => {
+                        const input = e.currentTarget;
+                        const next = sanitizeDecimalInput(input.value);
+                        input.value = next;
+                        form.setValue("ghat", next, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                      }}
+                    />
+                  </>
+                ) : null}
 
                 <div className=" w-full flex justify-center sm:col-span-2">
                   <Image
@@ -330,101 +324,128 @@ const DesignModal: FC<DesignModalProps> = ({
 
               <div className="flex flex-col gap-5">
                 <ScrollArea className="w-full max-w-[400px] sm:max-w-full mx-auto mt-5">
-                  <Table
-                    removeWrapper
-                    aria-label="Example static collection table"
-                    classNames={tableClassNames}
-                  >
-                    <TableHeader>
-                      <TableColumn>Serial No.</TableColumn>
-                      <TableColumn align="center">Item Name</TableColumn>
-                      <TableColumn align="center">Item Short Name</TableColumn>
-                      <TableColumn align="center">Quantity</TableColumn>
-                      <TableColumn align="center">Rate</TableColumn>
-                      <TableColumn align="center">Making Rate</TableColumn>
-                      <TableColumn align="center">Total</TableColumn>
-                    </TableHeader>
-                    <TableBody emptyContent={"No data found."}>
-                      {childRows?.map((data, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.itemName`}
-                              disabled
-                              className="min-w-[70px]"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <ItemShortNameCell
-                              form={form}
-                              index={index}
-                              row={items?.[index]}
-                              variantsByAttrs={variantsByAttrs}
-                              variantsLoading={variantsLoading}
-                              isPartyItem={isPartyItem}
-                              partyRate="0.00"
-                              formatRate={formatSampleItemRate}
-                              fallbackClassName="min-w-[70px]"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.itemQuantity`}
-                              disabled
-                              className="min-w-[70px]"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.itemRate`}
-                              type="text"
-                              inputMode="decimal"
-                              variant="bordered"
-                              className="min-w-[70px]"
-                              disabled={isPartyItem}
-                              onInput={(e) => {
-                                const input = e.currentTarget;
-                                const next = sanitizeRateInput(input.value);
-                                input.value = next;
-                                form.setValue(
-                                  `item.${index}.itemRate` as Path<SamplePrintFormData>,
-                                  next,
-                                  { shouldValidate: true, shouldDirty: true },
-                                );
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <InputField
-                              control={form.control}
-                              name={`item.${index}.makingRate`}
-                              type="text"
-                              inputMode="decimal"
-                              variant="bordered"
-                              className="min-w-[70px]"
-                              onInput={(e) => {
-                                const input = e.currentTarget;
-                                const next = sanitizeRateInput(input.value);
-                                input.value = next;
-                                form.setValue(
-                                  `item.${index}.makingRate` as Path<SamplePrintFormData>,
-                                  next,
-                                  { shouldValidate: true, shouldDirty: true },
-                                );
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <RowTotalCell form={form} index={index} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white">
+                    <table className="w-full min-w-[720px] border-collapse text-center">
+                      <thead>
+                        <tr>
+                          <th className={headClassName}>Serial No.</th>
+                          <th className={headClassName}>Item Name</th>
+                          <th className={headClassName}>Item Short Name</th>
+                          <th className={headClassName}>Quantity</th>
+                          <th className={headClassName}>Rate</th>
+                          {showMakingRate ? (
+                            <th className={headClassName}>Making Rate</th>
+                          ) : null}
+                          <th className={headClassName}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {childRows?.length ? (
+                          childRows.map((data, index) => (
+                            <tr
+                              key={`${data.Item_Id}-${index}`}
+                              className="border-b border-black/[0.05]"
+                            >
+                              <td className={cellClassName}>{index + 1}</td>
+                              <td className={cellClassName}>
+                                <InputField
+                                  control={form.control}
+                                  name={`item.${index}.itemName`}
+                                  disabled
+                                  className="min-w-[70px]"
+                                />
+                              </td>
+                              <td className={cellClassName}>
+                                <ItemShortNameCell
+                                  form={form}
+                                  index={index}
+                                  row={items?.[index]}
+                                  variantsByAttrs={variantsByAttrs}
+                                  variantsLoading={variantsLoading}
+                                  isPartyItem={isPartyItem}
+                                  partyRate="0.00"
+                                  formatRate={formatSampleItemRate}
+                                  fallbackClassName="min-w-[70px]"
+                                />
+                              </td>
+                              <td className={cellClassName}>
+                                <InputField
+                                  control={form.control}
+                                  name={`item.${index}.itemQuantity`}
+                                  disabled
+                                  className="min-w-[70px]"
+                                />
+                              </td>
+                              <td className={cellClassName}>
+                                <InputField
+                                  control={form.control}
+                                  name={`item.${index}.itemRate`}
+                                  type="text"
+                                  inputMode="decimal"
+                                  variant="bordered"
+                                  className="min-w-[70px]"
+                                  disabled={isPartyItem}
+                                  onInput={(e) => {
+                                    const input = e.currentTarget;
+                                    const next = sanitizeRateInput(input.value);
+                                    input.value = next;
+                                    form.setValue(
+                                      `item.${index}.itemRate` as Path<SamplePrintFormData>,
+                                      next,
+                                      {
+                                        shouldValidate: true,
+                                        shouldDirty: true,
+                                      },
+                                    );
+                                  }}
+                                />
+                              </td>
+                              {showMakingRate ? (
+                                <td className={cellClassName}>
+                                  <InputField
+                                    control={form.control}
+                                    name={`item.${index}.makingRate`}
+                                    type="text"
+                                    inputMode="decimal"
+                                    variant="bordered"
+                                    className="min-w-[70px]"
+                                    disabled={!items?.[index]?.makingRateManual}
+                                    onInput={(e) => {
+                                      const input = e.currentTarget;
+                                      const next = sanitizeRateInput(
+                                        input.value,
+                                      );
+                                      input.value = next;
+                                      form.setValue(
+                                        `item.${index}.makingRate` as Path<SamplePrintFormData>,
+                                        next,
+                                        {
+                                          shouldValidate: true,
+                                          shouldDirty: true,
+                                        },
+                                      );
+                                    }}
+                                  />
+                                </td>
+                              ) : null}
+                              <td className={cellClassName}>
+                                <RowTotalCell form={form} index={index} />
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={showMakingRate ? 7 : 6}
+                              className="px-4 py-12 text-center text-sm text-muted-foreground"
+                            >
+                              No data found.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {rowCount > 0 ? (

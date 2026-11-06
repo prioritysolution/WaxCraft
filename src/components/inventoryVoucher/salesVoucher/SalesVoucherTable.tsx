@@ -229,7 +229,7 @@ const SalesVoucherTable: FC<SalesVoucherTableProps> = ({
                                     <th className={nestedHeadClassName}>
                                       Design Rate
                                     </th>
-                                    <th className={nestedHeadClassName}>Wt</th>
+                                    <th className={nestedHeadClassName}>WT</th>
                                     <th className={nestedHeadClassName}>
                                       Total Wt
                                     </th>

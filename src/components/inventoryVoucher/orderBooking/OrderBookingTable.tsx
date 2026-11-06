@@ -1,5 +1,6 @@
 "use client";
 
+import { TableDateFilter } from "@/components/ui/table-date-filter";
 import { TableSearchInput } from "@/components/ui/table-search-input";
 import { TableEmptyState } from "@/components/ui/table-empty-state";
 import {
@@ -10,7 +11,14 @@ import {
   getPaginatedTableRows,
 } from "@/components/ui/table-edit-button";
 import { filterBySearch } from "@/lib/useClientTableSearch";
-import { ChevronRight, ClipboardCheck, Printer } from "lucide-react";
+import { toApiDate } from "@/lib/voucherTableDate";
+import {
+  ChevronRight,
+  ClipboardCheck,
+  ListFilter,
+  Printer,
+  RotateCcw,
+} from "lucide-react";
 
 import { tableClassNames } from "@/lib/uiStyles";
 import { DeleteConfirmModal } from "@/components/ui/delete-confirm-modal";
@@ -42,9 +50,27 @@ import { useSelector } from "react-redux";
 import { TablePaginationBar } from "@/components/ui/table-pagination";
 import JobSheetModal from "./JobSheetModal";
 
+interface OrderPartyOption {
+  Id: number;
+  Party_Name: string;
+}
+
 interface OrderBookingState {
   orderBookingData: OrderBookingTableData[];
+  orderPartyData: OrderPartyOption[];
 }
+
+const ORDER_STATUS_OPTIONS = [
+  "Ordered",
+  "In Process",
+  "Product Ready",
+  "Shipped",
+  "Out for Delivery",
+  "Cancelled",
+];
+
+const filterSelectClassName =
+  "h-10 min-w-[148px] rounded-full border border-black/15 bg-white px-3 text-sm text-foreground outline-none focus:border-black/25";
 
 interface RootState {
   orderBooking: OrderBookingState;
@@ -71,6 +97,17 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
   onPerPageChange,
   orderTableInput,
   handleFilterOrderTable,
+  orderFromDate,
+  orderToDate,
+  onOrderFromDateChange,
+  onOrderToDateChange,
+  orderPartyFilter,
+  onOrderPartyFilterChange,
+  orderItemTypeFilter,
+  onOrderItemTypeFilterChange,
+  orderStatusFilter,
+  onOrderStatusFilterChange,
+  onResetOrderFilters,
 }) => {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [jobSheetOrder, setJobSheetOrder] =
@@ -89,13 +126,56 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
   const orderBookingData: OrderBookingTableData[] = useSelector(
     (state: RootState) => state?.orderBooking?.orderBookingData
   ) ?? [];
+  const orderPartyData: OrderPartyOption[] = useSelector(
+    (state: RootState) => state?.orderBooking?.orderPartyData
+  ) ?? [];
 
   const safeOrderBookingData = Array.isArray(orderBookingData)
     ? orderBookingData
     : [];
 
   const search = orderTableInput;
-  const filtered = filterBySearch(safeOrderBookingData, search);
+  const fromDay = toApiDate(orderFromDate);
+  const toDay = toApiDate(orderToDate);
+  const filtered = filterBySearch(
+    safeOrderBookingData.filter((order) => {
+      if (orderPartyFilter && String(order.Party_Id) !== orderPartyFilter) {
+        return false;
+      }
+      if (
+        orderItemTypeFilter &&
+        getOrderItemType(order).toLowerCase() !== orderItemTypeFilter
+      ) {
+        return false;
+      }
+      if (
+        orderStatusFilter &&
+        String(order.Order_Status ?? "").trim().toLowerCase() !==
+          orderStatusFilter.trim().toLowerCase()
+      ) {
+        return false;
+      }
+      const orderDay = toApiDate(new Date(order.Order_Date));
+      if (fromDay && (!orderDay || orderDay < fromDay)) return false;
+      if (toDay && (!orderDay || orderDay > toDay)) return false;
+      return true;
+    }),
+    search,
+  );
+  const hasActiveFilters = Boolean(
+    search ||
+      orderFromDate ||
+      orderToDate ||
+      orderPartyFilter ||
+      orderItemTypeFilter ||
+      orderStatusFilter,
+  );
+  // A short page is the last page. Filtered lists under the page size must
+  // not keep the unfiltered API page count.
+  const effectiveLastPage =
+    filtered.length < perPage
+      ? Math.max(1, currentPage)
+      : Math.max(lastPage, currentPage);
 
   useEffect(() => {
     setExpandedOrderId(null);
@@ -109,7 +189,7 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
         bottomContent={
           <TablePaginationBar
             currentPage={currentPage}
-            lastPage={lastPage}
+            lastPage={effectiveLastPage}
             perPage={perPage}
             onPerPageChange={onPerPageChange}
             onPageChange={(page) => {
@@ -119,13 +199,85 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
           />
         }
         topContent={
-          <TableSearchInput
-            title="Active orders"
-            description="Search, review, and manage existing orders."
-            value={search}
-            onValueChange={handleFilterOrderTable}
-            placeholder="Search order"
-          />
+          <div className="flex w-full flex-col gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Active orders
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Search, review, and manage existing orders.
+              </p>
+            </div>
+            <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-black/[0.08] bg-white p-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 pr-1 text-sm font-medium text-foreground">
+                <ListFilter className="h-4 w-4 text-primary" />
+                Filter
+              </span>
+              <TableSearchInput
+                value={search}
+                onValueChange={handleFilterOrderTable}
+                placeholder="Search order"
+                className="w-auto shrink-0 justify-start"
+              />
+              <TableDateFilter
+                fromDate={orderFromDate}
+                toDate={orderToDate}
+                onFromDateChange={onOrderFromDateChange}
+                onToDateChange={onOrderToDateChange}
+              />
+              <select
+                aria-label="Party"
+                value={orderPartyFilter}
+                onChange={(event) => onOrderPartyFilterChange(event.target.value)}
+                className={filterSelectClassName}
+              >
+                <option value="">All parties</option>
+                {orderPartyData.map((party) => (
+                  <option key={party.Id} value={String(party.Id)}>
+                    {party.Party_Name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Item type"
+                value={orderItemTypeFilter}
+                onChange={(event) =>
+                  onOrderItemTypeFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All item types</option>
+                <option value="own">Own</option>
+                <option value="party">Party</option>
+              </select>
+              <select
+                aria-label="Order status"
+                value={orderStatusFilter}
+                onChange={(event) =>
+                  onOrderStatusFilterChange(event.target.value)
+                }
+                className={filterSelectClassName}
+              >
+                <option value="">All statuses</option>
+                {ORDER_STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="bordered"
+                radius="full"
+                className="h-10 min-w-[108px] border-black/15 bg-white px-3 text-sm font-medium"
+                startContent={<RotateCcw className="h-4 w-4" />}
+                isDisabled={!hasActiveFilters}
+                onPress={onResetOrderFilters}
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
         }
         classNames={tableClassNames}
       >
@@ -322,9 +474,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                         WT
                                       </th>
                                       <th className={nestedHeadClassName}>
-                                        WT Rate
-                                      </th>
-                                      <th className={nestedHeadClassName}>
                                         Total Wt
                                       </th>
                                       {ghatInfo ? (
@@ -352,9 +501,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Wt)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatRate(design.Wt_Rate)}
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Tot_Wt)}

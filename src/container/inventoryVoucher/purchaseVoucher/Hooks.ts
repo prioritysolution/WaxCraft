@@ -2,7 +2,9 @@ import { useForm, SubmitHandler, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@/lib/yupResolver";
 import { useListPerPage } from "@/lib/useListPerPage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toApiDate } from "@/lib/voucherTableDate";
+import { useSearchDebounce } from "@/lib/useSearchDebounce";
 import toast from "react-hot-toast";
 import getCookieData from "@/utils/getCookieData";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,6 +33,7 @@ import { ItemTableData } from "@/types/master/ItemTypes";
 import { getItemRateAPI } from "@/container/master/itemRate/ItemRateApis";
 import { toRateString, toTwoDecimalString } from "@/utils/formatDecimal";
 import { resolvePurchaseOrderType } from "@/utils/purchaseType";
+import { loadAllParties } from "@/lib/loadAllParties";
 
 interface PurchasePartyData {
   Id: number;
@@ -44,6 +47,20 @@ interface ItemState {
 interface PurchaseVoucherState {
   purchasePartyData: PurchasePartyData[];
 }
+
+type PurchaseListFilters = {
+  fromDate: string;
+  toDate: string;
+  partyId: string;
+  purchaseType: string;
+};
+
+const emptyPurchaseListFilters = (): PurchaseListFilters => ({
+  fromDate: "",
+  toDate: "",
+  partyId: "",
+  purchaseType: "",
+});
 
 interface RootState {
   purchaseVoucher: PurchaseVoucherState;
@@ -64,6 +81,7 @@ const pickRecordValue = (source: object, keys: string[]) => {
 
 export const usePurchaseVoucher = () => {
   const dispatch = useDispatch();
+  const runDebouncedSearch = useSearchDebounce();
 
   const [addPurchaseVoucherLoading, setAddPurchaseVoucherLoading] =
     useState(false);
@@ -82,6 +100,28 @@ export const usePurchaseVoucher = () => {
   const { perPage, handlePerPageChange } = useListPerPage(() =>
     setCurrentPage(1),
   );
+  const [purchaseTableInput, setPurchaseTableInput] = useState("");
+  const [purchaseFromDate, setPurchaseFromDate] = useState<Date | undefined>();
+  const [purchaseToDate, setPurchaseToDate] = useState<Date | undefined>();
+  const [purchasePartyFilter, setPurchasePartyFilter] = useState("");
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState("");
+  const purchaseFromDateApi = useMemo(
+    () => toApiDate(purchaseFromDate),
+    [purchaseFromDate],
+  );
+  const purchaseToDateApi = useMemo(
+    () => toApiDate(purchaseToDate),
+    [purchaseToDate],
+  );
+  const purchaseListFiltersRef = useRef<PurchaseListFilters>(
+    emptyPurchaseListFilters(),
+  );
+  purchaseListFiltersRef.current = {
+    fromDate: purchaseFromDateApi,
+    toDate: purchaseToDateApi,
+    partyId: purchasePartyFilter,
+    purchaseType: purchaseTypeFilter,
+  };
 
   const [purchasePartyInput, setPurchasePartyInput] = useState("");
   const [itemInput, setItemInput] = useState("");
@@ -805,7 +845,7 @@ export const usePurchaseVoucher = () => {
         resetPurchaseForm();
         setCurrentPage(1);
         setSelected("table");
-        getPurchaseVoucherApiCall(orgId, 1, "");
+        getPurchaseVoucherApiCall(orgId, 1, purchaseTableInput.trim());
         toast.success(res.data.message || "Purchase updated successfully");
       } else if (res.status === 200) {
         const savedPurchaseNo = String(purchaseNo || "").trim();
@@ -828,7 +868,7 @@ export const usePurchaseVoucher = () => {
         setPurchaseTableData([]);
         setCurrentPage(1);
         setSelected("table");
-        getPurchaseVoucherApiCall(orgId, 1, "");
+        getPurchaseVoucherApiCall(orgId, 1, purchaseTableInput.trim());
         setSuccessMessage(
           String(res.data.message || "Purchase added successfully").trim(),
         );
@@ -865,7 +905,7 @@ export const usePurchaseVoucher = () => {
           resetPurchaseForm();
         }
         setCurrentPage(1);
-        getPurchaseVoucherApiCall(orgId, 1, "");
+        getPurchaseVoucherApiCall(orgId, 1, purchaseTableInput.trim());
         setShowDeleteDialog(false);
       } else {
         toast.error(res.data.message);
@@ -890,6 +930,7 @@ export const usePurchaseVoucher = () => {
         page,
         keyword,
         perPage,
+        purchaseListFiltersRef.current,
       );
 
       if (res.status === 200) {
@@ -900,13 +941,13 @@ export const usePurchaseVoucher = () => {
             ? details.data
             : [];
         dispatch(getPurchaseVoucherData(rows));
-        setLastPage(
+        const apiLastPage =
           Number(details?.pagination?.last_page) > 0
             ? Number(details.pagination.last_page)
             : Number(details?.last_page) > 0
               ? Number(details.last_page)
-              : 1,
-        );
+              : 1;
+        setLastPage(rows.length < perPage ? page : apiLastPage);
       } else {
         dispatch(getPurchaseVoucherData([]));
         setLastPage(1);
@@ -919,6 +960,48 @@ export const usePurchaseVoucher = () => {
     }
   };
 
+  const handleFilterPurchaseTable = (value: string) => {
+    setPurchaseTableInput(value);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+    runDebouncedSearch(() => {
+      if (orgId) getPurchaseVoucherApiCall(orgId, 1, value.trim());
+    });
+  };
+
+  const handlePurchaseFromDateChange = (value: Date | undefined) => {
+    setPurchaseFromDate(value);
+    setCurrentPage(1);
+  };
+
+  const handlePurchaseToDateChange = (value: Date | undefined) => {
+    setPurchaseToDate(value);
+    setCurrentPage(1);
+  };
+
+  const handlePurchasePartyFilterChange = (value: string) => {
+    setPurchasePartyFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handlePurchaseTypeFilterChange = (value: string) => {
+    setPurchaseTypeFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleResetPurchaseFilters = () => {
+    setPurchaseFromDate(undefined);
+    setPurchaseToDate(undefined);
+    setPurchasePartyFilter("");
+    setPurchaseTypeFilter("");
+    setPurchaseTableInput("");
+    purchaseListFiltersRef.current = emptyPurchaseListFilters();
+    setCurrentPage(1);
+    if (orgId) getPurchaseVoucherApiCall(orgId, 1, "");
+  };
+
   const getPurchasePartyApiCall = async (
     orgId: number,
     page: number,
@@ -927,15 +1010,32 @@ export const usePurchaseVoucher = () => {
     setLoading(true);
 
     try {
+      if (page === 1 && !keyword) {
+        const parties = await loadAllParties(orgId);
+        dispatch(
+          getPurchasePartyData(
+            parties.map((party) => ({
+              Id: party.Id,
+              Party_Name: party.Party_Name,
+            })),
+          ),
+        );
+        setLastPurchasePartyPage(1);
+        return;
+      }
+
       const res: ApiResponse = await getPurchasePartyAPI(orgId, page, keyword);
 
-      if (res.status === 200) {
-        const newData =
-          page === 1
-            ? res.data.details?.data
-            : [...purchasePartyData, ...res.data.details?.data];
+      if (res.status === 200 || res.status === 202) {
+        const details = res.data.details;
+        const batch = Array.isArray(details)
+          ? details
+          : Array.isArray(details?.data)
+            ? details.data
+            : [];
+        const newData = page === 1 ? batch : [...purchasePartyData, ...batch];
         dispatch(getPurchasePartyData(newData));
-        setLastPurchasePartyPage(res.data.details?.last_page);
+        setLastPurchasePartyPage(details?.last_page);
       } else {
         dispatch(getPurchasePartyData([]));
       }
@@ -1008,5 +1108,18 @@ export const usePurchaseVoucher = () => {
     setPurchasePartyInput,
     itemInput,
     setItemInput,
+    purchaseTableInput,
+    handleFilterPurchaseTable,
+    purchaseFromDate,
+    purchaseToDate,
+    purchaseFromDateApi,
+    purchaseToDateApi,
+    handlePurchaseFromDateChange,
+    handlePurchaseToDateChange,
+    purchasePartyFilter,
+    handlePurchasePartyFilterChange,
+    purchaseTypeFilter,
+    handlePurchaseTypeFilterChange,
+    handleResetPurchaseFilters,
   };
 };

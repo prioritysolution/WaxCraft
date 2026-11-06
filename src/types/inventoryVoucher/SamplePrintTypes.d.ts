@@ -15,6 +15,8 @@ export interface SamplePrintFormData {
   wtRate: string;
   polish: string;
   ghat: string;
+  /** Show WT Rate, Polish, and Ghat when this party has no matching setup. */
+  manualDesignRates?: boolean;
   image: string;
   itemType: string;
   item: {
@@ -26,6 +28,8 @@ export interface SamplePrintFormData {
     itemQuantity: string;
     itemRate: string;
     makingRate: string;
+    /** True when this item has no party + model setup, so the user can type the rate. */
+    makingRateManual?: boolean;
     itemTotal: string;
     catId?: string;
     modelId?: string;
@@ -169,6 +173,15 @@ export interface SamplePrintProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  samplePrintTableInput: string;
+  handleFilterSamplePrintTable: (value: string) => void;
+  samplePrintFromDate?: Date;
+  samplePrintToDate?: Date;
+  onSamplePrintFromDateChange: (value: Date | undefined) => void;
+  onSamplePrintToDateChange: (value: Date | undefined) => void;
+  samplePrintPartyFilter: string;
+  onSamplePrintPartyFilterChange: (value: string) => void;
+  onResetSamplePrintFilters: () => void;
 }
 
 export interface SamplePrintFormProps {
@@ -211,6 +224,15 @@ export interface SamplePrintTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  samplePrintTableInput: string;
+  handleFilterSamplePrintTable: (value: string) => void;
+  samplePrintFromDate?: Date;
+  samplePrintToDate?: Date;
+  onSamplePrintFromDateChange: (value: Date | undefined) => void;
+  onSamplePrintToDateChange: (value: Date | undefined) => void;
+  samplePrintPartyFilter: string;
+  onSamplePrintPartyFilterChange: (value: string) => void;
+  onResetSamplePrintFilters: () => void;
 }
 
 export interface PrintModalProps {

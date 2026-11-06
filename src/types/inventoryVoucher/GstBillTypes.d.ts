@@ -81,6 +81,15 @@ export interface GstBillProps {
   setInvoiceData: Dispatch<SetStateAction<InvoiceData | null>>;
   getOrderPartyLoading: boolean;
   getUnitLoading: boolean;
+  gstBillTableInput: string;
+  handleFilterGstBillTable: (value: string) => void;
+  gstBillFromDate?: Date;
+  gstBillToDate?: Date;
+  onGstBillFromDateChange: (value: Date | undefined) => void;
+  onGstBillToDateChange: (value: Date | undefined) => void;
+  gstBillPartyFilter: string;
+  onGstBillPartyFilterChange: (value: string) => void;
+  onResetGstBillFilters: () => void;
 }
 
 export interface GstBillFormProps {
@@ -116,6 +125,15 @@ export interface GstBillTableProps {
   lastPage: number;
   perPage: number;
   onPerPageChange: (perPage: number) => void;
+  gstBillTableInput: string;
+  handleFilterGstBillTable: (value: string) => void;
+  gstBillFromDate?: Date;
+  gstBillToDate?: Date;
+  onGstBillFromDateChange: (value: Date | undefined) => void;
+  onGstBillToDateChange: (value: Date | undefined) => void;
+  gstBillPartyFilter: string;
+  onGstBillPartyFilterChange: (value: string) => void;
+  onResetGstBillFilters: () => void;
 }
 
 export interface InvoiceModalProps {
@@ -156,6 +174,7 @@ export interface GstBillTableData {
   Bill_Date?: string;
   Bill_No?: string;
   Party_Name?: string;
+  Party_Id?: number | string | null;
   Gross_Amt?: number | string;
   Total?: number | string;
   Cgst_Amt?: number | string;

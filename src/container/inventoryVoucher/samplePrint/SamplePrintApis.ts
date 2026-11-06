@@ -12,7 +12,13 @@ const buildGetSamplePrintKey = (
   page: number,
   keyword: string,
   perPage?: number,
-) => `${orgId}:${page}:${keyword}:${perPage ?? ""}`;
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
+) =>
+  `${orgId}:${page}:${keyword}:${perPage ?? ""}:${filters?.fromDate ?? ""}:${filters?.toDate ?? ""}:${filters?.partyId ?? ""}`;
 
 const buildGetSamplePrintDetailsKey = (
   orgId: string | number,
@@ -43,13 +49,18 @@ export const getSamplePrintAPI = async (
   orgId: string | number,
   page: number,
   keyword: string,
-  perPage?: number
+  perPage?: number,
+  filters?: {
+    fromDate?: string;
+    toDate?: string;
+    partyId?: string;
+  },
 ): Promise<ApiResponse> => {
-  const key = buildGetSamplePrintKey(orgId, page, keyword, perPage);
+  const key = buildGetSamplePrintKey(orgId, page, keyword, perPage, filters);
 
   return getSamplePrintInFlight.run(key, () =>
     doGetApiCall({
-      url: endPoints.getSamplePrint(orgId, page, keyword, perPage),
+      url: endPoints.getSamplePrint(orgId, page, keyword, perPage, filters),
     }),
   );
 };

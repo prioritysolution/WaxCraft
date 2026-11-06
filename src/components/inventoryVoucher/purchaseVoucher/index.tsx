@@ -45,6 +45,17 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
   setPurchasePartyInput,
   itemInput,
   setItemInput,
+  purchaseTableInput,
+  handleFilterPurchaseTable,
+  purchaseFromDate,
+  purchaseToDate,
+  onPurchaseFromDateChange,
+  onPurchaseToDateChange,
+  purchasePartyFilter,
+  onPurchasePartyFilterChange,
+  purchaseTypeFilter,
+  onPurchaseTypeFilterChange,
+  onResetPurchaseFilters,
   orderPurchaseType,
   handleOrderPurchaseTypeChange,
   showRequisitionModal,
@@ -125,6 +136,17 @@ const PurchaseVoucher: FC<PurchaseVoucherProps> = ({
             lastPage={lastPage}
             perPage={perPage}
             onPerPageChange={onPerPageChange}
+            purchaseTableInput={purchaseTableInput}
+            handleFilterPurchaseTable={handleFilterPurchaseTable}
+            purchaseFromDate={purchaseFromDate}
+            purchaseToDate={purchaseToDate}
+            onPurchaseFromDateChange={onPurchaseFromDateChange}
+            onPurchaseToDateChange={onPurchaseToDateChange}
+            purchasePartyFilter={purchasePartyFilter}
+            onPurchasePartyFilterChange={onPurchasePartyFilterChange}
+            purchaseTypeFilter={purchaseTypeFilter}
+            onPurchaseTypeFilterChange={onPurchaseTypeFilterChange}
+            onResetPurchaseFilters={onResetPurchaseFilters}
           />
         </Tab>
       </Tabs>

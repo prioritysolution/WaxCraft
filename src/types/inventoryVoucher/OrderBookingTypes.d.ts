@@ -19,6 +19,8 @@ export interface OrderBookingFormData {
   ghat: string;
   image: string;
   itemType: string;
+  /** Show WT Rate, Polish, and Ghat when this party has no matching setup. */
+  manualDesignRates: boolean;
   item: {
     designId: string;
     itemId: string;
@@ -28,6 +30,8 @@ export interface OrderBookingFormData {
     itemQuantity: string;
     itemRate: string;
     makingRate: string;
+    /** True when this item has no party + model setup, so the user can type the rate. */
+    makingRateManual?: boolean;
     itemTotal: string;
     catId?: string;
     modelId?: string;
@@ -108,6 +112,17 @@ export interface OrderBookingProps {
   onPerPageChange: (perPage: number) => void;
   orderTableInput: string;
   handleFilterOrderTable: (value: string) => void;
+  orderFromDate?: Date;
+  orderToDate?: Date;
+  onOrderFromDateChange: (value: Date | undefined) => void;
+  onOrderToDateChange: (value: Date | undefined) => void;
+  orderPartyFilter: string;
+  onOrderPartyFilterChange: (value: string) => void;
+  orderItemTypeFilter: string;
+  onOrderItemTypeFilterChange: (value: string) => void;
+  orderStatusFilter: string;
+  onOrderStatusFilterChange: (value: string) => void;
+  onResetOrderFilters: () => void;
   orderPartyInput: string;
   setOrderPartyInput: Dispatch<SetStateAction<string>>;
   orderDesignInput: string;
@@ -163,6 +178,17 @@ export interface OrderBookingTableProps {
   onPerPageChange: (perPage: number) => void;
   orderTableInput: string;
   handleFilterOrderTable: (value: string) => void;
+  orderFromDate?: Date;
+  orderToDate?: Date;
+  onOrderFromDateChange: (value: Date | undefined) => void;
+  onOrderToDateChange: (value: Date | undefined) => void;
+  orderPartyFilter: string;
+  onOrderPartyFilterChange: (value: string) => void;
+  orderItemTypeFilter: string;
+  onOrderItemTypeFilterChange: (value: string) => void;
+  orderStatusFilter: string;
+  onOrderStatusFilterChange: (value: string) => void;
+  onResetOrderFilters: () => void;
 }
 
 export interface DesignModalProps {

@@ -46,6 +46,17 @@ const SamplePrintContainer = () => {
     lastPage,
     perPage,
     handlePerPageChange,
+    samplePrintTableInput,
+    handleFilterSamplePrintTable,
+    samplePrintFromDate,
+    samplePrintToDate,
+    samplePrintFromDateApi,
+    samplePrintToDateApi,
+    handleSamplePrintFromDateChange,
+    handleSamplePrintToDateChange,
+    samplePrintPartyFilter,
+    handleSamplePrintPartyFilterChange,
+    handleResetSamplePrintFilters,
   } = useSamplePrint();
 
   const {
@@ -109,9 +120,24 @@ const SamplePrintContainer = () => {
 
   useEffect(() => {
     if (token && orgId && selected === "table") {
-      getSamplePrintApiCall(orgId, currentPage, "");
+      getOrderPartyApiCall(orgId, 1, "", "");
     }
-  }, [token, orgId, selected, currentPage, perPage]);
+  }, [token, orgId, selected]);
+
+  useEffect(() => {
+    if (token && orgId && selected === "table") {
+      getSamplePrintApiCall(orgId, currentPage, samplePrintTableInput.trim());
+    }
+  }, [
+    token,
+    orgId,
+    selected,
+    currentPage,
+    perPage,
+    samplePrintFromDateApi,
+    samplePrintToDateApi,
+    samplePrintPartyFilter,
+  ]);
 
   return (
     <SamplePrint
@@ -151,6 +177,15 @@ const SamplePrintContainer = () => {
       lastPage={lastPage}
       perPage={perPage}
       onPerPageChange={handlePerPageChange}
+      samplePrintTableInput={samplePrintTableInput}
+      handleFilterSamplePrintTable={handleFilterSamplePrintTable}
+      samplePrintFromDate={samplePrintFromDate}
+      samplePrintToDate={samplePrintToDate}
+      onSamplePrintFromDateChange={handleSamplePrintFromDateChange}
+      onSamplePrintToDateChange={handleSamplePrintToDateChange}
+      samplePrintPartyFilter={samplePrintPartyFilter}
+      onSamplePrintPartyFilterChange={handleSamplePrintPartyFilterChange}
+      onResetSamplePrintFilters={handleResetSamplePrintFilters}
     />
   );
 };

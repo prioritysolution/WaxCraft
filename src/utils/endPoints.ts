@@ -176,6 +176,17 @@ export const endPoints = {
     `${createApi}Org/Master/GetPartyMakingRateByParty?org_id=${orgId}&party_id=${partyId}`,
   addPartyMakingRate: `${createApi}Org/Master/AddPartyMakingRate`,
   updatePartyMakingRate: `${createApi}Org/Master/UpdatePartyMakingRate`,
+  savePartyMakingRate: `${createApi}Org/Master/SavePartyMakingRate`,
+  getPartyMakingRateLog: (
+    orgId: number | string,
+    page: number,
+    keyword: string,
+    perPage?: number
+  ) =>
+    appendPerPage(
+      `${createApi}Org/Master/GetPartyMakingRateLog?org_id=${orgId}&page=${page}&keyword=${keyword}`,
+      perPage
+    ),
   deletePartyMakingRate: `${createApi}Org/Master/DeletePartyMakingRate`,
   getDesign: (
     orgId: number | string,
@@ -233,12 +244,29 @@ export const endPoints = {
     orgId: number | string,
     page: number,
     keyword: string,
-    perPage?: number
+    perPage?: number,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      partyId?: string;
+      itemType?: string;
+      orderStatus?: string;
+    }
   ) => {
-    const base = `${createApi}Org/ProcessInventory/GetActiveOrder?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
-    if (perPage == null || perPage <= 0) return base;
+    let url = `${createApi}Org/ProcessInventory/GetActiveOrder?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
+    url = appendDateRange(url, filters?.fromDate, filters?.toDate);
+    if (filters?.partyId) {
+      url += `&party_id=${encodeURIComponent(filters.partyId)}`;
+    }
+    if (filters?.itemType) {
+      url += `&item_type=${encodeURIComponent(filters.itemType)}`;
+    }
+    if (filters?.orderStatus) {
+      url += `&order_status=${encodeURIComponent(filters.orderStatus)}`;
+    }
+    if (perPage == null || perPage <= 0) return url;
     // Send both common param names so backend page-size is applied reliably.
-    return `${base}&per_page=${perPage}&limit=${perPage}`;
+    return `${url}&per_page=${perPage}&limit=${perPage}`;
   },
   addOrderBooking: `${createApi}Org/ProcessInventory/PostOrder`,
   updateOrderBooking: `${createApi}Org/ProcessInventory/UpdateOrder`,
@@ -248,12 +276,20 @@ export const endPoints = {
     orgId: number | string,
     page: number,
     keyword: string,
-    perPage?: number
-  ) =>
-    appendPerPage(
-      `${createApi}Org/ProcessInventory/GetSamplePrint?org_id=${orgId}&page=${page}&keyword=${keyword}`,
-      perPage
-    ),
+    perPage?: number,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      partyId?: string;
+    }
+  ) => {
+    let url = `${createApi}Org/ProcessInventory/GetSamplePrint?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
+    url = appendDateRange(url, filters?.fromDate, filters?.toDate);
+    if (filters?.partyId) {
+      url += `&party_id=${encodeURIComponent(filters.partyId)}`;
+    }
+    return appendPerPage(url, perPage);
+  },
   getSamplePrintDetails: (orgId: number | string, printId: number | string) =>
     `${createApi}Org/ProcessInventory/GetSamplePrintDetails?org_id=${orgId}&print_id=${printId}`,
   deleteSamplePrint: `${createApi}Org/ProcessInventory/CancelSamplePrint`,
@@ -275,12 +311,20 @@ export const endPoints = {
     orgId: number | string,
     page: number,
     keyword: string,
-    perPage?: number
-  ) =>
-    appendPerPage(
-      `${createApi}Org/ProcessInventory/InvoiseList?org_id=${orgId}&page=${page}&keyword=${keyword}`,
-      perPage
-    ),
+    perPage?: number,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      partyId?: string;
+    }
+  ) => {
+    let url = `${createApi}Org/ProcessInventory/InvoiseList?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
+    url = appendDateRange(url, filters?.fromDate, filters?.toDate);
+    if (filters?.partyId) {
+      url += `&party_id=${encodeURIComponent(filters.partyId)}`;
+    }
+    return appendPerPage(url, perPage);
+  },
   deleteInvoiceData: `${createApi}Org/ProcessInventory/CalcelInvoise`,
   getInvoicePrintData: (orgId: number | string, salesId: string | number) =>
     `${createApi}Org/ProcessInventory/GetInvoisePrint?org_id=${orgId}&sales_id=${salesId}`,
@@ -290,12 +334,24 @@ export const endPoints = {
     orgId: number | string,
     page: number,
     keyword: string,
-    perPage?: number
-  ) =>
-    appendPerPage(
-      `${createApi}Org/ProcessInventory/GetPurchaseList?org_id=${orgId}&page=${page}&keyword=${keyword}`,
-      perPage
-    ),
+    perPage?: number,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      partyId?: string;
+      purchaseType?: string;
+    }
+  ) => {
+    let url = `${createApi}Org/ProcessInventory/GetPurchaseList?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
+    url = appendDateRange(url, filters?.fromDate, filters?.toDate);
+    if (filters?.partyId) {
+      url += `&party_id=${encodeURIComponent(filters.partyId)}`;
+    }
+    if (filters?.purchaseType) {
+      url += `&purchase_type=${encodeURIComponent(filters.purchaseType)}`;
+    }
+    return appendPerPage(url, perPage);
+  },
   addPurchaseVoucher: `${createApi}Org/ProcessInventory/PostPurchase`,
   updatePurchaseVoucher: `${createApi}Org/ProcessInventory/UpdatePurchase`,
   deletePurchaseVoucher: `${createApi}Org/ProcessInventory/CancelPurchase`,
@@ -306,12 +362,20 @@ export const endPoints = {
     orgId: number | string,
     page: number,
     keyword: string,
-    perPage?: number
-  ) =>
-    appendPerPage(
-      `${createApi}Org/ProcessInventory/GetGstBill?org_id=${orgId}&page=${page}&keyword=${keyword}`,
-      perPage
-    ),
+    perPage?: number,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      partyId?: string;
+    }
+  ) => {
+    let url = `${createApi}Org/ProcessInventory/GetGstBill?org_id=${orgId}&page=${page}&keyword=${encodeURIComponent(keyword ?? "")}`;
+    url = appendDateRange(url, filters?.fromDate, filters?.toDate);
+    if (filters?.partyId) {
+      url += `&party_id=${encodeURIComponent(filters.partyId)}`;
+    }
+    return appendPerPage(url, perPage);
+  },
   deleteGstBill: `${createApi}Org/ProcessInventory/CancelGstBill`,
   getGstBillPrint: (orgId: number | string, salesId: string | number) =>
     `${createApi}Org/ProcessInventory/GetGstBillPrint?org_id=${orgId}&sales_id=${salesId}`,
@@ -502,6 +566,8 @@ export const endPoints = {
   getModuleData: (orgId: string | number) =>
     `${createApi}Org/GetRoleMenue?org_id=${orgId}`,
   addRoleAssign: `${createApi}Org/MapUserRole`,
+  getUserRoleMenu: (orgId: string | number, userId: string | number) =>
+    `${createApi}Org/GetUserRoleMenue?org_id=${orgId}&user_id=${userId}`,
   getUserAccess: (orgId: string | number) =>
     `${createApi}Org/GetAccessUserList?org_id=${orgId}`,
   updateUserAccess: `${createApi}Org/UpdateUserAccess`,
@@ -515,4 +581,23 @@ export const endPoints = {
     partyId: string | number = "0"
   ) =>
     `${createApi}Org/GetDashboardStats/${orgId}?form_date=${formDate}&to_date=${toDate}&party_id=${partyId}`,
+  getManagerDashboard: (
+    orgId: string | number,
+    formDate: string,
+    toDate: string,
+  ) =>
+    `${createApi}Org/GetManagerDashboard/${orgId}?form_date=${formDate}&to_date=${toDate}`,
+  getAccountantDashboard: (
+    orgId: string | number,
+    formDate: string,
+    toDate: string,
+  ) =>
+    `${createApi}Org/GetAccountantDashboard/${orgId}?form_date=${formDate}&to_date=${toDate}`,
+  getOperatorDashboard: (
+    orgId: string | number,
+    formDate: string,
+    toDate: string,
+    userId: string | number,
+  ) =>
+    `${createApi}Org/GetOperatorDashboard/${orgId}?form_date=${formDate}&to_date=${toDate}&user_id=${userId}`,
 };

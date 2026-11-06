@@ -50,6 +50,15 @@ const GstBill: FC<GstBillProps> = ({
   setInvoiceData,
   getOrderPartyLoading,
   getUnitLoading,
+  gstBillTableInput,
+  handleFilterGstBillTable,
+  gstBillFromDate,
+  gstBillToDate,
+  onGstBillFromDateChange,
+  onGstBillToDateChange,
+  gstBillPartyFilter,
+  onGstBillPartyFilterChange,
+  onResetGstBillFilters,
 }) => {
   return (
     <PageShell>
@@ -105,6 +114,15 @@ const GstBill: FC<GstBillProps> = ({
               lastPage={lastPage}
               perPage={perPage}
               onPerPageChange={onPerPageChange}
+              gstBillTableInput={gstBillTableInput}
+              handleFilterGstBillTable={handleFilterGstBillTable}
+              gstBillFromDate={gstBillFromDate}
+              gstBillToDate={gstBillToDate}
+              onGstBillFromDateChange={onGstBillFromDateChange}
+              onGstBillToDateChange={onGstBillToDateChange}
+              gstBillPartyFilter={gstBillPartyFilter}
+              onGstBillPartyFilterChange={onGstBillPartyFilterChange}
+              onResetGstBillFilters={onResetGstBillFilters}
             />
         </Tab>
       </Tabs>

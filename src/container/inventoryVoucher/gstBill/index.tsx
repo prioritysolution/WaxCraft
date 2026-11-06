@@ -44,6 +44,17 @@ const GstBillContainer = () => {
     setInvoiceData,
     orderPartyInput,
     setOrderPartyInput,
+    gstBillTableInput,
+    handleFilterGstBillTable,
+    gstBillFromDate,
+    gstBillToDate,
+    gstBillFromDateApi,
+    gstBillToDateApi,
+    handleGstBillFromDateChange,
+    handleGstBillToDateChange,
+    gstBillPartyFilter,
+    handleGstBillPartyFilterChange,
+    handleResetGstBillFilters,
   } = useGstBill();
 
   const {
@@ -76,9 +87,24 @@ const GstBillContainer = () => {
 
   useEffect(() => {
     if (token && orgId && selected === "table") {
-      getGstBillApiCall(orgId, currentPage, "");
+      getOrderPartyApiCall(orgId, 1, "", "");
     }
-  }, [token, orgId, selected, currentPage, perPage]);
+  }, [token, orgId, selected]);
+
+  useEffect(() => {
+    if (token && orgId && selected === "table") {
+      getGstBillApiCall(orgId, currentPage, gstBillTableInput.trim());
+    }
+  }, [
+    token,
+    orgId,
+    selected,
+    currentPage,
+    perPage,
+    gstBillFromDateApi,
+    gstBillToDateApi,
+    gstBillPartyFilter,
+  ]);
 
   useEffect(() => {
     if (token && orgId) getItemUnitApiCall(orgId);
@@ -111,6 +137,15 @@ const GstBillContainer = () => {
       onPerPageChange={handlePerPageChange}
       orderPartyInput={orderPartyInput}
       setOrderPartyInput={setOrderPartyInput}
+      gstBillTableInput={gstBillTableInput}
+      handleFilterGstBillTable={handleFilterGstBillTable}
+      gstBillFromDate={gstBillFromDate}
+      gstBillToDate={gstBillToDate}
+      onGstBillFromDateChange={handleGstBillFromDateChange}
+      onGstBillToDateChange={handleGstBillToDateChange}
+      gstBillPartyFilter={gstBillPartyFilter}
+      onGstBillPartyFilterChange={handleGstBillPartyFilterChange}
+      onResetGstBillFilters={handleResetGstBillFilters}
       itemGrandTotal={itemGrandTotal}
       itemGst={itemGst}
       itemRoundOff={itemRoundOff}
