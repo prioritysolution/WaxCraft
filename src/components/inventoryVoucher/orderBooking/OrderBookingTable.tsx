@@ -470,12 +470,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                       <th className={nestedHeadClassName}>
                                         Order Qty
                                       </th>
-                                      <th className={nestedHeadClassName}>
-                                        WT
-                                      </th>
-                                      <th className={nestedHeadClassName}>
-                                        Total Wt
-                                      </th>
                                       {ghatInfo ? (
                                         <>
                                           <th className={nestedHeadClassName}>
@@ -498,12 +492,6 @@ const OrderBookingTable: FC<OrderBookingTableProps> = ({
                                     <tr>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Order_Qnty)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Wt)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Tot_Wt)}
                                       </td>
                                       {ghatInfo ? (
                                         <>

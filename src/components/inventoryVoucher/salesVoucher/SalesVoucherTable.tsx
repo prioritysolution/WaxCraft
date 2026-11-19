@@ -229,10 +229,6 @@ const SalesVoucherTable: FC<SalesVoucherTableProps> = ({
                                     <th className={nestedHeadClassName}>
                                       Design Rate
                                     </th>
-                                    <th className={nestedHeadClassName}>WT</th>
-                                    <th className={nestedHeadClassName}>
-                                      Total Wt
-                                    </th>
                                     <th className={nestedHeadClassName}>
                                       Polish
                                     </th>
@@ -248,12 +244,6 @@ const SalesVoucherTable: FC<SalesVoucherTableProps> = ({
                                     </td>
                                     <td className={nestedCellClassName}>
                                       {formatTwoDecimals(design.Design_Rate)}
-                                    </td>
-                                    <td className={nestedCellClassName}>
-                                      {formatTwoDecimals(design.Wt)}
-                                    </td>
-                                    <td className={nestedCellClassName}>
-                                      {formatTwoDecimals(design.Tot_Wt)}
                                     </td>
                                     <td className={nestedCellClassName}>
                                       {formatTwoDecimals(design.Polish)}

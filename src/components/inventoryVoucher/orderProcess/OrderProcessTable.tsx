@@ -455,9 +455,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                       <th className={nestedHeadClassName}>
                                         WT
                                       </th>
-                                      <th className={nestedHeadClassName}>
-                                        Total Wt
-                                      </th>
                                       {ghatInfo ? (
                                         <>
                                           <th className={nestedHeadClassName}>
@@ -483,9 +480,6 @@ const OrderProcessTable: FC<OrderProcessTableProps> = ({
                                       </td>
                                       <td className={nestedCellClassName}>
                                         {formatTwoDecimals(design.Wt)}
-                                      </td>
-                                      <td className={nestedCellClassName}>
-                                        {formatTwoDecimals(design.Tot_Wt)}
                                       </td>
                                       {ghatInfo ? (
                                         <>

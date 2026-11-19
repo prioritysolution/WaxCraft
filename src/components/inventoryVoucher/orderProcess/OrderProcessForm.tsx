@@ -188,7 +188,6 @@ const DesignCard: FC<{
   const metrics = [
     { label: "Order Qty", value: design.Order_Qnty },
     { label: "WT", value: design.Wt },
-    { label: "Total Wt", value: design.Tot_Wt },
     ...(ghatInfo
       ? [
           { label: "Ghat", value: ghatInfo.ghat },
@@ -229,7 +228,7 @@ const DesignCard: FC<{
       <div
         className={cn(
           "grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4",
-          ghatInfo ? "xl:grid-cols-7" : "xl:grid-cols-5",
+          ghatInfo ? "xl:grid-cols-6" : "xl:grid-cols-4",
         )}
       >
         {metrics.map((metric) => (
